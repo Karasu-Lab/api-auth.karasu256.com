@@ -1,0 +1,36 @@
+{
+  "name": "api-auth.karasu256.com",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "CLOUDFLARE_ENV=local vite dev --port 8790 --strictPort",
+    "build": "tsc && CLOUDFLARE_ENV=production vite build && wrangler deploy --dry-run",
+    "deploy": "CLOUDFLARE_ENV=production vite build && wrangler deploy",
+    "deploy:preview": "CLOUDFLARE_ENV=preview vite build && wrangler deploy",
+    "build:branch": "CLOUDFLARE_ENV=branch vite build",
+    "types": "wrangler types --env production --env-interface Env"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.62.5",
+    "@types/node": "^26.6.4",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "wrangler": "^4.147.0",
+    "yaml": "^2.9.0"
+  },
+  "dependencies": {
+    "@Hashibutogarasu/db": "workspace:*",
+    "@Hashibutogarasu/utils": "workspace:*",
+    "@better-auth/api-key": "1.6.23",
+    "@better-auth/core": "^1.6.23",
+    "@better-auth/drizzle-adapter": "^1.6.23",
+    "@better-auth/oauth-provider": "^1.6.23",
+    "@better-auth/passkey": "1.6.23",
+    "better-auth": "^1.6.23",
+    "drizzle-orm": "^0.44.0",
+    "elysia": "^1.4.29",
+    "jose": "^6.2.5",
+    "zod": "^4.4.3"
+  }
+}

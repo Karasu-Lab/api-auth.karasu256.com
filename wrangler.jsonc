@@ -1,0 +1,67 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "api-auth-karasu256-com",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": false,
+    },
+  },
+  "env": {
+    "local": {
+      "routes": [],
+      "vars": {
+        "APP_ENV": "local",
+        "BETTER_AUTH_URL": "http://localhost:8790",
+        "AUTH_UI_URL": "http://localhost:3004",
+        "ACCOUNTS_URL": "http://localhost:3001",
+        "BETTER_AUTH_SECRET": "local-development-better-auth-secret-not-for-production",
+        "AUTH_SECRET": "local-development-auth-secret-not-for-production",
+        "INTERNAL_API_SECRET": "local-development-internal-api-secret",
+        "DATABASE_URL": "postgres://postgres:postgres@localhost:5433/karasu256",
+        "FIREBASE_ADMIN_PROJECT_ID": "demo-karasu256",
+        "FIREBASE_ADMIN_CLIENT_EMAIL": "firebase-adminsdk@demo-karasu256.iam.gserviceaccount.com",
+        "FIREBASE_ADMIN_PRIVATE_KEY": "unused-with-emulator",
+        "FIREBASE_AUTH_EMULATOR_HOST": "127.0.0.1:9099",
+        "RESEND_API_KEY": "re_local_development",
+        "RESEND_FROM_EMAIL": "noreply@example.com",
+        "NEON_AUTH_BASE_URL": "http://localhost:3010/neondb/auth",
+      },
+    },
+    "branch": {
+      "routes": [],
+      "workers_dev": true,
+      "preview_urls": true,
+      "vars": {
+        "APP_ENV": "preview",
+        "BETTER_AUTH_URL": "https://dev-api-auth.karasu256.com",
+        "AUTH_UI_URL": "https://dev-auth.karasu256.com",
+        "ACCOUNTS_URL": "https://dev.accounts.karasu256.com",
+        "BASE_DOMAIN": "karasu256.com",
+      },
+    },
+    "preview": {
+      "routes": [{ "pattern": "dev-api-auth.karasu256.com", "custom_domain": true }],
+      "vars": {
+        "APP_ENV": "preview",
+        "BETTER_AUTH_URL": "https://dev-api-auth.karasu256.com",
+        "AUTH_UI_URL": "https://dev-auth.karasu256.com",
+        "ACCOUNTS_URL": "https://dev.accounts.karasu256.com",
+        "BASE_DOMAIN": "karasu256.com",
+      },
+    },
+    "production": {
+      "routes": [{ "pattern": "api-auth.karasu256.com", "custom_domain": true }],
+      "vars": {
+        "APP_ENV": "production",
+        "BETTER_AUTH_URL": "https://api-auth.karasu256.com",
+        "AUTH_UI_URL": "https://auth.karasu256.com",
+        "ACCOUNTS_URL": "https://accounts.karasu256.com",
+        "BASE_DOMAIN": "karasu256.com",
+      },
+    },
+  },
+}
