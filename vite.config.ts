@@ -12,6 +12,6 @@ const tunnelHosts: string[] = (parseYaml(fs.readFileSync(cloudflaredConfigPath, 
 );
 
 export default defineConfig({
-  plugins: [cloudflare()],
+  plugins: [cloudflare({ inspectorPort: 9232 })],
   server: { allowedHosts: tunnelHosts },
 });
