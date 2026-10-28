@@ -7,6 +7,7 @@ import { rejectInvalidSignature } from './lib/signature-gate';
 import { handleIssueApiKey, handleVerifyApiKey } from './routes/api-keys';
 import { handleProviderDetails } from './routes/providers';
 import { handleSetPassword } from './routes/set-password';
+import { handleSignInLookup } from './routes/sign-in-lookup';
 import { handleCreateTestAccount, handleDeleteTestAccount } from './routes/test-accounts';
 
 const env = cfEnv as Env;
@@ -38,6 +39,7 @@ async function dispatch(request: Request): Promise<Response> {
   if (pathname.startsWith('/api/auth/')) return withAuth(env, (auth) => auth.handler(request));
   if (pathname === '/api/api-keys/verify' && request.method === 'POST') return handleVerifyApiKey(env, request);
   if (pathname === '/api/internal/api-keys' && request.method === 'POST') return handleIssueApiKey(env, request);
+  if (pathname === '/api/sign-in/lookup' && request.method === 'GET') return handleSignInLookup(env, request);
   if (pathname === '/api/test/accounts' && request.method === 'POST') return handleCreateTestAccount(env, request);
   if (pathname === '/api/test/accounts' && request.method === 'DELETE') return handleDeleteTestAccount(env, request);
   return app.fetch(request);
