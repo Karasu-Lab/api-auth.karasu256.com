@@ -7,11 +7,11 @@ import { and, eq, isNotNull } from 'drizzle-orm';
  * Answers the one question the SSO site's two-step sign-in form has to ask
  * before it can route a work email address: does an account exist for it,
  * does its domain have an SSO provider registered, and can it sign in with
- * a password at all. Only booleans are returned; the address itself and
- * every account detail stay server-side.
+ * a password or a passkey. Only booleans are returned; the address itself
+ * and every account detail stay server-side.
  *
  * GET /api/sign-in/lookup?email=<address>
- * Response: { exists: boolean, sso: boolean, hasPassword: boolean }
+ * Response: { exists: boolean, sso: boolean, hasPassword: boolean, hasPasskey: boolean }
  */
 export async function handleSignInLookup(env: Env, request: Request): Promise<Response> {
   const email = new URL(request.url).searchParams.get('email')?.trim().toLowerCase() ?? '';
@@ -30,6 +30,7 @@ export async function handleSignInLookup(env: Env, request: Request): Promise<Re
     const [user] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email)).limit(1);
 
     let hasPassword = false;
+    let hasPasskey = false;
     if (user) {
       const [credential] = await db
         .select({ id: schema.accounts.id })
@@ -37,9 +38,12 @@ export async function handleSignInLookup(env: Env, request: Request): Promise<Re
         .where(and(eq(schema.accounts.userId, user.id), eq(schema.accounts.providerId, 'credential'), isNotNull(schema.accounts.password)))
         .limit(1);
       hasPassword = Boolean(credential);
+
+      const [passkey] = await db.select({ id: schema.passkeys.id }).from(schema.passkeys).where(eq(schema.passkeys.userId, user.id)).limit(1);
+      hasPasskey = Boolean(passkey);
     }
 
-    return Response.json({ exists: Boolean(user), sso: Boolean(provider), hasPassword });
+    return Response.json({ exists: Boolean(user), sso: Boolean(provider), hasPassword, hasPasskey });
   } finally {
     waitUntil(db.$client.end());
   }
