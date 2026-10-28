@@ -5,6 +5,7 @@ declare global {
     APP_ENV: 'local' | 'preview' | 'production';
     BETTER_AUTH_URL: string;
     AUTH_UI_URL: string;
+    SSO_UI_URL: string;
     ACCOUNTS_URL: string;
     BASE_DOMAIN?: string;
     BETTER_AUTH_SECRET: string;

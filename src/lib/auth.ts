@@ -1,6 +1,7 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { passkey } from '@better-auth/passkey';
 import { apiKey } from '@better-auth/api-key';
+import { sso } from '@better-auth/sso';
 import { oauthProvider } from '@better-auth/oauth-provider';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { jwt } from 'better-auth/plugins/jwt';
@@ -34,6 +35,23 @@ function createPlugins(env: Env) {
     }),
     multiSession({ maximumSessions: 5 }),
     apiKey({ defaultPrefix: 'ksk_', rateLimit: { enabled: false } }),
+    sso({
+      // The organization plugin is not installed in this monorepo, so SSO
+      // providers cannot be linked to an organization and provisioning into
+      // one must stay off; providers are matched by email domain instead.
+      organizationProvisioning: { disabled: true },
+      saml: {
+        // Accept unsolicited SAML responses so users can also start from
+        // their IdP's dashboard (Okta, Entra ID, ...). SP-initiated flows
+        // keep the plugin's default InResponseTo validation.
+        allowIdpInitiated: true,
+        // IdP-initiated flows carry no callback URL of their own, so send
+        // them to the SSO site's sign-in page, which continues to the
+        // default destination once it sees the session — the same contract
+        // as auth.karasu256.com's sign-in page.
+        idpInitiatedCallbackUrl: `${env.SSO_UI_URL}/sign-in`,
+      },
+    }),
     ...(mockOAuthUrl ? [genericOAuth({ config: getMockOAuthProviders(mockOAuthUrl) })] : []),
   ];
 }
@@ -65,6 +83,7 @@ function createAuthOptions(env: Env, db: Db) {
         oauthConsent: schema.oauthConsents,
         passkey: schema.passkeys,
         apikey: schema.apiKeys,
+        ssoProvider: schema.ssoProviders,
       },
     }),
     secret: env.BETTER_AUTH_SECRET,
