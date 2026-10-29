@@ -20,6 +20,16 @@
     "BASE_DOMAIN": "karasu256.com",
   },
   "preview_urls": true,
+  "previews": {
+    "vars": {
+      "APP_ENV": "preview",
+      "BETTER_AUTH_URL": "https://dev-api-auth.karasu256.com",
+      "AUTH_UI_URL": "https://dev-auth.karasu256.com",
+      "SSO_UI_URL": "https://dev-sso.karasu256.com",
+      "ACCOUNTS_URL": "https://dev.accounts.karasu256.com",
+      "BASE_DOMAIN": "karasu256.com",
+    },
+  },
   "env": {
     "local": {
       "routes": [],
