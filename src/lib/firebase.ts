@@ -63,6 +63,12 @@ export async function createFirebaseUser(env: Env, input: FirebaseUserInput): Pr
   return localId;
 }
 
+/** Finds a Firebase user by email address and returns its UID, or null when no such user exists. */
+export async function findFirebaseUidByEmail(env: Env, email: string): Promise<string | null> {
+  const { users } = await identityToolkit<{ users?: { localId: string }[] }>(env, '/accounts:lookup', { email: [email] });
+  return users?.[0]?.localId ?? null;
+}
+
 /** Updates a Firebase user's display name and photo. */
 export async function updateFirebaseUser(env: Env, uid: string, update: { displayName?: string; photoURL?: string }): Promise<void> {
   await identityToolkit(env, '/accounts:update', {

@@ -10,7 +10,8 @@ import type { Db } from '@Hashibutogarasu/db/create-db';
 import * as schema from '@Hashibutogarasu/db/schema';
 import { sendPasswordResetEmail } from '@Hashibutogarasu/utils/email';
 import { getAuthConfig } from '../config';
-import { createFirebaseUser, deleteFirebaseUser, updateFirebaseUser } from './firebase';
+import { deleteFirebaseUser, updateFirebaseUser } from './firebase';
+import { ensureFirebaseLink, getLinkedFirebaseUid } from './firebase-link';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { syncUserToNeonAuth } from './neon-auth';
 
@@ -60,9 +61,10 @@ function createPlugins(env: Env) {
  * Everything except `plugins`, shared by both instances so they cannot drift
  * apart.
  *
- * Every user id equals its Firebase UID, because every table and CDN storage
- * path in this monorepo is keyed by it; the `before` create hook therefore
- * provisions the Firebase user first and adopts its UID.
+ * The database is the single source of truth for sign-in: better-auth owns
+ * user ids, and Firebase is linked loosely through the `firebase_user` table
+ * (see `firebase-link.ts`). No hook may fail an authentication flow because
+ * Firebase or Neon Auth is unreachable — both are best-effort mirrors.
  */
 function createAuthOptions(env: Env, db: Db) {
   const { trustedOrigins } = getAuthConfig(env);
@@ -116,15 +118,23 @@ function createAuthOptions(env: Env, db: Db) {
     databaseHooks: {
       user: {
         create: {
-          before: async (user) => {
-            const uid = await createFirebaseUser(env, {
-              email: user.email || undefined,
-              emailVerified: user.emailVerified,
-              displayName: user.name || undefined,
-            });
-            return { data: { ...user, id: uid } };
+          after: async (user) => {
+            // Start the Firebase link unlinked; it is established lazily at
+            // sign-in by ensureFirebaseLink. Recorded failure-free so user
+            // creation never depends on the link table being reachable.
+            try {
+              await db.insert(schema.firebaseUsers).values({ userId: user.id }).onConflictDoNothing();
+            } catch (error) {
+              console.error(`Failed to record firebase_user row for user ${user.id}`, error);
+            }
+            // Neon Auth only mirrors the user id; the database is the source
+            // of truth, so a sync failure must not fail sign-up either.
+            try {
+              await syncUserToNeonAuth(env, user);
+            } catch (error) {
+              console.error(`Failed to sync user ${user.id} to Neon Auth`, error);
+            }
           },
-          after: (user) => syncUserToNeonAuth(env, user),
         },
         update: {
           after: async (user) => {
@@ -132,15 +142,36 @@ function createAuthOptions(env: Env, db: Db) {
             if (user.name) update.displayName = user.name as string;
             if (user.image) update.photoURL = user.image as string;
             if (Object.keys(update).length === 0) return;
-            await updateFirebaseUser(env, user.id, update);
+            const firebaseUid = await getLinkedFirebaseUid(db, user.id).catch(() => null);
+            if (!firebaseUid) return;
+            try {
+              await updateFirebaseUser(env, firebaseUid, update);
+            } catch (error) {
+              console.error(`Failed to update Firebase user for user ${user.id}`, error);
+            }
           },
+        },
+      },
+      session: {
+        create: {
+          after: (session) => ensureFirebaseLink(env, db, session.userId),
         },
       },
     },
     user: {
       deleteUser: {
         enabled: true,
-        afterDelete: (user) => deleteFirebaseUser(env, user.id),
+        // Runs while the firebase_user row still exists (it cascades with
+        // the user row), and never blocks deletion on a Firebase failure.
+        beforeDelete: async (user) => {
+          const firebaseUid = await getLinkedFirebaseUid(db, user.id).catch(() => null);
+          if (!firebaseUid) return;
+          try {
+            await deleteFirebaseUser(env, firebaseUid);
+          } catch (error) {
+            console.error(`Failed to delete Firebase user for user ${user.id}`, error);
+          }
+        },
       },
     },
     onAPIError: {
