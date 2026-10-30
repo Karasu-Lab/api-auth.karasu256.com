@@ -1,6 +1,6 @@
 # api-auth.karasu256.com
 
-The single Better Auth instance for Karasu Lab — email/password, Google and GitHub sign-in, passkeys, API keys, OAuth 2.1 / OIDC provider, and SAML SSO — running as a Cloudflare Worker. Split out of [Karasu-Lab/karasu256.com](https://github.com/Karasu-Lab/karasu256.com).
+The single Better Auth instance for Karasu Lab — email/password, Google and GitHub sign-in, passkeys, API keys, OAuth 2.1 / OIDC provider, and SAML SSO — running as a Cloudflare Worker. Split out of [Karasu-Lab/Karasu-Lab](https://github.com/Karasu-Lab/Karasu-Lab).
 
 ## Required environment variables
 
