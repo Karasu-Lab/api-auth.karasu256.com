@@ -34,7 +34,7 @@ Non-secret identifiers, synced to the worker alongside the secrets.
 
 | Name | Used for |
 | --- | --- |
-| `FIREBASE_ADMIN_PROJECT_ID` | Firebase project for the lazy Firebase UID linking |
+| `GOOGLE_CLOUD_PROJECT_ID` | Firebase project for the lazy Firebase UID linking |
 | `FIREBASE_ADMIN_CLIENT_EMAIL` | Firebase Admin service account email |
 | `RESEND_FROM_EMAIL` | Sender address for password reset email |
 | `NEON_AUTH_BASE_URL` | Base URL of the Neon Auth instance used for shadow-account sync |

@@ -42,7 +42,7 @@ async function identityToolkit<T>(env: Env, path: string, body: unknown): Promis
   const origin = emulator ? `http://${emulator}/identitytoolkit.googleapis.com` : 'https://identitytoolkit.googleapis.com';
   const token = emulator ? 'owner' : await getAccessToken(env);
 
-  const response = await fetch(`${origin}/v1/projects/${env.FIREBASE_ADMIN_PROJECT_ID}${path}`, {
+  const response = await fetch(`${origin}/v1/projects/${env.GOOGLE_CLOUD_PROJECT_ID}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
