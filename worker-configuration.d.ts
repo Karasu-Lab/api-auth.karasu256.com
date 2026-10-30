@@ -3,10 +3,6 @@
 // Runtime types generated with workerd@1.20261001.1 2026-10-01 nodejs_compat
 interface __BaseEnv_Env {
   APP_ENV: 'production';
-  BETTER_AUTH_URL: 'https://api-auth.karasu256.com';
-  AUTH_UI_URL: 'https://auth.karasu256.com';
-  ACCOUNTS_URL: 'https://accounts.karasu256.com';
-  BASE_DOMAIN: 'karasu256.com';
 }
 declare namespace Cloudflare {
   interface GlobalProps {
@@ -20,7 +16,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 };
 declare namespace NodeJS {
   interface ProcessEnv
-    extends StringifyValues<Pick<Cloudflare.Env, 'APP_ENV' | 'BETTER_AUTH_URL' | 'AUTH_UI_URL' | 'ACCOUNTS_URL' | 'BASE_DOMAIN'>> {}
+    extends StringifyValues<Pick<Cloudflare.Env, 'APP_ENV'>> {}
 }
 
 // Begin runtime types

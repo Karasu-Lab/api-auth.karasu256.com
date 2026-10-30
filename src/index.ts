@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia';
 import { CloudflareAdapter } from 'elysia/adapter/cloudflare-worker';
 import { env as cfEnv } from 'cloudflare:workers';
+import { resolveEnv } from './constants';
 import { handlePreflight, withCors } from './lib/cors';
 import { withAuth } from './lib/request-auth';
 import { rejectInvalidSignature } from './lib/signature-gate';
@@ -10,7 +11,7 @@ import { handleSetPassword } from './routes/set-password';
 import { handleSignInLookup } from './routes/sign-in-lookup';
 import { handleCreateTestAccount, handleDeleteTestAccount } from './routes/test-accounts';
 
-const env = cfEnv as Env;
+const env = resolveEnv(cfEnv as Env);
 
 /** Workers do not allow generating code at runtime. */
 const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typebox' }).get(
