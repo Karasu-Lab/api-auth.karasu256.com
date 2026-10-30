@@ -1,4 +1,4 @@
-import { createDb } from '@Hashibutogarasu/db/create-db';
+import { createDb } from '@karasu-lab/db/create-db';
 import { waitUntil } from 'cloudflare:workers';
 import { z } from 'zod';
 import { createTestAuth } from '../lib/auth';

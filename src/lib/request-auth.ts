@@ -1,5 +1,5 @@
 import { waitUntil } from 'cloudflare:workers';
-import { createDb } from '@Hashibutogarasu/db/create-db';
+import { createDb } from '@karasu-lab/db/create-db';
 import { createAuth, type Auth } from './auth';
 
 /**
