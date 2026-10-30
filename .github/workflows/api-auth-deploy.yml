@@ -2,7 +2,7 @@
 # This app depends on workspace packages, so the deploy still builds in
 # the hub repository's tree: this workflow clones the hub (with its
 # submodules) and pins this app's submodule to the commit that triggered
-# the run. It requires the hub's main branch to carry the submodule
+# the run. It requires the hub's dev branch to carry the submodule
 # layout, and this repository to hold the Actions secrets and variables
 # referenced below under the same names.
 #
@@ -34,7 +34,7 @@ jobs:
     steps:
       - name: Assemble the workspace from the hub repository
         run: |
-          git clone --recurse-submodules --branch main https://github.com/Karasu-Lab/Karasu-Lab.git .
+          git clone --recurse-submodules --branch dev https://github.com/Karasu-Lab/Karasu-Lab.git .
           git -C apps/api-auth.karasu256.com fetch origin "${{ github.sha }}"
           git -C apps/api-auth.karasu256.com checkout --detach "${{ github.sha }}"
 
@@ -87,7 +87,7 @@ jobs:
     steps:
       - name: Assemble the workspace from the hub repository
         run: |
-          git clone --recurse-submodules --branch main https://github.com/Karasu-Lab/Karasu-Lab.git .
+          git clone --recurse-submodules --branch dev https://github.com/Karasu-Lab/Karasu-Lab.git .
           git -C apps/api-auth.karasu256.com fetch origin "${{ github.sha }}"
           git -C apps/api-auth.karasu256.com checkout --detach "${{ github.sha }}"
 
