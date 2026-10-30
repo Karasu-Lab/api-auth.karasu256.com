@@ -1,4 +1,4 @@
-import { verifyRequest } from '@Hashibutogarasu/utils/server/request-signature';
+import { verifyRequest } from '@karasu-lab/utils/server/request-signature';
 
 const SIGNATURE_REQUIRED_PREFIX = '/api/internal/';
 

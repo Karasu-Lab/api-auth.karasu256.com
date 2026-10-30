@@ -19,8 +19,8 @@
     "yaml": "^2.9.0"
   },
   "dependencies": {
-    "@Hashibutogarasu/db": "workspace:*",
-    "@Hashibutogarasu/utils": "workspace:*",
+    "@karasu-lab/db": "0.1.0-9f9276e",
+    "@karasu-lab/utils": "0.1.0-967de79",
     "@better-auth/api-key": "1.7.12",
     "@better-auth/core": "^1.7.12",
     "@better-auth/drizzle-adapter": "^1.7.12",
