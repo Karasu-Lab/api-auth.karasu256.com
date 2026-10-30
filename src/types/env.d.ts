@@ -20,7 +20,7 @@ declare global {
     RESEND_FROM_EMAIL: string;
     NEON_AUTH_BASE_URL: string;
     /** Cloudflare Rate Limiting binding for the sign-in lookup endpoint; absent where the binding is not configured, in which case an in-memory fallback applies. */
-    SIGN_IN_LOOKUP_RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
+    CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
     GOOGLE_CLIENT_ID?: string;
     GOOGLE_CLIENT_SECRET?: string;
     GITHUB_CLIENT_ID?: string;

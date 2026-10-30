@@ -20,7 +20,7 @@ const windows = new Map<string, { count: number; resetAt: number }>();
  * the exact reset time, so its verdicts advertise the full window.
  */
 export async function checkSignInLookupRateLimit(env: Env, key: string): Promise<RateLimitVerdict> {
-  const binding = env.SIGN_IN_LOOKUP_RATE_LIMITER;
+  const binding = env.CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER;
   if (binding) {
     try {
       const { success } = await binding.limit({ key });
