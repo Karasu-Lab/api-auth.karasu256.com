@@ -9,6 +9,7 @@ import { handleIssueApiKey, handleVerifyApiKey } from './routes/api-keys';
 import { handleProviderDetails } from './routes/providers';
 import { handleSetPassword } from './routes/set-password';
 import { handleSignInLookup } from './routes/sign-in-lookup';
+import { rejectUnverifiedTurnstile } from './lib/turnstile';
 import { handleCreateTestAccount, handleDeleteTestAccount } from './routes/test-accounts';
 
 const env = resolveEnv(cfEnv as Env);
@@ -37,7 +38,11 @@ async function dispatch(request: Request): Promise<Response> {
   const { pathname } = new URL(request.url);
 
   if (pathname === '/api/auth/set-password') return handleSetPassword(env, request);
-  if (pathname.startsWith('/api/auth/')) return withAuth(env, (auth) => auth.handler(request));
+  if (pathname.startsWith('/api/auth/')) {
+    const rejectedTurnstile = await rejectUnverifiedTurnstile(env, request);
+    if (rejectedTurnstile) return rejectedTurnstile;
+    return withAuth(env, (auth) => auth.handler(request));
+  }
   if (pathname === '/api/api-keys/verify' && request.method === 'POST') return handleVerifyApiKey(env, request);
   if (pathname === '/api/internal/api-keys' && request.method === 'POST') return handleIssueApiKey(env, request);
   if (pathname === '/api/sign-in/lookup' && request.method === 'GET') return handleSignInLookup(env, request);

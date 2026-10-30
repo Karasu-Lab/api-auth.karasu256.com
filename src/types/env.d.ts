@@ -27,5 +27,7 @@ declare global {
     GITHUB_CLIENT_ID?: string;
     GITHUB_CLIENT_SECRET?: string;
     E2E_MOCK_OAUTH_URL?: string;
+    /** Turnstile widget secret for bot verification of the credential endpoints; verification stays off while unset. */
+    CLOUDFLARE_TURNSTILE_SECRET?: string;
   }
 }
