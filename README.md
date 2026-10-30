@@ -4,7 +4,7 @@ The single Better Auth instance for Karasu Lab — email/password, Google and Gi
 
 ## Required environment variables
 
-The deploy workflow (`.github/workflows/api-auth-deploy.yml`) reads the following GitHub Actions secrets and variables. Register them on this repository under exactly these names. Values are never committed to the repository.
+The deploy workflow (`.github/workflows/api-auth-deploy.yml`) reads the following GitHub Actions secrets and variables, organized by GitHub Environments. The production job runs in the `production` environment and the preview job in the `preview` environment (a `development` environment also exists); register each name at repository level as the default, and override it inside an environment only where that environment needs a different value — a name an environment does not define falls back to the repository-level entry. Values are never committed to the repository. Identifiers that are not confidential (client IDs and similar) are variables, not secrets.
 
 ### Deployment
 
@@ -15,7 +15,7 @@ The deploy workflow (`.github/workflows/api-auth-deploy.yml`) reads the followin
 
 ### Worker secrets
 
-These are synced to the production worker on every deploy to `main`.
+These are synced to the worker on every deploy; previews resolve the same names from the `preview` environment.
 
 | Name | Used for |
 | --- | --- |
@@ -23,19 +23,22 @@ These are synced to the production worker on every deploy to `main`.
 | `AUTH_SECRET` | Legacy Neon Auth sync secret |
 | `INTERNAL_API_SECRET` | Shared secret for internal API calls |
 | `DATABASE_URL` | Connection string of the database holding the auth accounts |
-| `FIREBASE_ADMIN_PROJECT_ID` | Firebase project for the lazy Firebase UID linking |
-| `FIREBASE_ADMIN_CLIENT_EMAIL` | Firebase Admin service account email |
 | `FIREBASE_ADMIN_PRIVATE_KEY` | Firebase Admin service account private key |
 | `RESEND_API_KEY` | Resend API key used to send password reset email |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `GH_CLIENT_SECRET` | GitHub OAuth client secret, passed to the worker as `GITHUB_CLIENT_SECRET` |
+
+### Worker variables
+
+Non-secret identifiers, synced to the worker alongside the secrets.
+
+| Name | Used for |
+| --- | --- |
+| `FIREBASE_ADMIN_PROJECT_ID` | Firebase project for the lazy Firebase UID linking |
+| `FIREBASE_ADMIN_CLIENT_EMAIL` | Firebase Admin service account email |
 | `RESEND_FROM_EMAIL` | Sender address for password reset email |
 | `NEON_AUTH_BASE_URL` | Base URL of the Neon Auth instance used for shadow-account sync |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `GH_CLIENT_ID` | GitHub OAuth client ID, passed to the worker as `GITHUB_CLIENT_ID` (GitHub reserves the `GITHUB_` prefix, so the Actions secret uses the `GH_` name) |
-| `GH_CLIENT_SECRET` | GitHub OAuth client secret, passed to the worker as `GITHUB_CLIENT_SECRET` |
+| `GH_CLIENT_ID` | GitHub OAuth client ID, passed to the worker as `GITHUB_CLIENT_ID` (GitHub reserves the `GITHUB_` prefix, so the Actions entry uses the `GH_` name) |
 
-If one of these secrets is unset, the sync falls back to the default in the worker's `wrangler.jsonc` local environment, and skips the entry when it is defined in neither place.
-
-### Branch previews
-
-Pushes to non-`main` branches deploy a preview worker. Previews share the values above except for the following, which have dedicated preview variants: `PREVIEW_FIREBASE_ADMIN_PROJECT_ID`, `PREVIEW_FIREBASE_ADMIN_CLIENT_EMAIL`, `PREVIEW_FIREBASE_ADMIN_PRIVATE_KEY`, `PREVIEW_RESEND_API_KEY`, `PREVIEW_RESEND_FROM_EMAIL`, `PREVIEW_NEON_AUTH_BASE_URL`, `PREVIEW_GOOGLE_CLIENT_ID`, `PREVIEW_GOOGLE_CLIENT_SECRET`, `PREVIEW_GH_CLIENT_ID`, `PREVIEW_GH_CLIENT_SECRET`.
+If one of these entries is unset everywhere, the sync falls back to the default in the worker's `wrangler.jsonc` local environment, and skips the entry when it is defined in neither place.
