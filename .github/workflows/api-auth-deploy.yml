@@ -5,6 +5,7 @@ on:
     branches: ["**"]
   workflow_dispatch:
 
+jobs:
   deploy:
     if: github.ref_name == 'main'
     environment: production
