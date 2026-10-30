@@ -6,6 +6,8 @@ const ANDROID_ORIGINS = [
 export interface AuthConfig {
   webauthn: { rpId: string; rpName: string; expectedOrigins: string[] };
   trustedOrigins: string[];
+  /** Hostnames a Turnstile challenge may run on for this environment (the auth and sso sign-in pages). */
+  turnstileHostnames: string[];
 }
 
 const CONFIGS: Record<Env['APP_ENV'], AuthConfig> = {
@@ -15,6 +17,7 @@ const CONFIGS: Record<Env['APP_ENV'], AuthConfig> = {
       rpName: 'Karasu Lab',
       expectedOrigins: ['https://local-accounts.karasu256.com', 'https://local-auth.karasu256.com', 'https://local-sso.karasu256.com', ...ANDROID_ORIGINS],
     },
+    turnstileHostnames: ['local-auth.karasu256.com', 'local-sso.karasu256.com'],
     trustedOrigins: [
       'http://localhost:3000',
       'http://localhost:3001',
@@ -36,6 +39,7 @@ const CONFIGS: Record<Env['APP_ENV'], AuthConfig> = {
       rpName: 'Karasu Lab',
       expectedOrigins: ['https://dev.accounts.karasu256.com', 'https://dev-auth.karasu256.com', 'https://dev-sso.karasu256.com', 'https://dev.karasu256.com', ...ANDROID_ORIGINS],
     },
+    turnstileHostnames: ['dev-auth.karasu256.com', 'dev-sso.karasu256.com'],
     trustedOrigins: [
       'https://dev.accounts.karasu256.com',
       'https://dev-auth.karasu256.com',
@@ -51,6 +55,7 @@ const CONFIGS: Record<Env['APP_ENV'], AuthConfig> = {
       rpName: 'Karasu Lab',
       expectedOrigins: ['https://accounts.karasu256.com', 'https://auth.karasu256.com', 'https://sso.karasu256.com', 'https://karasu256.com', ...ANDROID_ORIGINS],
     },
+    turnstileHostnames: ['auth.karasu256.com', 'sso.karasu256.com'],
     trustedOrigins: [
       'https://accounts.karasu256.com',
       'https://auth.karasu256.com',

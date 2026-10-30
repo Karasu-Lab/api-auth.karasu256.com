@@ -25,6 +25,7 @@ jobs:
       RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
       RESEND_FROM_EMAIL: ${{ vars.RESEND_FROM_EMAIL }}
       NEON_AUTH_BASE_URL: ${{ vars.NEON_AUTH_BASE_URL }}
+      CLOUDFLARE_TURNSTILE_SECRET: ${{ secrets.CLOUDFLARE_TURNSTILE_SECRET }}
       GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       GITHUB_CLIENT_ID: ${{ vars.GH_CLIENT_ID }}
@@ -37,7 +38,7 @@ jobs:
           hub-repo: Karasu-Lab/Karasu-Lab
           app-path: apps/api-auth.karasu256.com
           secrets-command: node .github/scripts/worker-secrets-file.mjs {app_path} "{secrets_file}" {secret_names}
-          secret-names: BETTER_AUTH_SECRET AUTH_SECRET INTERNAL_API_SECRET DATABASE_URL GOOGLE_CLOUD_PROJECT_ID FIREBASE_ADMIN_CLIENT_EMAIL FIREBASE_ADMIN_PRIVATE_KEY RESEND_API_KEY RESEND_FROM_EMAIL NEON_AUTH_BASE_URL GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET
+          secret-names: BETTER_AUTH_SECRET AUTH_SECRET INTERNAL_API_SECRET DATABASE_URL GOOGLE_CLOUD_PROJECT_ID FIREBASE_ADMIN_CLIENT_EMAIL FIREBASE_ADMIN_PRIVATE_KEY RESEND_API_KEY RESEND_FROM_EMAIL NEON_AUTH_BASE_URL GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET CLOUDFLARE_TURNSTILE_SECRET
           deploy-command: pnpm --filter api-auth.karasu256.com deploy
           preview-command: pnpm --filter api-auth.karasu256.com preview -- --name "{branch}" --secrets-file "{secrets_file}"
           sync-command: pnpm --filter api-auth.karasu256.com exec wrangler secret bulk "{secrets_file}"
@@ -62,6 +63,7 @@ jobs:
       RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
       RESEND_FROM_EMAIL: ${{ vars.RESEND_FROM_EMAIL }}
       NEON_AUTH_BASE_URL: ${{ vars.NEON_AUTH_BASE_URL }}
+      CLOUDFLARE_TURNSTILE_SECRET: ${{ secrets.CLOUDFLARE_TURNSTILE_SECRET }}
       GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       GITHUB_CLIENT_ID: ${{ vars.GH_CLIENT_ID }}
@@ -74,7 +76,7 @@ jobs:
           hub-repo: Karasu-Lab/Karasu-Lab
           app-path: apps/api-auth.karasu256.com
           secrets-command: node .github/scripts/worker-secrets-file.mjs {app_path} "{secrets_file}" {secret_names}
-          secret-names: BETTER_AUTH_SECRET AUTH_SECRET INTERNAL_API_SECRET DATABASE_URL GOOGLE_CLOUD_PROJECT_ID FIREBASE_ADMIN_CLIENT_EMAIL FIREBASE_ADMIN_PRIVATE_KEY RESEND_API_KEY RESEND_FROM_EMAIL NEON_AUTH_BASE_URL GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET
+          secret-names: BETTER_AUTH_SECRET AUTH_SECRET INTERNAL_API_SECRET DATABASE_URL GOOGLE_CLOUD_PROJECT_ID FIREBASE_ADMIN_CLIENT_EMAIL FIREBASE_ADMIN_PRIVATE_KEY RESEND_API_KEY RESEND_FROM_EMAIL NEON_AUTH_BASE_URL GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET CLOUDFLARE_TURNSTILE_SECRET
           deploy-command: pnpm --filter api-auth.karasu256.com deploy
           preview-command: pnpm --filter api-auth.karasu256.com preview -- --name "{branch}" --secrets-file "{secrets_file}"
           sync-command: pnpm --filter api-auth.karasu256.com exec wrangler secret bulk "{secrets_file}"
