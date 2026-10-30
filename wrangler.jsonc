@@ -30,7 +30,7 @@
         "AUTH_SECRET": "local-development-auth-secret-not-for-production",
         "INTERNAL_API_SECRET": "local-development-internal-api-secret",
         "DATABASE_URL": "postgres://postgres:postgres@localhost:5433/karasu256",
-        "FIREBASE_ADMIN_PROJECT_ID": "demo-karasu256",
+        "GOOGLE_CLOUD_PROJECT_ID": "demo-karasu256",
         "FIREBASE_ADMIN_CLIENT_EMAIL": "firebase-adminsdk@demo-karasu256.iam.gserviceaccount.com",
         "FIREBASE_ADMIN_PRIVATE_KEY": "unused-with-emulator",
         "FIREBASE_AUTH_EMULATOR_HOST": "127.0.0.1:9099",

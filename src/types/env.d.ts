@@ -13,7 +13,7 @@ declare global {
     AUTH_SECRET: string;
     INTERNAL_API_SECRET: string;
     DATABASE_URL: string;
-    FIREBASE_ADMIN_PROJECT_ID: string;
+    GOOGLE_CLOUD_PROJECT_ID: string;
     FIREBASE_ADMIN_CLIENT_EMAIL: string;
     FIREBASE_ADMIN_PRIVATE_KEY: string;
     FIREBASE_AUTH_EMULATOR_HOST?: string;
