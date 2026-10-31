@@ -191,7 +191,6 @@ function createAuthOptions(env: Env, db: Db) {
             disableImplicitSignUp: false,
           },
         },
-    disabledPaths: ['/token'],
   } satisfies BetterAuthOptions;
 }
 
