@@ -7,6 +7,8 @@ declare global {
     AUTH_UI_URL: string;
     SSO_UI_URL: string;
     ACCOUNTS_URL: string;
+    /** Base URL of api.karasu256.com, which owns the permission registry; defaulted by src/constants.ts per APP_ENV. */
+    API_URL: string;
     /** Defaulted by src/constants.ts in production and preview; intentionally unset locally, where cross-subdomain cookies stay off. */
     BASE_DOMAIN?: string;
     BETTER_AUTH_SECRET: string;

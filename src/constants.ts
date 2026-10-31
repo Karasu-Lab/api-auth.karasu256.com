@@ -13,6 +13,7 @@ const PRODUCTION_DEFAULTS = {
   AUTH_UI_URL: 'https://auth.karasu256.com',
   SSO_UI_URL: 'https://sso.karasu256.com',
   ACCOUNTS_URL: 'https://accounts.karasu256.com',
+  API_URL: 'https://api.karasu256.com',
   BASE_DOMAIN: 'karasu256.com',
 };
 
@@ -21,6 +22,7 @@ const PREVIEW_DEFAULTS = {
   AUTH_UI_URL: 'https://dev-auth.karasu256.com',
   SSO_UI_URL: 'https://dev-sso.karasu256.com',
   ACCOUNTS_URL: 'https://dev.accounts.karasu256.com',
+  API_URL: 'https://dev-api.karasu256.com',
   BASE_DOMAIN: 'karasu256.com',
 };
 
@@ -29,6 +31,7 @@ const LOCAL_DEFAULTS = {
   AUTH_UI_URL: 'http://localhost:3004',
   SSO_UI_URL: 'http://localhost:3007',
   ACCOUNTS_URL: 'http://localhost:3001',
+  API_URL: 'http://localhost:8789',
   // No BASE_DOMAIN locally: the local wrangler environment never defined
   // one, and setting it would turn on cross-subdomain cookies, whose
   // Domain attribute a localhost caller cannot send back.
@@ -39,6 +42,7 @@ type DomainDefaults = {
   AUTH_UI_URL: string;
   SSO_UI_URL: string;
   ACCOUNTS_URL: string;
+  API_URL: string;
   BASE_DOMAIN?: string;
 };
 
@@ -48,6 +52,7 @@ function domainEnvSchema(defaults: DomainDefaults) {
     AUTH_UI_URL: z.url().default(defaults.AUTH_UI_URL),
     SSO_UI_URL: z.url().default(defaults.SSO_UI_URL),
     ACCOUNTS_URL: z.url().default(defaults.ACCOUNTS_URL),
+    API_URL: z.url().default(defaults.API_URL),
     BASE_DOMAIN: defaults.BASE_DOMAIN ? z.string().default(defaults.BASE_DOMAIN) : z.string().optional(),
   });
 }

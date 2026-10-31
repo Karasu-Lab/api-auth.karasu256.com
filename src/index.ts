@@ -5,7 +5,7 @@ import { resolveEnv } from './constants';
 import { handlePreflight, withCors } from './lib/cors';
 import { withAuth } from './lib/request-auth';
 import { rejectInvalidSignature } from './lib/signature-gate';
-import { handleIssueApiKey, handleVerifyApiKey } from './routes/api-keys';
+import { handleCreateApiKey, handleDeleteApiKey, handleIssueApiKey, handleListApiKeys, handleListPermissions, handleVerifyApiKey } from './routes/api-keys';
 import { handleProviderDetails } from './routes/providers';
 import { handleSetPassword } from './routes/set-password';
 import { handleSignInLookup } from './routes/sign-in-lookup';
@@ -44,6 +44,11 @@ async function dispatch(request: Request): Promise<Response> {
     return withAuth(env, (auth) => auth.handler(request));
   }
   if (pathname === '/api/api-keys/verify' && request.method === 'POST') return handleVerifyApiKey(env, request);
+  if (pathname === '/api/api-keys' && request.method === 'GET') return handleListApiKeys(env, request);
+  if (pathname === '/api/api-keys' && request.method === 'POST') return handleCreateApiKey(env, request);
+  if (pathname.startsWith('/api/api-keys/') && request.method === 'DELETE')
+    return handleDeleteApiKey(env, request, decodeURIComponent(pathname.slice('/api/api-keys/'.length)));
+  if (pathname === '/api/permissions' && request.method === 'GET') return handleListPermissions(env, request);
   if (pathname === '/api/internal/api-keys' && request.method === 'POST') return handleIssueApiKey(env, request);
   if (pathname === '/api/sign-in/lookup' && request.method === 'GET') return handleSignInLookup(env, request);
   if (pathname === '/api/test/accounts' && request.method === 'POST') return handleCreateTestAccount(env, request);
