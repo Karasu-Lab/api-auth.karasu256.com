@@ -77,16 +77,49 @@ export async function getProviderProfile(
   }
 
   let info = await provider.getUserInfo({ accessToken, refreshToken, idToken }).catch(() => null);
+  let currentAccessToken = accessToken;
 
   if (!info && refreshToken && provider.refreshAccessToken) {
     const refreshed = await provider.refreshAccessToken(refreshToken).catch(() => null);
     if (refreshed?.accessToken) {
+      currentAccessToken = refreshed.accessToken;
       info = await provider.getUserInfo({ ...refreshed }).catch(() => null);
     }
   }
 
   if (!info) return null;
-  return { name: info.user.name ?? null, email: info.user.email ?? null, avatarUrl: info.user.image ?? null };
+  let avatarUrl = info.user.image ?? null;
+
+  if (providerId === 'microsoft' && !avatarUrl && currentAccessToken) {
+    avatarUrl = await getMicrosoftPhotoDataUrl(currentAccessToken);
+  }
+
+  return { name: info.user.name ?? null, email: info.user.email ?? null, avatarUrl };
+}
+
+/**
+ * Reads the Microsoft profile photo from Microsoft Graph as a data
+ * URL. The Microsoft provider itself runs with
+ * `disableProfilePhoto: true` (see `lib/auth.ts`): better-auth would
+ * embed this same data URL into the user info it applies to the user
+ * record on sign-in and link, where it overflows the `users.image`
+ * column. Fetching it here keeps the photo available to provider
+ * profile consumers without it ever reaching a user update.
+ *
+ * @returns `null` when the account has no photo or it cannot be read.
+ */
+async function getMicrosoftPhotoDataUrl(accessToken: string): Promise<string | null> {
+  const res = await fetch('https://graph.microsoft.com/v1.0/me/photos/48x48/$value', {
+    headers: { authorization: `Bearer ${accessToken}` },
+  }).catch(() => null);
+  if (!res?.ok) return null;
+  const bytes = new Uint8Array(await res.arrayBuffer().catch(() => new ArrayBuffer(0)));
+  if (bytes.length === 0) return null;
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
+  }
+  return `data:image/jpeg;base64, ${btoa(binary)}`;
 }
 
 /**

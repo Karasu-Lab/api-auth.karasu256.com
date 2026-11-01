@@ -81,6 +81,12 @@ export async function authorizeXsts(xboxLiveToken: string, relyingParty: string)
  * `XboxLive.signin`, the only form Xbox Live accepts. The client secret
  * is included because the app registration is a confidential (web)
  * client; the exchange runs entirely on this worker.
+ *
+ * The exchange only succeeds when the user consented to
+ * `XboxLive.signin` when the Microsoft account was linked — the
+ * provider requests that scope at sign-in / link time (see
+ * `lib/auth.ts`) — because the token endpoint refuses to issue tokens
+ * for scopes the stored refresh token was never granted.
  */
 export async function exchangeMicrosoftRefreshToken(
   refreshToken: string,
