@@ -1,6 +1,6 @@
 # api-auth.karasu256.com
 
-The single Better Auth instance for Karasu Lab — email/password, Google and GitHub sign-in, passkeys, API keys, OAuth 2.1 / OIDC provider, and SAML SSO — running as a Cloudflare Worker. Split out of [Karasu-Lab/Karasu-Lab](https://github.com/Karasu-Lab/Karasu-Lab).
+The single Better Auth instance for Karasu Lab — email/password, Google, GitHub and Microsoft sign-in, passkeys, API keys, OAuth 2.1 / OIDC provider, and SAML SSO — running as a Cloudflare Worker. The Microsoft link also backs the derived Xbox Live and Minecraft provider profiles (see `src/lib/xbox-live.ts`). Split out of [Karasu-Lab/Karasu-Lab](https://github.com/Karasu-Lab/Karasu-Lab).
 
 ## Required environment variables
 
@@ -27,6 +27,7 @@ These are synced to the worker on every deploy; previews resolve the same names 
 | `RESEND_API_KEY` | Resend API key used to send password reset email |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `GH_CLIENT_SECRET` | GitHub OAuth client secret, passed to the worker as `GITHUB_CLIENT_SECRET` |
+| `MICROSOFT_CLIENT_SECRET` | Microsoft OAuth client secret |
 
 ### Worker variables
 
@@ -40,5 +41,6 @@ Non-secret identifiers, synced to the worker alongside the secrets.
 | `NEON_AUTH_BASE_URL` | Base URL of the Neon Auth instance used for shadow-account sync |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GH_CLIENT_ID` | GitHub OAuth client ID, passed to the worker as `GITHUB_CLIENT_ID` (GitHub reserves the `GITHUB_` prefix, so the Actions entry uses the `GH_` name) |
+| `MICROSOFT_CLIENT_ID` | Microsoft OAuth client ID (an Entra app registration limited to personal Microsoft accounts, so the provider uses the `consumers` tenant) |
 
 If one of these entries is unset everywhere, the sync falls back to the default in the worker's `wrangler.jsonc` local environment, and skips the entry when it is defined in neither place.

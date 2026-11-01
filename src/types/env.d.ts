@@ -28,6 +28,9 @@ declare global {
     GOOGLE_CLIENT_SECRET?: string;
     GITHUB_CLIENT_ID?: string;
     GITHUB_CLIENT_SECRET?: string;
+    /** Microsoft Entra app registration used for Microsoft sign-in and, through its stored refresh token, the Xbox Live / Minecraft chain. The ID is a plain variable; the secret is a worker secret. */
+    MICROSOFT_CLIENT_ID?: string;
+    MICROSOFT_CLIENT_SECRET?: string;
     E2E_MOCK_OAUTH_URL?: string;
     /** Turnstile widget secret for bot verification of the credential endpoints; verification stays off while unset. */
     CLOUDFLARE_TURNSTILE_SECRET?: string;

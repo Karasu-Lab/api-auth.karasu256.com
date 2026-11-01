@@ -99,7 +99,7 @@ function createAuthOptions(env: Env, db: Db) {
       encryptOAuthTokens: true,
       accountLinking: {
         enabled: true,
-        trustedProviders: ['google', 'github'],
+        trustedProviders: ['google', 'github', 'microsoft'],
         allowDifferentEmails: true,
         updateUserInfoOnLink: true,
       },
@@ -214,6 +214,23 @@ function createAuthOptions(env: Env, db: Db) {
           github: {
             clientId: env.GITHUB_CLIENT_ID as string,
             clientSecret: env.GITHUB_CLIENT_SECRET as string,
+            disableImplicitSignUp: false,
+          },
+          microsoft: {
+            clientId: env.MICROSOFT_CLIENT_ID as string,
+            clientSecret: env.MICROSOFT_CLIENT_SECRET as string,
+            // The app registration is limited to personal Microsoft
+            // accounts (the accounts that hold Xbox Live / Minecraft
+            // licenses), so the authority must be the consumers tenant:
+            // the default `common` tenant is rejected for this client.
+            tenantId: 'consumers',
+            // No scope override: better-auth's defaults already include
+            // `offline_access`, so a refresh token is stored. The Xbox
+            // Live / Minecraft profiles are derived later by exchanging
+            // that refresh token for an XboxLive.signin-scoped token
+            // (see `lib/xbox-live.ts`), never from the sign-in access
+            // token, whose audience is Microsoft Graph.
+            prompt: 'select_account',
             disableImplicitSignUp: false,
           },
         },
