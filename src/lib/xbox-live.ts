@@ -2,7 +2,8 @@ const MICROSOFT_TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/
 const XBOX_LIVE_AUTH_URL = 'https://user.auth.xboxlive.com/user/authenticate';
 const XSTS_AUTH_URL = 'https://xsts.auth.xboxlive.com/xsts/authorize';
 const XBOX_PROFILE_URL = 'https://profile.xboxlive.com/users/xuid';
-export const XBOX_RELYING_PARTY = 'http://auth.xboxlive.com';
+const XBOX_AUTH_RELYING_PARTY = 'http://auth.xboxlive.com';
+export const XBOX_RELYING_PARTY = 'http://xboxlive.com';
 export const MINECRAFT_RELYING_PARTY = 'rp://api.minecraftservices.com/';
 
 export interface XboxToken {
@@ -78,7 +79,7 @@ export async function authenticateXboxLive(microsoftAccessToken: string): Promis
     XBOX_LIVE_AUTH_URL,
     {
       Properties: { AuthMethod: 'RPS', SiteName: 'user.auth.xboxlive.com', RpsTicket: `d=${microsoftAccessToken}` },
-      RelyingParty: XBOX_RELYING_PARTY,
+      RelyingParty: XBOX_AUTH_RELYING_PARTY,
       TokenType: 'JWT',
     },
     'Xbox Live authentication'
