@@ -33,6 +33,7 @@ interface StoredAccount {
   accessToken?: string | null;
   refreshToken?: string | null;
   idToken?: string | null;
+  accessTokenExpiresAt?: Date | string | null;
 }
 
 /**
@@ -52,10 +53,16 @@ async function decryptStoredTokens(ctx: AuthContext, account: StoredAccount): Pr
       accessToken: account.accessToken ? await decryptOAuthToken(account.accessToken, ctx) : undefined,
       refreshToken: account.refreshToken ? await decryptOAuthToken(account.refreshToken, ctx) : undefined,
       idToken: account.idToken ? await decryptOAuthToken(account.idToken, ctx) : undefined,
+      accessTokenExpiresAt: account.accessTokenExpiresAt ? new Date(account.accessTokenExpiresAt) : undefined,
     };
   } catch {
     return null;
   }
+}
+
+function hasLiveAccessToken(tokens: OAuth2Tokens): boolean {
+  if (!tokens.accessToken || !tokens.accessTokenExpiresAt) return false;
+  return tokens.accessTokenExpiresAt.getTime() > Date.now() + 30_000;
 }
 
 async function persistRefreshedTokens(ctx: AuthContext, accountId: string, refreshed: OAuth2Tokens): Promise<void> {
@@ -74,32 +81,91 @@ async function persistRefreshedTokens(ctx: AuthContext, accountId: string, refre
 }
 
 /**
- * The flow every provider's profile sync shares: when a refresh token
- * is stored, exchange it for fresh tokens first and sync them back to
- * the account (providers may rotate refresh tokens, so the fresh set
- * must replace the stored one), then fetch the profile with the
- * freshest token set available. A failed refresh falls back to the
- * stored tokens.
+ * The flow every provider's profile sync shares: a stored access token
+ * that is still live is used as is; once it has expired (access tokens
+ * are short-lived), the stored refresh token is exchanged for fresh
+ * tokens and synced back to the account first (providers may rotate
+ * refresh tokens, so the fresh set must replace the stored one), and
+ * the profile is fetched with the freshest token set available.
+ *
+ * Two derived providers (xbox, minecraft) share one account row, so
+ * parallel syncs refresh the same rotating refresh token: the sync
+ * that loses that race fails its refresh and falls back to the expired
+ * stored token. When a fetch fails, the account is therefore re-read
+ * and the fetch retried with the tokens the winning sync stored.
  */
 async function syncProviderProfile(
   ctx: AuthContext,
   accountId: string,
   stored: OAuth2Tokens,
-  sync: ProviderProfileSync
+  sync: ProviderProfileSync,
+  reloadStored?: () => Promise<OAuth2Tokens | null>
 ): Promise<ProviderProfile | null> {
+  const refresh = async (base: OAuth2Tokens): Promise<OAuth2Tokens | null> => {
+    if (!base.refreshToken) return null;
+    const refreshed = await sync.refreshTokens(base.refreshToken).catch(() => null);
+    if (!refreshed?.accessToken) return null;
+    await persistRefreshedTokens(ctx, accountId, refreshed);
+    return {
+      accessToken: refreshed.accessToken,
+      refreshToken: refreshed.refreshToken ?? base.refreshToken,
+      idToken: refreshed.idToken ?? base.idToken,
+      accessTokenExpiresAt: refreshed.accessTokenExpiresAt,
+    };
+  };
+  const attempt = async (
+    tokens: OAuth2Tokens
+  ): Promise<{ profile: ProviderProfile | null; error: unknown }> => {
+    try {
+      return { profile: await sync.fetchProfile(tokens), error: null };
+    } catch (error) {
+      return { profile: null, error };
+    }
+  };
+
   let tokens = stored;
-  if (stored.refreshToken) {
-    const refreshed = await sync.refreshTokens(stored.refreshToken).catch(() => null);
-    if (refreshed?.accessToken) {
-      tokens = {
-        accessToken: refreshed.accessToken,
-        refreshToken: refreshed.refreshToken ?? stored.refreshToken,
-        idToken: refreshed.idToken ?? stored.idToken,
-      };
-      await persistRefreshedTokens(ctx, accountId, refreshed);
+  let refreshed = false;
+  const startedLive = hasLiveAccessToken(stored);
+  if (!startedLive) {
+    const fresh = await refresh(stored);
+    if (fresh) {
+      tokens = fresh;
+      refreshed = true;
     }
   }
-  return sync.fetchProfile(tokens);
+
+  let result = await attempt(tokens);
+
+  if (!result.profile && !refreshed && startedLive) {
+    const fresh = await refresh(tokens);
+    if (fresh) {
+      result = await attempt(fresh);
+      refreshed = true;
+    }
+  }
+
+  if (!result.profile && !refreshed && reloadStored) {
+    // The winning sync may not have stored its fresh tokens yet when
+    // this sync first re-reads the account, so re-read a few times.
+    let reloaded: OAuth2Tokens | null = null;
+    for (let i = 0; i < 3; i++) {
+      reloaded = await reloadStored().catch(() => null);
+      if (reloaded && (reloaded.accessToken !== stored.accessToken || reloaded.refreshToken !== stored.refreshToken)) break;
+      reloaded = null;
+      if (i < 2) await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    if (reloaded) {
+      let retryTokens = reloaded;
+      if (!hasLiveAccessToken(reloaded)) {
+        retryTokens = (await refresh(reloaded)) ?? reloaded;
+      }
+      const retry = await attempt(retryTokens);
+      if (retry.profile || !result.error) result = retry;
+    }
+  }
+
+  if (result.error) throw result.error;
+  return result.profile;
 }
 
 function socialProfileSync(provider: SocialProvider): ProviderProfileSync {
@@ -220,7 +286,10 @@ export async function getProviderProfile(
   if (!stored) return null;
 
   const createSync = SOCIAL_PROFILE_SYNC_FACTORIES[providerId] ?? socialProfileSync;
-  return syncProviderProfile(ctx, account.id, stored, createSync(provider));
+  return syncProviderProfile(ctx, account.id, stored, createSync(provider), async () => {
+    const again = (await ctx.internalAdapter.findAccounts(uid)).find((entry) => entry.id === account.id);
+    return again ? decryptStoredTokens(ctx, again) : null;
+  });
 }
 
 async function getMicrosoftPhotoDataUrl(accessToken: string): Promise<string | null> {
@@ -255,7 +324,10 @@ async function getDerivedProviderProfile(
   // linked; a profile that cannot be resolved (for example an account
   // that owns no Minecraft) yields an empty profile, not null.
   try {
-    const profile = await syncProviderProfile(ctx, account.id, stored, sync);
+    const profile = await syncProviderProfile(ctx, account.id, stored, sync, async () => {
+      const again = (await ctx.internalAdapter.findAccounts(uid)).find((entry) => entry.id === account.id);
+      return again ? decryptStoredTokens(ctx, again) : null;
+    });
     if (profile) return profile;
   } catch (error) {
     console.error(`Failed to resolve the ${providerId} profile:`, error instanceof Error ? error.message : error);
