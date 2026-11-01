@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 # Deployment itself lives in Karasu-Lab/WorkersDeploy: it deploys this
-# app standalone from this repository, detects the Elysia project,
+# app standalone from this repository, detects the ElysiaJS project,
 # builds it with Vite, and deploys it to Cloudflare Workers.
 
 jobs:
