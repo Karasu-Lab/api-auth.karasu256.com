@@ -10,6 +10,7 @@ import type { Db } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
 import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
 import { getAuthConfig } from '../config';
+import { assertNoDeviceSessionConflict } from './device-session-conflict';
 import { deleteFirebaseUser, updateFirebaseUser } from './firebase';
 import { ensureFirebaseLink, getLinkedFirebaseUid } from './firebase-link';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
@@ -182,6 +183,17 @@ function createAuthOptions(env: Env, db: Db) {
       },
       session: {
         create: {
+          before: async (session, context) => {
+            if (!context) return;
+            await assertNoDeviceSessionConflict(
+              {
+                cookieHeader: context.headers?.get('cookie') ?? null,
+                getSignedCookie: (name) => context.getSignedCookie(name, context.context.secret),
+                findSessions: (tokens) => context.context.internalAdapter.findSessions(tokens, { onlyActiveSessions: true }),
+              },
+              session.userId,
+            );
+          },
           after: (session) => ensureFirebaseLink(env, db, session.userId),
         },
       },
