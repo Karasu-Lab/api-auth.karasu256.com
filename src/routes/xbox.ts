@@ -27,26 +27,44 @@ export async function handleXboxLink(env: Env, request: Request): Promise<Respon
 
 export async function handleXboxCallback(env: Env, request: Request): Promise<Response> {
   const url = new URL(request.url);
+  const destination = new URL(linkingUrl(env));
+  const fail = (error: string, errorDescription?: string | null) => {
+    destination.searchParams.set('error', error);
+    if (errorDescription) destination.searchParams.set('error_description', errorDescription);
+    return Response.redirect(destination.toString(), 302);
+  };
+
+  const authorizeError = url.searchParams.get('error');
+  if (authorizeError) return fail(authorizeError, url.searchParams.get('error_description'));
+
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
+  if (!code || !state) return fail('xbox_link_missing_code', 'Microsoft did not return an authorization code.');
+  if (!env.MICROSOFT_CLIENT_ID || !env.MICROSOFT_CLIENT_SECRET) {
+    return fail('xbox_link_not_configured', 'The Microsoft client credentials are not configured on the server.');
+  }
 
-  const succeeded =
-    code && state && env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET
-      ? await withAuth(env, async (auth: Auth) => {
-          const stateUserId = await verifyXboxLinkState(env.BETTER_AUTH_SECRET, state);
-          if (!stateUserId) return false;
-          const session = await auth.api.getSession({ headers: request.headers });
-          if (!session || session.user.id !== stateUserId) return false;
+  const result = await withAuth(env, async (auth: Auth) => {
+    const stateUserId = await verifyXboxLinkState(env.BETTER_AUTH_SECRET, state);
+    if (!stateUserId) return { error: 'xbox_link_state_invalid', errorDescription: 'The link state was invalid or expired.' };
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session || session.user.id !== stateUserId) {
+      return { error: 'xbox_link_session_mismatch', errorDescription: 'The session does not match the user who started the Xbox link.' };
+    }
 
-          const tokens = await exchangeXboxLinkCode(code, callbackUrl(env), env.MICROSOFT_CLIENT_ID!, env.MICROSOFT_CLIENT_SECRET!);
-          if (!tokens) return false;
+    const exchange = await exchangeXboxLinkCode(code, callbackUrl(env), env.MICROSOFT_CLIENT_ID!, env.MICROSOFT_CLIENT_SECRET!);
+    if (!exchange.tokens) return { error: exchange.error ?? 'xbox_token_exchange_failed', errorDescription: exchange.errorDescription };
 
-          const ctx = (await auth.$context) as unknown as AuthContext;
-          return storeXboxLink(ctx, session.user.id, tokens);
-        }).catch(() => false)
-      : false;
+    const ctx = (await auth.$context) as unknown as AuthContext;
+    const stored = await storeXboxLink(ctx, session.user.id, exchange.tokens);
+    if (!stored) return { error: 'xbox_live_rejected', errorDescription: 'Xbox Live rejected the token issued for this Microsoft account.' };
+    return { error: null, errorDescription: null };
+  }).catch((error: unknown) => ({
+    error: 'xbox_link_failed',
+    errorDescription: error instanceof Error ? error.message : String(error),
+  }));
 
-  const destination = new URL(linkingUrl(env));
-  if (!succeeded) destination.searchParams.set('error', 'xbox_link_failed');
+  if (result.error) return fail(result.error, result.errorDescription);
+  destination.searchParams.set('linked', 'Xbox');
   return Response.redirect(destination.toString(), 302);
 }
