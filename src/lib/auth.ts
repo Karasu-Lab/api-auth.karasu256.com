@@ -224,28 +224,13 @@ function createAuthOptions(env: Env, db: Db) {
             // licenses), so the authority must be the consumers tenant:
             // the default `common` tenant is rejected for this client.
             tenantId: 'consumers',
-            // `XboxLive.signin` is added to better-auth's default
-            // scopes so the consent granted at sign-in / link time
-            // covers Xbox Live: without it, the stored refresh token
-            // cannot be exchanged for an Xbox-scoped token afterwards
-            // (the token endpoint refuses scopes that were never
-            // consented), and the derived Xbox / Minecraft profiles
-            // never resolve. The exchange itself happens later, from
-            // the refresh token (see `lib/xbox-live.ts`), never from
-            // the sign-in access token, whose audience is Microsoft
-            // Graph. Accounts linked before this scope was added grant
-            // it by linking Microsoft once more.
-            scope: ['XboxLive.signin'],
-            // better-auth's Microsoft provider otherwise embeds the
-            // Graph profile photo into the user info as a base64 data
-            // URL, and applying that on link overflows the
-            // `users.image` column (varchar(2048)), which fails the
-            // update-user-info-on-link write. The stored account icon
-            // is never seeded from a provider picture anyway (see the
-            // user create/update hooks), so the provider's photo fetch
-            // is off; `lib/provider-profile.ts` reads the photo itself
-            // when a profile is displayed, where the data URL never
-            // reaches a user update.
+            // No `XboxLive.signin` scope here: a code issued for two
+            // resources cannot be redeemed without a scope parameter,
+            // which better-auth does not send (AADSTS70011). Xbox
+            // consent uses the dedicated flow in `routes/xbox.ts`.
+            // The profile photo is not fetched either: better-auth
+            // would embed it as a data URL that overflows
+            // `users.image` (varchar(2048)) on link.
             disableProfilePhoto: true,
             prompt: 'select_account',
             disableImplicitSignUp: false,
