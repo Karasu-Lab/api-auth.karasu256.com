@@ -128,15 +128,19 @@ async function getDerivedProviderProfile(
     clientSecret: options?.microsoftClientSecret,
   };
 
-  if (providerId === 'xbox') {
-    const xsts = await getXstsToken(XBOX_RELYING_PARTY, candidates);
-    if (!xsts) return null;
-    const profile = await getXboxProfile(xsts);
-    if (!profile) return null;
-    return { name: profile.gamertag, email: null, avatarUrl: profile.avatarUrl };
-  }
+  try {
+    if (providerId === 'xbox') {
+      const xsts = await getXstsToken(XBOX_RELYING_PARTY, candidates);
+      const profile = await getXboxProfile(xsts);
+      if (!profile) return null;
+      return { name: profile.gamertag, email: null, avatarUrl: profile.avatarUrl };
+    }
 
-  const profile = await getMinecraftProfileFromMicrosoftTokens(candidates);
-  if (!profile) return null;
-  return { name: profile.name, email: null, avatarUrl: profile.skinTextureUrl };
+    const profile = await getMinecraftProfileFromMicrosoftTokens(candidates);
+    if (!profile) return null;
+    return { name: profile.name, email: null, avatarUrl: profile.skinTextureUrl };
+  } catch (error) {
+    console.error(`Failed to resolve the ${providerId} profile:`, error instanceof Error ? error.message : error);
+    return null;
+  }
 }

@@ -44,18 +44,21 @@ export async function getMinecraftProfile(minecraftAccessToken: string): Promise
   return { id: body.id, name: body.name, skinTextureUrl: activeSkin?.url ?? null };
 }
 
-export async function getMinecraftProfileFromMicrosoftTokens(
-  candidates: MicrosoftTokenCandidates
-): Promise<MinecraftProfile | null> {
+// Throws the last chain failure when no token candidate completes it.
+export async function getMinecraftProfileFromMicrosoftTokens(candidates: MicrosoftTokenCandidates): Promise<MinecraftProfile | null> {
+  let lastError: unknown = null;
   for (const microsoftToken of await microsoftTokenAttempts(candidates)) {
-    const xboxLive = await authenticateXboxLive(microsoftToken);
-    if (!xboxLive) continue;
-    const xsts = await authorizeXsts(xboxLive.token, MINECRAFT_RELYING_PARTY);
-    if (!xsts) continue;
-    const minecraftToken = await loginToMinecraft(xsts);
-    if (!minecraftToken) continue;
-    const profile = await getMinecraftProfile(minecraftToken);
-    if (profile) return profile;
+    try {
+      const xboxLive = await authenticateXboxLive(microsoftToken);
+      const xsts = await authorizeXsts(xboxLive.token, MINECRAFT_RELYING_PARTY);
+      const minecraftToken = await loginToMinecraft(xsts);
+      if (!minecraftToken) continue;
+      const profile = await getMinecraftProfile(minecraftToken);
+      if (profile) return profile;
+    } catch (error) {
+      lastError = error;
+    }
   }
+  if (lastError) throw lastError;
   return null;
 }
