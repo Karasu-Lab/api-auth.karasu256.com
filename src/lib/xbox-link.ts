@@ -66,12 +66,18 @@ export interface XboxLinkTokens {
   accessTokenExpiresAt: Date | null;
 }
 
+export interface XboxLinkExchange {
+  tokens: XboxLinkTokens | null;
+  error: string | null;
+  errorDescription: string | null;
+}
+
 export async function exchangeXboxLinkCode(
   code: string,
   redirectUri: string,
   clientId: string,
   clientSecret: string
-): Promise<XboxLinkTokens | null> {
+): Promise<XboxLinkExchange> {
   const res = await fetch(MICROSOFT_TOKEN_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -86,17 +92,28 @@ export async function exchangeXboxLinkCode(
       scope: XBOX_SCOPE,
     }),
   }).catch(() => null);
-  if (!res?.ok) return null;
-  const body = (await res.json().catch(() => null)) as {
+  const body = (await res?.json().catch(() => null)) as {
     access_token?: string;
     refresh_token?: string;
     expires_in?: number;
+    error?: string;
+    error_description?: string;
   } | null;
-  if (!body?.access_token) return null;
+  if (!res?.ok || !body?.access_token) {
+    return {
+      tokens: null,
+      error: body?.error ?? 'xbox_token_exchange_failed',
+      errorDescription: body?.error_description ?? `Microsoft's token endpoint answered ${res?.status ?? 'no response'}.`,
+    };
+  }
   return {
-    accessToken: body.access_token,
-    refreshToken: body.refresh_token ?? null,
-    accessTokenExpiresAt: body.expires_in ? new Date(Date.now() + body.expires_in * 1000) : null,
+    tokens: {
+      accessToken: body.access_token,
+      refreshToken: body.refresh_token ?? null,
+      accessTokenExpiresAt: body.expires_in ? new Date(Date.now() + body.expires_in * 1000) : null,
+    },
+    error: null,
+    errorDescription: null,
   };
 }
 
