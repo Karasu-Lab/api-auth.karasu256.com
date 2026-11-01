@@ -37,7 +37,10 @@ export const DERIVED_PROVIDER_IDS = ['xbox', 'minecraft'] as const;
  * some plaintext tokens, e.g. legacy 40-char hex GitHub tokens, as
  * ciphertext), which is treated like any other unresolvable profile.
  *
- * @returns `null` when the provider isn't linked or its profile can't be resolved.
+ * @returns `null` when the provider isn't linked or its profile can't be
+ * resolved. A derived provider (xbox, minecraft) is linked exactly when its
+ * Xbox account row exists, so an unresolvable profile there returns an
+ * empty profile instead of `null`.
  */
 export async function getProviderProfile(
   auth: Auth,
@@ -128,19 +131,20 @@ async function getDerivedProviderProfile(
     clientSecret: options?.microsoftClientSecret,
   };
 
+  // The Xbox account row exists at this point, so the provider is
+  // linked; a profile that cannot be resolved (for example an account
+  // that owns no Minecraft) yields an empty profile, not null.
   try {
     if (providerId === 'xbox') {
       const xsts = await getXstsToken(XBOX_RELYING_PARTY, candidates);
       const profile = await getXboxProfile(xsts);
-      if (!profile) return null;
-      return { name: profile.gamertag, email: null, avatarUrl: profile.avatarUrl };
+      if (profile) return { name: profile.gamertag, email: null, avatarUrl: profile.avatarUrl };
+    } else {
+      const profile = await getMinecraftProfileFromMicrosoftTokens(candidates);
+      if (profile) return { name: profile.name, email: null, avatarUrl: profile.skinTextureUrl };
     }
-
-    const profile = await getMinecraftProfileFromMicrosoftTokens(candidates);
-    if (!profile) return null;
-    return { name: profile.name, email: null, avatarUrl: profile.skinTextureUrl };
   } catch (error) {
     console.error(`Failed to resolve the ${providerId} profile:`, error instanceof Error ? error.message : error);
-    return null;
   }
+  return { name: null, email: null, avatarUrl: null };
 }
