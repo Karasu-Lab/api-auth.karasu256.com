@@ -7,34 +7,17 @@ import {
   type XboxToken,
 } from './xbox-live';
 
-/**
- * Minecraft Services on top of the Xbox Live chain (see
- * `lib/xbox-live.ts`): an XSTS token for the Minecraft relying party is
- * exchanged for a Minecraft access token, which reads the player's
- * Minecraft profile. A Microsoft account that does not own Minecraft
- * gets no profile here, which is exactly how the provider profile API
- * distinguishes a linked Minecraft account from an unlinked one.
- */
-
 const MINECRAFT_LOGIN_URL = 'https://api.minecraftservices.com/authentication/login_with_xbox';
 const MINECRAFT_PROFILE_URL = 'https://api.minecraftservices.com/minecraft/profile';
 
 export interface MinecraftProfile {
-  /** The player's Minecraft UUID, without dashes, as Minecraft Services reports it. */
   id: string;
-  /** The player's in-game name. */
   name: string;
-  /**
-   * The active skin's texture URL on Mojang's texture host, when the
-   * profile has one. This is a public URL, but the image behind it is
-   * the raw UV-mapped skin texture, not a ready-made avatar: clients
-   * that display it as an avatar must crop and composite the head
-   * region themselves (client-side conversion).
-   */
+  // Mojang's raw UV-mapped skin texture URL; clients convert it into
+  // an avatar themselves.
   skinTextureUrl: string | null;
 }
 
-/** Exchanges an XSTS token for the Minecraft relying party for a Minecraft access token. */
 export async function loginToMinecraft(xsts: XboxToken): Promise<string | null> {
   const res = await fetch(MINECRAFT_LOGIN_URL, {
     method: 'POST',
@@ -46,7 +29,6 @@ export async function loginToMinecraft(xsts: XboxToken): Promise<string | null> 
   return body?.access_token ?? null;
 }
 
-/** Reads the Minecraft profile for a Minecraft access token. */
 export async function getMinecraftProfile(minecraftAccessToken: string): Promise<MinecraftProfile | null> {
   const res = await fetch(MINECRAFT_PROFILE_URL, {
     headers: { authorization: `Bearer ${minecraftAccessToken}`, accept: 'application/json' },
@@ -62,12 +44,6 @@ export async function getMinecraftProfile(minecraftAccessToken: string): Promise
   return { id: body.id, name: body.name, skinTextureUrl: activeSkin?.url ?? null };
 }
 
-/**
- * Runs the whole chain from a linked Microsoft account's stored tokens
- * to the Minecraft profile, trying each Microsoft token candidate in
- * the shared order (see `microsoftTokenAttempts`); the Minecraft login
- * needs the intermediate XSTS token, so the chain is spelled out here.
- */
 export async function getMinecraftProfileFromMicrosoftTokens(
   candidates: MicrosoftTokenCandidates
 ): Promise<MinecraftProfile | null> {

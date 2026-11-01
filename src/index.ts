@@ -7,6 +7,7 @@ import { withAuth } from './lib/request-auth';
 import { rejectInvalidSignature } from './lib/signature-gate';
 import { handleCreateApiKey, handleDeleteApiKey, handleIssueApiKey, handleListApiKeys, handleListPermissions, handleVerifyApiKey } from './routes/api-keys';
 import { handleProviderDetails } from './routes/providers';
+import { handleXboxCallback, handleXboxLink } from './routes/xbox';
 import { handleSetPassword } from './routes/set-password';
 import { handleSignInLookup } from './routes/sign-in-lookup';
 import { rejectUnverifiedTurnstile } from './lib/turnstile';
@@ -15,10 +16,10 @@ import { handleCreateTestAccount, handleDeleteTestAccount } from './routes/test-
 const env = resolveEnv(cfEnv as Env);
 
 /** Workers do not allow generating code at runtime. */
-const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typebox' }).get(
-  '/api/users/me/providers/:providerId/details',
-  ({ request, params }) => handleProviderDetails(env, request, params.providerId)
-);
+const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typebox' })
+  .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
+  .get('/api/xbox/link', ({ request }) => handleXboxLink(env, request))
+  .get('/api/xbox/callback', ({ request }) => handleXboxCallback(env, request));
 
 /** Collapses repeated slashes so a caller's base URL with a trailing slash still reaches the route. */
 function normalizePath(request: Request): Request {

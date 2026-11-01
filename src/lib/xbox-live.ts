@@ -1,23 +1,3 @@
-/**
- * The Xbox Live authentication chain that a Microsoft access token feeds
- * into, plus the Minecraft login built on top of it.
- *
- * A linked Microsoft account is the only credential this chain starts
- * from, and its better-auth access token cannot be used directly: that
- * token's audience is Microsoft Graph, while Xbox Live only accepts a
- * token scoped `XboxLive.signin`. The stored refresh token (granted
- * because the Microsoft provider requests `offline_access`) is therefore
- * exchanged for an Xbox-scoped token first; the stored access token is
- * still tried first in case it already carries the scope.
- *
- * Chain: Microsoft token → Xbox Live user token
- * (`user.auth.xboxlive.com`) → XSTS token (`xsts.auth.xboxlive.com`,
- * issued per relying party) → the relying party's own API. The Xbox
- * profile uses the `http://auth.xboxlive.com` relying party; Minecraft
- * uses `rp://api.minecraftservices.com/` and one more exchange at
- * `api.minecraftservices.com/authentication/login_with_xbox`.
- */
-
 const MICROSOFT_TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
 const XBOX_LIVE_AUTH_URL = 'https://user.auth.xboxlive.com/user/authenticate';
 const XSTS_AUTH_URL = 'https://xsts.auth.xboxlive.com/xsts/authorize';
@@ -27,11 +7,8 @@ export const MINECRAFT_RELYING_PARTY = 'rp://api.minecraftservices.com/';
 
 export interface XboxToken {
   token: string;
-  /** The user hash (`uhs`) that accompanies the token in `XBL3.0` authorization headers and identity tokens. */
   userHash: string;
-  /** The Xbox user ID (XUID) from the token's display claims, when the relying party exposes it. */
   xuid: string | null;
-  /** The gamertag from the token's display claims, when the relying party exposes it. */
   gamertag: string | null;
 }
 
@@ -56,7 +33,6 @@ async function postJson<T>(url: string, body: unknown): Promise<T | null> {
   return (await res.json().catch(() => null)) as T | null;
 }
 
-/** Authenticates a Microsoft access token with Xbox Live, returning the Xbox Live user token. */
 export async function authenticateXboxLive(microsoftAccessToken: string): Promise<XboxToken | null> {
   const body = await postJson<XboxTokenResponse>(XBOX_LIVE_AUTH_URL, {
     Properties: { AuthMethod: 'RPS', SiteName: 'user.auth.xboxlive.com', RpsTicket: `d=${microsoftAccessToken}` },
@@ -66,7 +42,6 @@ export async function authenticateXboxLive(microsoftAccessToken: string): Promis
   return body ? toXboxToken(body) : null;
 }
 
-/** Upgrades an Xbox Live user token to an XSTS token for one relying party. */
 export async function authorizeXsts(xboxLiveToken: string, relyingParty: string): Promise<XboxToken | null> {
   const body = await postJson<XboxTokenResponse>(XSTS_AUTH_URL, {
     Properties: { SandboxId: 'RETAIL', UserTokens: [xboxLiveToken] },
@@ -76,18 +51,6 @@ export async function authorizeXsts(xboxLiveToken: string, relyingParty: string)
   return body ? toXboxToken(body) : null;
 }
 
-/**
- * Exchanges a stored Microsoft refresh token for an access token scoped
- * `XboxLive.signin`, the only form Xbox Live accepts. The client secret
- * is included because the app registration is a confidential (web)
- * client; the exchange runs entirely on this worker.
- *
- * The exchange only succeeds when the user consented to
- * `XboxLive.signin` when the Microsoft account was linked — the
- * provider requests that scope at sign-in / link time (see
- * `lib/auth.ts`) — because the token endpoint refuses to issue tokens
- * for scopes the stored refresh token was never granted.
- */
 export async function exchangeMicrosoftRefreshToken(
   refreshToken: string,
   clientId: string,
@@ -109,7 +72,6 @@ export async function exchangeMicrosoftRefreshToken(
   return body?.access_token ?? null;
 }
 
-/** The stored Microsoft tokens a chain attempt can start from. */
 export interface MicrosoftTokenCandidates {
   accessToken?: string;
   refreshToken?: string;
@@ -117,11 +79,6 @@ export interface MicrosoftTokenCandidates {
   clientSecret?: string;
 }
 
-/**
- * Lists the Microsoft access tokens a chain attempt tries, in order:
- * the stored access token, then a fresh Xbox-scoped token exchanged
- * from the refresh token.
- */
 export async function microsoftTokenAttempts(candidates: MicrosoftTokenCandidates): Promise<string[]> {
   const attempts: string[] = [];
   if (candidates.accessToken) attempts.push(candidates.accessToken);
@@ -132,14 +89,6 @@ export async function microsoftTokenAttempts(candidates: MicrosoftTokenCandidate
   return attempts;
 }
 
-/**
- * Runs the first half of the chain for one relying party.
- *
- * @returns The XSTS token for the relying party, or `null` when no
- * candidate completes the chain (no Xbox profile, a child account that
- * is not in a family, an account from a region without Xbox Live, a
- * token without the Xbox scope and no usable refresh token, ...).
- */
 export async function getXstsToken(relyingParty: string, candidates: MicrosoftTokenCandidates): Promise<XboxToken | null> {
   for (const microsoftToken of await microsoftTokenAttempts(candidates)) {
     const xboxLive = await authenticateXboxLive(microsoftToken);
@@ -155,12 +104,6 @@ export interface XboxProfile {
   avatarUrl: string | null;
 }
 
-/**
- * Reads the signed-in user's public Xbox profile (gamertag and display
- * picture) with an XSTS token for the Xbox relying party. The display
- * picture URL is hosted by Xbox's own CDN and is publicly readable,
- * which is what the linking screen renders as the provider avatar.
- */
 export async function getXboxProfile(xsts: XboxToken): Promise<XboxProfile | null> {
   if (!xsts.xuid) return xsts.gamertag ? { gamertag: xsts.gamertag, avatarUrl: null } : null;
   const settings = 'Gamertag,GameDisplayPicRaw';
