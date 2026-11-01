@@ -1,12 +1,30 @@
 import { decryptOAuthToken } from 'better-auth/oauth2';
 import type { AuthContext } from '@better-auth/core';
 import type { Auth } from './auth';
+import { getMinecraftProfileFromMicrosoftTokens } from './minecraft';
+import { getXboxProfile, getXstsToken, XBOX_RELYING_PARTY } from './xbox-live';
 
 export interface ProviderProfile {
   name: string | null;
   email: string | null;
   avatarUrl: string | null;
 }
+
+/** Options the derived Xbox / Minecraft profiles need beyond the auth instance itself. */
+export interface ProviderProfileOptions {
+  microsoftClientId?: string;
+  microsoftClientSecret?: string;
+}
+
+/**
+ * The providers the user endpoint resolves from a linked Microsoft
+ * account instead of from an account row of their own. Linking
+ * Microsoft is the only link action for both: Xbox Live is reached
+ * through the Microsoft token chain (see `lib/xbox-live.ts`), and a
+ * Minecraft profile exists exactly when that chain proves the account
+ * owns Minecraft (see `lib/minecraft.ts`).
+ */
+export const DERIVED_PROVIDER_IDS = ['xbox', 'minecraft'] as const;
 
 /**
  * Fetches a linked provider's current profile (name, email, avatar) by
@@ -29,8 +47,18 @@ export interface ProviderProfile {
  *
  * @returns `null` when the provider isn't linked or its profile can't be resolved.
  */
-export async function getProviderProfile(auth: Auth, uid: string, providerId: string): Promise<ProviderProfile | null> {
+export async function getProviderProfile(
+  auth: Auth,
+  uid: string,
+  providerId: string,
+  options?: ProviderProfileOptions
+): Promise<ProviderProfile | null> {
   const ctx = (await auth.$context) as unknown as AuthContext;
+
+  if ((DERIVED_PROVIDER_IDS as readonly string[]).includes(providerId)) {
+    return getDerivedProviderProfile(ctx, uid, providerId, options);
+  }
+
   const tokens = (await ctx.internalAdapter.findAccounts(uid)).find((account) => account.providerId === providerId);
   if (!tokens) return null;
 
@@ -59,4 +87,58 @@ export async function getProviderProfile(auth: Auth, uid: string, providerId: st
 
   if (!info) return null;
   return { name: info.user.name ?? null, email: info.user.email ?? null, avatarUrl: info.user.image ?? null };
+}
+
+/**
+ * Resolves the `xbox` and `minecraft` profiles from the user's linked
+ * Microsoft account. Neither has an account row or OAuth flow of its
+ * own: both are read through the Microsoft token chain, so a profile
+ * comes back exactly when Microsoft is linked and the chain succeeds —
+ * for Minecraft, only when the account owns the game.
+ */
+async function getDerivedProviderProfile(
+  ctx: AuthContext,
+  uid: string,
+  providerId: string,
+  options?: ProviderProfileOptions
+): Promise<ProviderProfile | null> {
+  const tokens = (await ctx.internalAdapter.findAccounts(uid)).find((account) => account.providerId === 'microsoft');
+  if (!tokens) return null;
+
+  let accessToken: string | undefined;
+  let refreshToken: string | undefined;
+  try {
+    accessToken = tokens.accessToken ? await decryptOAuthToken(tokens.accessToken, ctx) : undefined;
+    refreshToken = tokens.refreshToken ? await decryptOAuthToken(tokens.refreshToken, ctx) : undefined;
+  } catch {
+    return null;
+  }
+
+  const candidates = {
+    accessToken,
+    refreshToken,
+    clientId: options?.microsoftClientId,
+    clientSecret: options?.microsoftClientSecret,
+  };
+
+  if (providerId === 'xbox') {
+    const xsts = await getXstsToken(XBOX_RELYING_PARTY, candidates);
+    if (!xsts) return null;
+    const profile = await getXboxProfile(xsts);
+    if (!profile) return null;
+    return { name: profile.gamertag, email: null, avatarUrl: profile.avatarUrl };
+  }
+
+  const profile = await getMinecraftProfileFromMicrosoftTokens(candidates);
+  if (!profile) return null;
+  return {
+    name: profile.name,
+    email: null,
+    // Mojang's texture URL is public, so it can stand in for the
+    // better-auth provider image as-is. What it points at is the raw
+    // UV-mapped skin texture, though: clients convert it into an
+    // avatar on their side (cropping and compositing the head region)
+    // instead of rendering the URL directly as an image.
+    avatarUrl: profile.skinTextureUrl,
+  };
 }

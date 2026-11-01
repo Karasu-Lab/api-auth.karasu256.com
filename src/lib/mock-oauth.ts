@@ -7,7 +7,7 @@ export function getMockOAuthUrl(env: Env): string | null {
 }
 
 export function getMockOAuthProviders(mockUrl: string): GenericOAuthConfig[] {
-  return ['google', 'github'].map((providerId) => ({
+  return ['google', 'github', 'microsoft'].map((providerId) => ({
     providerId,
     clientId: `mock-${providerId}`,
     clientSecret: `mock-${providerId}-secret`,

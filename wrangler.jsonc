@@ -37,6 +37,8 @@
         "RESEND_API_KEY": "re_local_development",
         "RESEND_FROM_EMAIL": "noreply@example.com",
         "NEON_AUTH_BASE_URL": "http://localhost:3010/neondb/auth",
+        "MICROSOFT_CLIENT_ID": "local-development-microsoft-client-id",
+        "MICROSOFT_CLIENT_SECRET": "local-development-microsoft-client-secret",
       },
     },
   },
