@@ -1,5 +1,4 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
-import { eq } from 'drizzle-orm';
 import { passkey } from '@better-auth/passkey';
 import { apiKey } from '@better-auth/api-key';
 import { sso } from '@better-auth/sso';
@@ -148,20 +147,21 @@ function createAuthOptions(env: Env, db: Db) {
         },
         update: {
           before: async (user) => {
-            // Signing in or linking with an external provider refreshes
-            // the user record from the provider's profile; without this
-            // guard that refresh overwrites the stored account icon with
-            // the provider's picture. Pin `image` to the value already in
-            // the database so no update that flows through the auth layer
-            // can change it — the icon changes only through the user's
-            // own upload, which writes the database directly.
-            if (!('image' in user) || !user.id) return;
-            const [current] = await db
-              .select({ image: schema.users.image })
-              .from(schema.users)
-              .where(eq(schema.users.id, user.id as string))
-              .limit(1);
-            return { data: { ...user, image: current?.image ?? null } };
+            // The profile (name and icon) stored in the database is the
+            // single source of truth and is only ever written by
+            // endpoints that write the database directly, never through
+            // the auth layer. Drop both fields from every user update
+            // here, so a provider's profile can never overwrite the
+            // stored one, whatever sign-in or link path produced the
+            // update: the provider flow then only issues its session.
+            // An update that consisted solely of profile fields becomes
+            // a no-op.
+            if (!('name' in user) && !('image' in user)) return;
+            const rest = { ...user };
+            delete rest.name;
+            delete rest.image;
+            if (Object.keys(rest).length === 0) return false;
+            return { data: { ...rest, name: undefined, image: undefined } };
           },
           after: async (user) => {
             const update: { displayName?: string; photoURL?: string } = {};
