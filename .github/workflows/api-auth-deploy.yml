@@ -5,13 +5,18 @@ on:
     branches: ["**"]
   workflow_dispatch:
 
+# Deployment itself lives in Karasu-Lab/WorkersDeploy: it deploys this
+# app standalone from this repository, detects the Elysia project,
+# builds it with Vite, and deploys it to Cloudflare Workers.
+
 jobs:
   deploy:
     if: github.ref_name == 'main'
     environment: production
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
+      packages: read
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
@@ -29,27 +34,23 @@ jobs:
       GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       GITHUB_CLIENT_ID: ${{ vars.GH_CLIENT_ID }}
-      GITHUB_CLIENT_SECRET: ${{ secrets.GH_CLIENT_SECRET }}
+      GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
+      NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
       - name: Deploy the worker
-        uses: Karasu-Lab/Workers/deploy-worker@v1
+        uses: Karasu-Lab/WorkersDeploy@v1
         with:
           mode: production
-          hub-repo: Karasu-Lab/Karasu-Lab
-          app-path: apps/api-auth.karasu256.com
-          secrets-command: node .github/scripts/worker-secrets-file.mjs {app_path} "{secrets_file}" {secret_names}
-          secret-names: BETTER_AUTH_SECRET AUTH_SECRET INTERNAL_API_SECRET DATABASE_URL GOOGLE_CLOUD_PROJECT_ID FIREBASE_ADMIN_CLIENT_EMAIL FIREBASE_ADMIN_PRIVATE_KEY RESEND_API_KEY RESEND_FROM_EMAIL NEON_AUTH_BASE_URL GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET CLOUDFLARE_TURNSTILE_SECRET
-          deploy-command: pnpm --filter api-auth.karasu256.com deploy
-          preview-command: pnpm --filter api-auth.karasu256.com preview -- --name "{branch}" --secrets-file "{secrets_file}"
-          sync-command: pnpm --filter api-auth.karasu256.com exec wrangler secret bulk "{secrets_file}"
           worker-name: api-auth-karasu256-com
+          secret-names: BETTER_AUTH_SECRET AUTH_SECRET INTERNAL_API_SECRET DATABASE_URL GOOGLE_CLOUD_PROJECT_ID FIREBASE_ADMIN_CLIENT_EMAIL FIREBASE_ADMIN_PRIVATE_KEY RESEND_API_KEY RESEND_FROM_EMAIL NEON_AUTH_BASE_URL GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET CLOUDFLARE_TURNSTILE_SECRET
 
   preview:
     if: github.ref_name != 'main'
     environment: preview
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
+      packages: read
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
@@ -67,17 +68,12 @@ jobs:
       GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       GITHUB_CLIENT_ID: ${{ vars.GH_CLIENT_ID }}
-      GITHUB_CLIENT_SECRET: ${{ secrets.GH_CLIENT_SECRET }}
+      GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
+      NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
       - name: Deploy the worker
-        uses: Karasu-Lab/Workers/deploy-worker@v1
+        uses: Karasu-Lab/WorkersDeploy@v1
         with:
           mode: preview
-          hub-repo: Karasu-Lab/Karasu-Lab
-          app-path: apps/api-auth.karasu256.com
-          secrets-command: node .github/scripts/worker-secrets-file.mjs {app_path} "{secrets_file}" {secret_names}
-          secret-names: BETTER_AUTH_SECRET AUTH_SECRET INTERNAL_API_SECRET DATABASE_URL GOOGLE_CLOUD_PROJECT_ID FIREBASE_ADMIN_CLIENT_EMAIL FIREBASE_ADMIN_PRIVATE_KEY RESEND_API_KEY RESEND_FROM_EMAIL NEON_AUTH_BASE_URL GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET CLOUDFLARE_TURNSTILE_SECRET
-          deploy-command: pnpm --filter api-auth.karasu256.com deploy
-          preview-command: pnpm --filter api-auth.karasu256.com preview -- --name "{branch}" --secrets-file "{secrets_file}"
-          sync-command: pnpm --filter api-auth.karasu256.com exec wrangler secret bulk "{secrets_file}"
           worker-name: api-auth-karasu256-com
+          secret-names: BETTER_AUTH_SECRET AUTH_SECRET INTERNAL_API_SECRET DATABASE_URL GOOGLE_CLOUD_PROJECT_ID FIREBASE_ADMIN_CLIENT_EMAIL FIREBASE_ADMIN_PRIVATE_KEY RESEND_API_KEY RESEND_FROM_EMAIL NEON_AUTH_BASE_URL GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET CLOUDFLARE_TURNSTILE_SECRET
