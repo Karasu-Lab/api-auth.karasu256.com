@@ -1,11 +1,4 @@
-import {
-  authorizeXsts,
-  authenticateXboxLive,
-  microsoftTokenAttempts,
-  MINECRAFT_RELYING_PARTY,
-  type MicrosoftTokenCandidates,
-  type XboxToken,
-} from './xbox-live';
+import type { XboxToken } from './xbox-live';
 
 const MINECRAFT_LOGIN_URL = 'https://api.minecraftservices.com/authentication/login_with_xbox';
 const MINECRAFT_PROFILE_URL = 'https://api.minecraftservices.com/minecraft/profile';
@@ -54,20 +47,4 @@ export async function getMinecraftProfile(minecraftAccessToken: string): Promise
   if (!body.id || !body.name) throw new Error(`Minecraft profile failed: the response did not include a profile: ${text.slice(0, 300)}`);
   const activeSkin = body.skins?.find((skin) => skin.state === 'ACTIVE') ?? body.skins?.[0];
   return { id: body.id, name: body.name, skinTextureUrl: activeSkin?.url ?? null };
-}
-
-// Throws the last chain failure when no token candidate completes it.
-export async function getMinecraftProfileFromMicrosoftTokens(candidates: MicrosoftTokenCandidates): Promise<MinecraftProfile> {
-  let lastError: unknown = null;
-  for (const microsoftToken of await microsoftTokenAttempts(candidates)) {
-    try {
-      const xboxLive = await authenticateXboxLive(microsoftToken);
-      const xsts = await authorizeXsts(xboxLive.token, MINECRAFT_RELYING_PARTY);
-      const minecraftToken = await loginToMinecraft(xsts);
-      return await getMinecraftProfile(minecraftToken);
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError ?? new Error('No Microsoft token was available.');
 }

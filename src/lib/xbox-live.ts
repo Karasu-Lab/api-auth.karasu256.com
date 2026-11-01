@@ -1,3 +1,5 @@
+import type { OAuth2Tokens } from '@better-auth/core/oauth2';
+
 const MICROSOFT_TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
 const XBOX_LIVE_AUTH_URL = 'https://user.auth.xboxlive.com/user/authenticate';
 const XSTS_AUTH_URL = 'https://xsts.auth.xboxlive.com/xsts/authorize';
@@ -104,11 +106,13 @@ export async function authorizeXsts(xboxLiveToken: string, relyingParty: string)
   return token;
 }
 
-export async function exchangeMicrosoftRefreshToken(
+// Exchanges a Microsoft refresh token for a fresh Xbox-scoped token
+// set, including the rotated refresh token the caller must sync back.
+export async function refreshMicrosoftTokens(
   refreshToken: string,
   clientId: string,
   clientSecret: string
-): Promise<string | null> {
+): Promise<OAuth2Tokens | null> {
   const res = await fetch(MICROSOFT_TOKEN_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -121,40 +125,13 @@ export async function exchangeMicrosoftRefreshToken(
     }),
   }).catch(() => null);
   if (!res?.ok) return null;
-  const body = (await res.json().catch(() => null)) as { access_token?: string } | null;
-  return body?.access_token ?? null;
-}
-
-export interface MicrosoftTokenCandidates {
-  accessToken?: string;
-  refreshToken?: string;
-  clientId?: string;
-  clientSecret?: string;
-}
-
-export async function microsoftTokenAttempts(candidates: MicrosoftTokenCandidates): Promise<string[]> {
-  const attempts: string[] = [];
-  if (candidates.accessToken) attempts.push(candidates.accessToken);
-  if (candidates.refreshToken && candidates.clientId && candidates.clientSecret) {
-    const exchanged = await exchangeMicrosoftRefreshToken(candidates.refreshToken, candidates.clientId, candidates.clientSecret);
-    if (exchanged && exchanged !== candidates.accessToken) attempts.push(exchanged);
-  }
-  return attempts;
-}
-
-// Tries each Microsoft token candidate in order and throws the last
-// failure when none of them completes the chain.
-export async function getXstsToken(relyingParty: string, candidates: MicrosoftTokenCandidates): Promise<XboxToken> {
-  let lastError: unknown = null;
-  for (const microsoftToken of await microsoftTokenAttempts(candidates)) {
-    try {
-      const xboxLive = await authenticateXboxLive(microsoftToken);
-      return await authorizeXsts(xboxLive.token, relyingParty);
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError ?? new XboxLiveError('Xbox Live authentication', null, null, 'No Microsoft token was available.');
+  const body = (await res.json().catch(() => null)) as { access_token?: string; refresh_token?: string; expires_in?: number } | null;
+  if (!body?.access_token) return null;
+  return {
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token,
+    accessTokenExpiresAt: body.expires_in ? new Date(Date.now() + body.expires_in * 1000) : undefined,
+  };
 }
 
 export interface XboxProfile {
