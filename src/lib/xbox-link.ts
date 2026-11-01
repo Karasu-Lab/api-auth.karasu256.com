@@ -117,9 +117,10 @@ export async function exchangeXboxLinkCode(
   };
 }
 
-export async function storeXboxLink(ctx: AuthContext, userId: string, tokens: XboxLinkTokens): Promise<boolean> {
+// Stores the link and returns the XUID. Xbox Live failures throw.
+export async function storeXboxLink(ctx: AuthContext, userId: string, tokens: XboxLinkTokens): Promise<string> {
   const xboxLive = await authenticateXboxLive(tokens.accessToken);
-  if (!xboxLive?.xuid) return false;
+  if (!xboxLive.xuid) throw new Error('Xbox Live authentication did not return a user ID.');
 
   const data = {
     accountId: xboxLive.xuid,
@@ -134,5 +135,5 @@ export async function storeXboxLink(ctx: AuthContext, userId: string, tokens: Xb
   } else {
     await ctx.internalAdapter.createAccount({ userId, providerId: XBOX_PROVIDER_ID, ...data });
   }
-  return true;
+  return xboxLive.xuid;
 }

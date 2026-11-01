@@ -56,8 +56,11 @@ export async function handleXboxCallback(env: Env, request: Request): Promise<Re
     if (!exchange.tokens) return { error: exchange.error ?? 'xbox_token_exchange_failed', errorDescription: exchange.errorDescription };
 
     const ctx = (await auth.$context) as unknown as AuthContext;
-    const stored = await storeXboxLink(ctx, session.user.id, exchange.tokens);
-    if (!stored) return { error: 'xbox_live_rejected', errorDescription: 'Xbox Live rejected the token issued for this Microsoft account.' };
+    try {
+      await storeXboxLink(ctx, session.user.id, exchange.tokens);
+    } catch (error) {
+      return { error: 'xbox_live_rejected', errorDescription: error instanceof Error ? error.message : String(error) };
+    }
     return { error: null, errorDescription: null };
   }).catch((error: unknown) => ({
     error: 'xbox_link_failed',
