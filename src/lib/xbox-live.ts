@@ -124,7 +124,13 @@ export async function refreshMicrosoftTokens(
       scope: 'XboxLive.signin offline_access',
     }),
   }).catch(() => null);
-  if (!res?.ok) return null;
+  if (!res?.ok) {
+    const detail = res ? await res.text().catch(() => '') : '';
+    console.error(
+      `Failed to refresh the Microsoft tokens: HTTP ${res?.status ?? 'no response'}${detail ? `: ${detail}` : ''}`
+    );
+    return null;
+  }
   const body = (await res.json().catch(() => null)) as { access_token?: string; refresh_token?: string; expires_in?: number } | null;
   if (!body?.access_token) return null;
   return {
