@@ -141,7 +141,7 @@ async function getDerivedProviderProfile(
       if (profile) return { name: profile.gamertag, email: null, avatarUrl: profile.avatarUrl };
     } else {
       const profile = await getMinecraftProfileFromMicrosoftTokens(candidates);
-      if (profile) return { name: profile.name, email: null, avatarUrl: profile.skinTextureUrl };
+      return { name: profile.name, email: null, avatarUrl: profile.skinTextureUrl };
     }
   } catch (error) {
     console.error(`Failed to resolve the ${providerId} profile:`, error instanceof Error ? error.message : error);
