@@ -1,6 +1,6 @@
 import { setTokenUtil } from 'better-auth/oauth2';
 import type { AuthContext } from '@better-auth/core';
-import { authenticateXboxLive } from './xbox-live';
+import { authenticateXboxLive, authorizeXsts, XBOX_RELYING_PARTY } from './xbox-live';
 
 export const XBOX_PROVIDER_ID = 'xbox';
 export const XBOX_SCOPE = 'XboxLive.signin offline_access';
@@ -118,12 +118,17 @@ export async function exchangeXboxLinkCode(
 }
 
 // Stores the link and returns the XUID. Xbox Live failures throw.
+// A Microsoft account without an Xbox profile gets a user token with
+// no XUID; the XSTS call is what answers why (its XErr), so it runs
+// before the XUID is read.
 export async function storeXboxLink(ctx: AuthContext, userId: string, tokens: XboxLinkTokens): Promise<string> {
   const xboxLive = await authenticateXboxLive(tokens.accessToken);
-  if (!xboxLive.xuid) throw new Error('Xbox Live authentication did not return a user ID.');
+  const xsts = await authorizeXsts(xboxLive.token, XBOX_RELYING_PARTY);
+  const xuid = xsts.xuid ?? xboxLive.xuid;
+  if (!xuid) throw new Error('Xbox Live authentication did not return a user ID.');
 
   const data = {
-    accountId: xboxLive.xuid,
+    accountId: xuid,
     accessToken: await setTokenUtil(tokens.accessToken, ctx),
     refreshToken: (await setTokenUtil(tokens.refreshToken, ctx)) ?? null,
     accessTokenExpiresAt: tokens.accessTokenExpiresAt,
@@ -135,5 +140,5 @@ export async function storeXboxLink(ctx: AuthContext, userId: string, tokens: Xb
   } else {
     await ctx.internalAdapter.createAccount({ userId, providerId: XBOX_PROVIDER_ID, ...data });
   }
-  return xboxLive.xuid;
+  return xuid;
 }
