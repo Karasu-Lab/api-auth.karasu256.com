@@ -1,4 +1,5 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
+import { eq } from 'drizzle-orm';
 import { passkey } from '@better-auth/passkey';
 import { apiKey } from '@better-auth/api-key';
 import { sso } from '@better-auth/sso';
@@ -118,6 +119,15 @@ function createAuthOptions(env: Env, db: Db) {
     databaseHooks: {
       user: {
         create: {
+          before: async (user) => {
+            // The account icon stored in the database is the single source
+            // of truth and changes only when the user uploads one
+            // themselves (through the profile image endpoint, which writes
+            // the database directly). A provider profile must never seed
+            // it: accounts created from an external provider's sign-up
+            // start with no icon, whatever picture the provider returned.
+            return { data: { ...user, image: null } };
+          },
           after: async (user) => {
             // Start the Firebase link unlinked; it is established lazily at
             // sign-in by ensureFirebaseLink. Recorded failure-free so user
@@ -137,6 +147,22 @@ function createAuthOptions(env: Env, db: Db) {
           },
         },
         update: {
+          before: async (user) => {
+            // Signing in or linking with an external provider refreshes
+            // the user record from the provider's profile; without this
+            // guard that refresh overwrites the stored account icon with
+            // the provider's picture. Pin `image` to the value already in
+            // the database so no update that flows through the auth layer
+            // can change it — the icon changes only through the user's
+            // own upload, which writes the database directly.
+            if (!('image' in user) || !user.id) return;
+            const [current] = await db
+              .select({ image: schema.users.image })
+              .from(schema.users)
+              .where(eq(schema.users.id, user.id as string))
+              .limit(1);
+            return { data: { ...user, image: current?.image ?? null } };
+          },
           after: async (user) => {
             const update: { displayName?: string; photoURL?: string } = {};
             if (user.name) update.displayName = user.name as string;
