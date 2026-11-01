@@ -146,17 +146,19 @@ function createAuthOptions(env: Env, db: Db) {
           },
         },
         update: {
-          before: async (user) => {
-            // The profile (name and icon) stored in the database is the
-            // single source of truth and is only ever written by
-            // endpoints that write the database directly, never through
-            // the auth layer. Drop both fields from every user update
-            // here, so a provider's profile can never overwrite the
-            // stored one, whatever sign-in or link path produced the
-            // update: the provider flow then only issues its session.
-            // An update that consisted solely of profile fields becomes
-            // a no-op.
+          before: async (user, context) => {
+            // The better-auth user row is the single source of truth for
+            // the profile (name and icon), and the user's own profile edit
+            // through the update-user endpoint is how it is maintained:
+            // let that one write through. Every other auth-layer update
+            // carrying profile fields comes from an external provider flow
+            // (sign-in, account linking, SSO), where the provider's profile
+            // must never overwrite the stored one, so drop both fields
+            // there and let the provider flow only issue its session. An
+            // update that consisted solely of profile fields becomes a
+            // no-op.
             if (!('name' in user) && !('image' in user)) return;
+            if (context?.path === '/update-user') return;
             const rest = { ...user };
             delete rest.name;
             delete rest.image;
