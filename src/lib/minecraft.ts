@@ -9,6 +9,9 @@ import {
 
 const MINECRAFT_LOGIN_URL = 'https://api.minecraftservices.com/authentication/login_with_xbox';
 const MINECRAFT_PROFILE_URL = 'https://api.minecraftservices.com/minecraft/profile';
+// api.minecraftservices.com answers requests without the launcher's
+// user agent with an HTML 403 page.
+const MINECRAFT_USER_AGENT = 'MinecraftLauncher/2.2.10675';
 
 export interface MinecraftProfile {
   id: string;
@@ -29,7 +32,7 @@ async function readMinecraftResponse(res: Response | null, stage: string): Promi
 export async function loginToMinecraft(xsts: XboxToken): Promise<string> {
   const res = await fetch(MINECRAFT_LOGIN_URL, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    headers: { 'content-type': 'application/json', accept: 'application/json', 'user-agent': MINECRAFT_USER_AGENT },
     body: JSON.stringify({ identityToken: `XBL3.0 x=${xsts.userHash};${xsts.token}` }),
   }).catch(() => null);
   const text = await readMinecraftResponse(res, 'Minecraft login');
@@ -40,7 +43,7 @@ export async function loginToMinecraft(xsts: XboxToken): Promise<string> {
 
 export async function getMinecraftProfile(minecraftAccessToken: string): Promise<MinecraftProfile> {
   const res = await fetch(MINECRAFT_PROFILE_URL, {
-    headers: { authorization: `Bearer ${minecraftAccessToken}`, accept: 'application/json' },
+    headers: { authorization: `Bearer ${minecraftAccessToken}`, accept: 'application/json', 'user-agent': MINECRAFT_USER_AGENT },
   }).catch(() => null);
   const text = await readMinecraftResponse(res, 'Minecraft profile');
   const body = JSON.parse(text) as {
