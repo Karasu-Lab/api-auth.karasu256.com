@@ -27,11 +27,11 @@ importers:
         specifier: 1.7.12
         version: 1.7.12(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-auth@1.7.14(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(better-call@1.4.4(zod@4.6.7))
       '@karasu-lab/db':
-        specifier: 0.1.0-9f9276e
-        version: 0.1.0-9f9276e(@daveyplate/better-auth-tanstack@1.3.6(@tanstack/query-core@5.105.0)(@tanstack/react-query@5.105.0(react@19.3.1))(better-auth@1.7.14(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@instantdb/react@1.0.67(react@19.3.1))(@radix-ui/react-tooltip@1.4.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@tanstack/react-query@5.105.0(react@19.3.1))(@triplit/client@1.0.50(typescript@6.0.3))(@triplit/react@1.0.51(react@19.3.1)(typescript@6.0.3))(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(kysely@0.29.7)(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: 0.1.0-84bddbd
+        version: 0.1.0-84bddbd(@daveyplate/better-auth-tanstack@1.3.6(@tanstack/query-core@5.105.0)(@tanstack/react-query@5.105.0(react@19.3.1))(better-auth@1.7.14(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@instantdb/react@1.0.67(react@19.3.1))(@radix-ui/react-tooltip@1.4.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@tanstack/react-query@5.105.0(react@19.3.1))(@triplit/client@1.0.50(typescript@6.0.3))(@triplit/react@1.0.51(react@19.3.1)(typescript@6.0.3))(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(kysely@0.29.7)(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@karasu-lab/utils':
-        specifier: 0.1.0-967de79
-        version: 0.1.0-967de79(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: 0.1.0-be51f04
+        version: 0.1.0-be51f04(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(@karasu-lab/api-permissions@0.1.0-4b04f47)(better-call@1.4.4(zod@4.6.7))(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       better-auth:
         specifier: ^1.7.12
         version: 1.7.14(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -401,6 +401,10 @@ packages:
 
   '@emnapi/runtime@1.11.3':
     resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
+
+  '@enesusta/url-query-builder@1.0.0':
+    resolution: {integrity: sha512-vSa+BRj8ETFb1TU+sUBf3lmxq+sdAYuVcuxk5UNxnEPumzzGT4yb1FM7HuJ9UEfMryp/ZrodOg9UPB5RmEjuqg==}
+    engines: {node: '>=8', npm: '>=5'}
 
   '@esbuild/aix-ppc64@0.28.2':
     resolution: {integrity: sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ==}
@@ -854,17 +858,18 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@karasu-lab/api-permissions@0.1.0-4efb331':
-    resolution: {integrity: sha512-1BW/uS+dK9bRf9ZrJak+Jgm5CSfESjTCWOAqzVsHDqA2s8fMPbl4JQimAoUU4+aMjp5aYmZGEK0zbYJzDZI+Rg==, tarball: https://npm.pkg.github.com/download/@karasu-lab/api-permissions/0.1.0-4efb331/3505971bbd0ebb3029d0c174ae6f5789b2c8562e}
+  '@karasu-lab/api-permissions@0.1.0-4b04f47':
+    resolution: {integrity: sha512-waPf+NZB15QztOTOLcZdmy/QfXJ/YFJgZGlIveSZcNRGdmStfAxNnjuddZO9CH/iVd0+qkud+7b+W8+Cc3qeUQ==, tarball: https://npm.pkg.github.com/download/@karasu-lab/api-permissions/0.1.0-4b04f47/b0dcdfd39bdfdfb806b719eaedaeba1edfff5dca}
 
-  '@karasu-lab/db@0.1.0-9f9276e':
-    resolution: {integrity: sha512-bZ4fLac5Ef5wAOuT0/bNRm7CzxlqfwAQ6s0cy5qVV/IPX9GMV5fGXJXp8DhV5HkGa3ADtPV4+aaqTDqB4giToA==, tarball: https://npm.pkg.github.com/download/@karasu-lab/db/0.1.0-9f9276e/592696a488b5c1127dc85abd00a8dcf84635cada}
+  '@karasu-lab/db@0.1.0-84bddbd':
+    resolution: {integrity: sha512-00IZsiShfKVzIYTzS5uGCFfd8/XgFP2pm3OUNozIliIEIkZiFKxKdwbaDj7nM/9frP0lkx58GeYByLeLXhLN+Q==, tarball: https://npm.pkg.github.com/download/@karasu-lab/db/0.1.0-84bddbd/847ed4c0f71111fdac786508cff0124216a46efa}
     peerDependencies:
       drizzle-orm: ^0.44.7
 
-  '@karasu-lab/utils@0.1.0-967de79':
-    resolution: {integrity: sha512-P++d3nXjMfKIwzCGHUIxHZn+ZRRUFbVmLDxkPrApyZOyFMu2zWkIG3IR6x3a099ng9K6n5ItC9Da6V3FDW7pdw==, tarball: https://npm.pkg.github.com/download/@karasu-lab/utils/0.1.0-967de79/3e4e410290036da414521fc1e29be0ab20167569}
+  '@karasu-lab/utils@0.1.0-be51f04':
+    resolution: {integrity: sha512-I6U7RD31Se7i7e+45HRkdTwo+Jm8sc+eMNZh81Z9kW1U+P+JHQINT/hRtVeshTylmKBGi+LjMqV3e+2IXA1bpQ==, tarball: https://npm.pkg.github.com/download/@karasu-lab/utils/0.1.0-be51f04/3b0dd9ed7fa40b441492d2e8c919733a916d0ba8}
     peerDependencies:
+      '@karasu-lab/api-permissions': 0.1.0-4b04f47
       next: ^15.3.9
       react: ^19
 
@@ -3201,6 +3206,8 @@ snapshots:
       tslib: 2.9.1
     optional: true
 
+  '@enesusta/url-query-builder@1.0.0': {}
+
   '@esbuild/aix-ppc64@0.28.2':
     optional: true
 
@@ -3455,9 +3462,9 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@karasu-lab/api-permissions@0.1.0-4efb331': {}
+  '@karasu-lab/api-permissions@0.1.0-4b04f47': {}
 
-  '@karasu-lab/db@0.1.0-9f9276e(@daveyplate/better-auth-tanstack@1.3.6(@tanstack/query-core@5.105.0)(@tanstack/react-query@5.105.0(react@19.3.1))(better-auth@1.7.14(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@instantdb/react@1.0.67(react@19.3.1))(@radix-ui/react-tooltip@1.4.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@tanstack/react-query@5.105.0(react@19.3.1))(@triplit/client@1.0.50(typescript@6.0.3))(@triplit/react@1.0.51(react@19.3.1)(typescript@6.0.3))(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(kysely@0.29.7)(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@karasu-lab/db@0.1.0-84bddbd(@daveyplate/better-auth-tanstack@1.3.6(@tanstack/query-core@5.105.0)(@tanstack/react-query@5.105.0(react@19.3.1))(better-auth@1.7.14(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@instantdb/react@1.0.67(react@19.3.1))(@radix-ui/react-tooltip@1.4.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@tanstack/react-query@5.105.0(react@19.3.1))(@triplit/client@1.0.50(typescript@6.0.3))(@triplit/react@1.0.51(react@19.3.1)(typescript@6.0.3))(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(kysely@0.29.7)(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@neondatabase/auth': 0.7.0-beta(@daveyplate/better-auth-tanstack@1.3.6(@tanstack/query-core@5.105.0)(@tanstack/react-query@5.105.0(react@19.3.1))(better-auth@1.7.14(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@instantdb/react@1.0.67(react@19.3.1))(@radix-ui/react-tooltip@1.4.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@tanstack/react-query@5.105.0(react@19.3.1))(@triplit/client@1.0.50(typescript@6.0.3))(@triplit/react@1.0.51(react@19.3.1)(typescript@6.0.3))(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(kysely@0.29.7)(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@paralleldrive/cuid2': 3.3.0
@@ -3517,12 +3524,13 @@ snapshots:
       - vue
       - yup
 
-  '@karasu-lab/utils@0.1.0-967de79(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@karasu-lab/utils@0.1.0-be51f04(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(@karasu-lab/api-permissions@0.1.0-4b04f47)(better-call@1.4.4(zod@4.6.7))(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@better-auth/oauth-provider': 1.7.14(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-auth@1.7.14(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(better-call@1.4.4(zod@4.6.7))
       '@better-auth/passkey': 1.7.12(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-auth@1.7.14(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(better-call@1.4.4(zod@4.6.7))(nanostores@1.5.5)
       '@better-auth/sso': 1.7.12(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-auth@1.7.14(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(better-call@1.4.4(zod@4.6.7))
-      '@karasu-lab/api-permissions': 0.1.0-4efb331
+      '@enesusta/url-query-builder': 1.0.0
+      '@karasu-lab/api-permissions': 0.1.0-4b04f47
       '@react-email/components': 1.0.12(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       better-auth: 1.7.14(drizzle-orm@0.44.7(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       jose: 6.2.14
