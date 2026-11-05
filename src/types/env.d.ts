@@ -7,11 +7,9 @@ declare global {
     AUTH_UI_URL: string;
     SSO_UI_URL: string;
     ACCOUNTS_URL: string;
-    /** Base URL of api.karasu256.com, which owns the permission registry; defaulted by src/constants.ts per APP_ENV. */
     API_URL: string;
     FEATURE_FLAGS_API_URL: string;
     FEATURE_FLAGS_ORIGIN: string;
-    /** Defaulted by src/constants.ts in production and preview; intentionally unset locally, where cross-subdomain cookies stay off. */
     BASE_DOMAIN?: string;
     BETTER_AUTH_SECRET: string;
     AUTH_SECRET: string;
@@ -24,7 +22,6 @@ declare global {
     RESEND_API_KEY: string;
     RESEND_FROM_EMAIL: string;
     NEON_AUTH_BASE_URL: string;
-    /** Cloudflare Rate Limiting binding for the sign-in lookup endpoint; absent where the binding is not configured, in which case an in-memory fallback applies. */
     CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
     GOOGLE_CLIENT_ID?: string;
     GOOGLE_CLIENT_SECRET?: string;
@@ -33,7 +30,14 @@ declare global {
     MICROSOFT_CLIENT_ID?: string;
     MICROSOFT_CLIENT_SECRET?: string;
     E2E_MOCK_OAUTH_URL?: string;
-    /** Turnstile widget secret for bot verification of the credential endpoints; verification stays off while unset. */
     CLOUDFLARE_TURNSTILE_SECRET?: string;
+    CDN_URL: string;
+    STORAGE_ENDPOINT: string;
+    STORAGE_BUCKET: string;
+    STORAGE_ACCESS_KEY_ID: string;
+    STORAGE_SECRET_ACCESS_KEY: string;
+    STORAGE_REGION?: string;
+    STORAGE_PRESIGN_TTL_SECONDS?: string;
+    UPLOAD_INTENT_TTL_SECONDS?: string;
   }
 }

@@ -13,12 +13,18 @@
   "routes": [{ "pattern": "api-auth.karasu256.com", "custom_domain": true }],
   "vars": {
     "APP_ENV": "production",
+    "CDN_URL": "https://cdn.karasu256.com",
+    "STORAGE_ENDPOINT": "https://dc4a5b8ffc2d999e39e9f9509bb4f9af.r2.cloudflarestorage.com",
+    "STORAGE_BUCKET": "cdn",
   },
   "ratelimits": [{ "name": "CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
   "preview_urls": true,
   "previews": {
     "vars": {
       "APP_ENV": "preview",
+      "CDN_URL": "https://dev.cdn.karasu256.com",
+      "STORAGE_ENDPOINT": "https://dc4a5b8ffc2d999e39e9f9509bb4f9af.r2.cloudflarestorage.com",
+      "STORAGE_BUCKET": "cdn",
     },
   },
   "env": {
@@ -39,6 +45,11 @@
         "NEON_AUTH_BASE_URL": "http://localhost:3010/neondb/auth",
         "MICROSOFT_CLIENT_ID": "local-development-microsoft-client-id",
         "MICROSOFT_CLIENT_SECRET": "local-development-microsoft-client-secret",
+        "CDN_URL": "http://localhost:8788",
+        "STORAGE_ENDPOINT": "http://localhost:8333",
+        "STORAGE_BUCKET": "cdn-local",
+        "STORAGE_ACCESS_KEY_ID": "local-development-access-key-id",
+        "STORAGE_SECRET_ACCESS_KEY": "local-development-secret-access-key",
       },
     },
   },
