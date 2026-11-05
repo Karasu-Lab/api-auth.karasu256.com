@@ -14,6 +14,8 @@ const PRODUCTION_DEFAULTS = {
   SSO_UI_URL: 'https://sso.karasu256.com',
   ACCOUNTS_URL: 'https://accounts.karasu256.com',
   API_URL: 'https://api.karasu256.com',
+  FEATURE_FLAGS_API_URL: 'https://flags.karasu256.com',
+  FEATURE_FLAGS_ORIGIN: 'https://api-auth.karasu256.com',
   BASE_DOMAIN: 'karasu256.com',
 };
 
@@ -23,6 +25,8 @@ const PREVIEW_DEFAULTS = {
   SSO_UI_URL: 'https://dev-sso.karasu256.com',
   ACCOUNTS_URL: 'https://dev.accounts.karasu256.com',
   API_URL: 'https://dev-api.karasu256.com',
+  FEATURE_FLAGS_API_URL: 'https://dev-flags.karasu256.com',
+  FEATURE_FLAGS_ORIGIN: 'https://dev-api-auth.karasu256.com',
   BASE_DOMAIN: 'karasu256.com',
 };
 
@@ -32,6 +36,8 @@ const LOCAL_DEFAULTS = {
   SSO_UI_URL: 'http://localhost:3007',
   ACCOUNTS_URL: 'http://localhost:3001',
   API_URL: 'http://localhost:8789',
+  FEATURE_FLAGS_API_URL: 'https://dev-flags.karasu256.com',
+  FEATURE_FLAGS_ORIGIN: 'https://dev-api-auth.karasu256.com',
   // No BASE_DOMAIN locally: the local wrangler environment never defined
   // one, and setting it would turn on cross-subdomain cookies, whose
   // Domain attribute a localhost caller cannot send back.
@@ -43,6 +49,8 @@ type DomainDefaults = {
   SSO_UI_URL: string;
   ACCOUNTS_URL: string;
   API_URL: string;
+  FEATURE_FLAGS_API_URL: string;
+  FEATURE_FLAGS_ORIGIN: string;
   BASE_DOMAIN?: string;
 };
 
@@ -53,6 +61,8 @@ function domainEnvSchema(defaults: DomainDefaults) {
     SSO_UI_URL: z.url().default(defaults.SSO_UI_URL),
     ACCOUNTS_URL: z.url().default(defaults.ACCOUNTS_URL),
     API_URL: z.url().default(defaults.API_URL),
+    FEATURE_FLAGS_API_URL: z.url().default(defaults.FEATURE_FLAGS_API_URL),
+    FEATURE_FLAGS_ORIGIN: z.url().default(defaults.FEATURE_FLAGS_ORIGIN),
     BASE_DOMAIN: defaults.BASE_DOMAIN ? z.string().default(defaults.BASE_DOMAIN) : z.string().optional(),
   });
 }

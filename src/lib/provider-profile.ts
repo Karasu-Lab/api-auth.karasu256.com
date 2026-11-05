@@ -22,6 +22,7 @@ export interface ProviderProfile {
 export interface ProviderProfileOptions {
   microsoftClientId?: string;
   microsoftClientSecret?: string;
+  minecraftAuthEnabled?: boolean;
 }
 
 export const DERIVED_PROVIDER_IDS = ['xbox', 'minecraft'] as const;
@@ -314,6 +315,10 @@ async function getDerivedProviderProfile(
 ): Promise<ProviderProfile | null> {
   const account = (await ctx.internalAdapter.findAccounts(uid)).find((entry) => entry.providerId === XBOX_PROVIDER_ID);
   if (!account) return null;
+
+  if (providerId === 'minecraft' && options?.minecraftAuthEnabled === false) {
+    return { name: null, email: null, avatarUrl: null };
+  }
 
   const stored = await decryptStoredTokens(ctx, account);
   if (!stored) return null;
