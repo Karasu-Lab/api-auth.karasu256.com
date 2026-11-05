@@ -1,0 +1,48 @@
+name: Production Migrations
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - drizzle/migrations/**
+      - .github/workflows/production-migrate.yml
+  workflow_dispatch:
+
+concurrency:
+  group: production-migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    environment: production
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.15.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: "@karasu-lab"
+
+      - name: Install dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations to the production database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm db:migrate:deploy
