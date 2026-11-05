@@ -16,7 +16,7 @@
     "@cloudflare/vite-plugin": "^1.62.5",
     "@types/node": "^26.6.4",
     "dotenv-cli": "^11.0.0",
-    "drizzle-kit": "^0.30.6",
+    "drizzle-kit": "^0.31.7",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
     "wrangler": "^4.147.0",
