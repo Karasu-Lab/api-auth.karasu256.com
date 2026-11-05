@@ -22,6 +22,12 @@ export interface ProviderProfile {
 export interface ProviderProfileOptions {
   microsoftClientId?: string;
   microsoftClientSecret?: string;
+  /**
+   * Whether Minecraft authentication is enabled (the `useMinecraftAuth`
+   * flag). Only an explicit `false` turns it off: while it is off, the
+   * Minecraft profile is not resolved at all.
+   */
+  minecraftAuthEnabled?: boolean;
 }
 
 export const DERIVED_PROVIDER_IDS = ['xbox', 'minecraft'] as const;
@@ -314,6 +320,15 @@ async function getDerivedProviderProfile(
 ): Promise<ProviderProfile | null> {
   const account = (await ctx.internalAdapter.findAccounts(uid)).find((entry) => entry.providerId === XBOX_PROVIDER_ID);
   if (!account) return null;
+
+  // While Minecraft authentication is off, its profile is never
+  // resolved: the Xbox account row still marks the provider as linked,
+  // so it yields the same empty profile an unresolvable profile does,
+  // without attempting the Minecraft login (and without the error log
+  // a failed resolution would leave).
+  if (providerId === 'minecraft' && options?.minecraftAuthEnabled === false) {
+    return { name: null, email: null, avatarUrl: null };
+  }
 
   const stored = await decryptStoredTokens(ctx, account);
   if (!stored) return null;
