@@ -6,7 +6,12 @@ import { handlePreflight, withCors } from './lib/cors';
 import { withAuth } from './lib/request-auth';
 import { rejectInvalidSignature } from './lib/signature-gate';
 import { handleCreateApiKey, handleDeleteApiKey, handleIssueApiKey, handleListApiKeys, handleListPermissions, handleVerifyApiKey } from './routes/api-keys';
-import { handleListOAuthClientInfo, handleUpsertOAuthClientInfo } from './routes/oauth-client-info';
+import {
+  handleCompleteOAuthClientIcon,
+  handleListOAuthClientInfo,
+  handlePrepareOAuthClientIcon,
+  handleUpsertOAuthClientInfo,
+} from './routes/oauth-client-info';
 import { handleProviderDetails } from './routes/providers';
 import { handleXboxCallback, handleXboxLink } from './routes/xbox';
 import { handleSetPassword } from './routes/set-password';
@@ -16,13 +21,11 @@ import { handleCreateTestAccount, handleDeleteTestAccount } from './routes/test-
 
 const env = resolveEnv(cfEnv as Env);
 
-/** Workers do not allow generating code at runtime. */
 const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typebox' })
   .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
   .get('/api/xbox/link', ({ request }) => handleXboxLink(env, request))
   .get('/api/xbox/callback', ({ request }) => handleXboxCallback(env, request));
 
-/** Collapses repeated slashes so a caller's base URL with a trailing slash still reaches the route. */
 function normalizePath(request: Request): Request {
   const url = new URL(request.url);
   const pathname = url.pathname.replace(/\/{2,}/g, '/');
@@ -31,11 +34,6 @@ function normalizePath(request: Request): Request {
   return new Request(url, request);
 }
 
-/**
- * Routes that read the raw request body (better-auth's own handler, key
- * verification and the signed internal route) are dispatched here, before
- * Elysia can consume it.
- */
 async function dispatch(request: Request): Promise<Response> {
   const { pathname } = new URL(request.url);
 
@@ -52,6 +50,10 @@ async function dispatch(request: Request): Promise<Response> {
     return handleDeleteApiKey(env, request, decodeURIComponent(pathname.slice('/api/api-keys/'.length)));
   if (pathname === '/api/permissions' && request.method === 'GET') return handleListPermissions(env, request);
   if (pathname === '/api/oauth-client-info' && request.method === 'GET') return handleListOAuthClientInfo(env, request);
+  if (pathname.startsWith('/api/oauth-client-info/') && pathname.endsWith('/icon/complete') && request.method === 'POST')
+    return handleCompleteOAuthClientIcon(env, request, decodeURIComponent(pathname.slice('/api/oauth-client-info/'.length, -'/icon/complete'.length)));
+  if (pathname.startsWith('/api/oauth-client-info/') && pathname.endsWith('/icon') && request.method === 'POST')
+    return handlePrepareOAuthClientIcon(env, request, decodeURIComponent(pathname.slice('/api/oauth-client-info/'.length, -'/icon'.length)));
   if (pathname.startsWith('/api/oauth-client-info/') && request.method === 'PUT')
     return handleUpsertOAuthClientInfo(env, request, decodeURIComponent(pathname.slice('/api/oauth-client-info/'.length)));
   if (pathname === '/api/internal/api-keys' && request.method === 'POST') return handleIssueApiKey(env, request);

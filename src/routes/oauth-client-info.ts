@@ -4,12 +4,27 @@ import { waitUntil } from 'cloudflare:workers';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { withAuth } from '../lib/request-auth';
+import { presignUploadUrl, storageEnv } from '../lib/storage';
+import { signUploadIntent, verifyUploadIntent } from '../lib/upload-intent';
+import { UploadVerificationError } from '../lib/upload-verification-error';
 
 const upsertBodySchema = z.object({
   name: z.string().trim().min(1).max(255),
   icon_url: z.string().max(2048).nullable().optional(),
   description: z.string().max(2000).nullable().optional(),
 });
+
+const prepareIconBodySchema = z.object({
+  content_type: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  size: z
+    .number()
+    .int()
+    .positive()
+    .max(5 * 1024 * 1024),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+});
+
+const completeIconBodySchema = z.object({ intent: z.string().min(1) });
 
 const badRequest = () => Response.json({ error: 'Bad Request' }, { status: 400 });
 const unauthorized = () => Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -23,13 +38,20 @@ interface OAuthClientInfoResponse {
   description: string | null;
 }
 
-/**
- * Lists the display info rows for the signed-in user's OAuth clients.
- * The developer settings reference these rows for what a client item
- * shows (name, icon, description) instead of the client record itself.
- *
- * GET /api/oauth-client-info
- */
+async function ownsClient(env: Env, clientId: string, userId: string): Promise<boolean> {
+  const db = createDb(env.DATABASE_URL);
+  try {
+    const [client] = await db
+      .select({ clientId: schema.oauthClients.clientId })
+      .from(schema.oauthClients)
+      .where(and(eq(schema.oauthClients.clientId, clientId), eq(schema.oauthClients.userId, userId)))
+      .limit(1);
+    return Boolean(client);
+  } finally {
+    waitUntil(db.$client.end());
+  }
+}
+
 export async function handleListOAuthClientInfo(env: Env, request: Request): Promise<Response> {
   const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
   if (!session) return unauthorized();
@@ -65,16 +87,6 @@ export async function handleListOAuthClientInfo(env: Env, request: Request): Pro
   }
 }
 
-/**
- * Creates or replaces the display info row for one of the signed-in
- * user's OAuth clients. The accounts developer settings call this
- * right after a client is created or updated, so the row mirrors what
- * the settings show; the author is recorded on first insert. Clients
- * owned by someone else are indistinguishable from missing ones.
- *
- * PUT /api/oauth-client-info/:clientId
- * Body: { name: string, icon_url?: string | null, description?: string | null }
- */
 export async function handleUpsertOAuthClientInfo(env: Env, request: Request, clientId: string): Promise<Response> {
   const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
   if (!session) return unauthorized();
@@ -112,4 +124,54 @@ export async function handleUpsertOAuthClientInfo(env: Env, request: Request, cl
   } finally {
     waitUntil(db.$client.end());
   }
+}
+
+export async function handlePrepareOAuthClientIcon(env: Env, request: Request, clientId: string): Promise<Response> {
+  const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
+  if (!session) return unauthorized();
+
+  const parsed = prepareIconBodySchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return badRequest();
+  if (!(await ownsClient(env, clientId, session.user.id))) return notFound();
+
+  const path = `i/oauth/${clientId}/avatar.png`;
+  return Response.json({
+    upload_url: presignUploadUrl(env, path, parsed.data.content_type),
+    intent: signUploadIntent(env, {
+      userId: session.user.id,
+      clientId,
+      path,
+      sha256: parsed.data.sha256,
+      contentType: parsed.data.content_type,
+      size: parsed.data.size,
+    }),
+  });
+}
+
+export async function handleCompleteOAuthClientIcon(env: Env, request: Request, clientId: string): Promise<Response> {
+  const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
+  if (!session) return unauthorized();
+
+  const parsed = completeIconBodySchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return badRequest();
+  const intent = verifyUploadIntent(env, parsed.data.intent, session.user.id, clientId);
+  if (!intent) return badRequest();
+
+  const { token } = await withAuth(env, (auth) => auth.api.getToken({ headers: request.headers }));
+  const verified = await fetch(`${env.API_URL}/upload/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      path: intent.path,
+      sha256: intent.sha256,
+      contentType: intent.contentType,
+      size: intent.size,
+      uploaderId: session.user.id,
+    }),
+  });
+  if (verified.status === 422) return Response.json({ error: 'upload_verification_failed' }, { status: 422 });
+  if (!verified.ok) throw new UploadVerificationError();
+
+  const { sha256 } = (await verified.json()) as { sha256: string };
+  return Response.json({ icon_url: `${storageEnv(env).CDN_URL}/${intent.path}?v=${sha256.slice(0, 16)}` });
 }
