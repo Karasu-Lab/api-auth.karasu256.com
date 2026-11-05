@@ -8,6 +8,13 @@
       "when": 1793861811456,
       "tag": "0000_swift_rafael_vega",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793867751950,
+      "tag": "0001_oauth_client_info",
+      "breakpoints": true
     }
   ]
 }
