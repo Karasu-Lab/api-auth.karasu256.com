@@ -14,7 +14,6 @@
   "vars": {
     "APP_ENV": "production",
     "CDN_URL": "https://cdn.karasu256.com",
-    "STORAGE_ENDPOINT": "https://dc4a5b8ffc2d999e39e9f9509bb4f9af.r2.cloudflarestorage.com",
     "STORAGE_BUCKET": "cdn",
   },
   "ratelimits": [{ "name": "CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
@@ -23,7 +22,6 @@
     "vars": {
       "APP_ENV": "preview",
       "CDN_URL": "https://dev.cdn.karasu256.com",
-      "STORAGE_ENDPOINT": "https://dc4a5b8ffc2d999e39e9f9509bb4f9af.r2.cloudflarestorage.com",
       "STORAGE_BUCKET": "cdn",
     },
   },
