@@ -37,8 +37,6 @@ const LOCAL_DEFAULTS = {
   ACCOUNTS_URL: 'http://localhost:3001',
   API_URL: 'http://localhost:8789',
   FEATURE_FLAGS_API_URL: 'https://dev-flags.karasu256.com',
-  // The flags API only accepts karasu256.com hosts as the origin, so
-  // the local worker identifies itself with the preview origin.
   FEATURE_FLAGS_ORIGIN: 'https://dev-api-auth.karasu256.com',
   // No BASE_DOMAIN locally: the local wrangler environment never defined
   // one, and setting it would turn on cross-subdomain cookies, whose
