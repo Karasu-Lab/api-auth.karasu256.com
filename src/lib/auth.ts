@@ -27,7 +27,8 @@ function createPlugins(env: Env) {
       loginPage: `${env.AUTH_UI_URL}/sign-in`,
       consentPage: `${env.AUTH_UI_URL}/oauth/consent`,
       scopes: ['openid', 'profile', 'email', 'offline_access', 'read:profile', 'write:profile'],
-      allowDynamicClientRegistration: false,
+      allowDynamicClientRegistration: true,
+      allowUnauthenticatedClientRegistration: true,
       accessTokenExpiresIn: 15 * 60,
     }),
     passkey({
