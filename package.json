@@ -6,11 +6,17 @@
   "scripts": {
     "dev": "CLOUDFLARE_ENV=local vite dev --port 8790 --strictPort",
     "build": "tsc && vite build && wrangler deploy --dry-run",
-    "types": "wrangler types --env-interface Env"
+    "types": "wrangler types --env-interface Env",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:dev": "dotenv -e .env.development.local -- drizzle-kit migrate",
+    "db:migrate:prod": "dotenv -e .env.production -- drizzle-kit migrate",
+    "db:migrate:deploy": "drizzle-kit migrate"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.62.5",
     "@types/node": "^26.6.4",
+    "dotenv-cli": "^11.0.0",
+    "drizzle-kit": "^0.30.6",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
     "wrangler": "^4.147.0",
