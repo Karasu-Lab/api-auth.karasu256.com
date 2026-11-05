@@ -5,7 +5,7 @@ import { sso } from '@better-auth/sso';
 import { oauthProvider } from '@better-auth/oauth-provider';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { jwt } from 'better-auth/plugins/jwt';
-import { genericOAuth, multiSession, testUtils } from 'better-auth/plugins';
+import { deviceAuthorization, genericOAuth, multiSession, testUtils } from 'better-auth/plugins';
 import type { Db } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
 import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
@@ -36,6 +36,7 @@ function createPlugins(env: Env) {
       origin: webauthn.expectedOrigins,
     }),
     multiSession({ maximumSessions: 5 }),
+    deviceAuthorization({ verificationUri: `${env.AUTH_UI_URL}/device` }),
     apiKey({ defaultPrefix: 'ksk_', rateLimit: { enabled: false } }),
     sso({
       // The organization plugin is not installed in this monorepo, so SSO
@@ -88,6 +89,7 @@ function createAuthOptions(env: Env, db: Db) {
         oauthClientResource: schema.oauthClientResources,
         oauthClientAssertion: schema.oauthClientAssertions,
         passkey: schema.passkeys,
+        deviceCode: schema.deviceCodes,
         apikey: schema.apiKeys,
         ssoProvider: schema.ssoProviders,
       },
