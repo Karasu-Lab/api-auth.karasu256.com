@@ -6,6 +6,7 @@ import { handlePreflight, withCors } from './lib/cors';
 import { withAuth } from './lib/request-auth';
 import { rejectInvalidSignature } from './lib/signature-gate';
 import { handleCreateApiKey, handleDeleteApiKey, handleIssueApiKey, handleListApiKeys, handleListPermissions, handleVerifyApiKey } from './routes/api-keys';
+import { handleListOAuthClientInfo, handleUpsertOAuthClientInfo } from './routes/oauth-client-info';
 import { handleProviderDetails } from './routes/providers';
 import { handleXboxCallback, handleXboxLink } from './routes/xbox';
 import { handleSetPassword } from './routes/set-password';
@@ -50,6 +51,9 @@ async function dispatch(request: Request): Promise<Response> {
   if (pathname.startsWith('/api/api-keys/') && request.method === 'DELETE')
     return handleDeleteApiKey(env, request, decodeURIComponent(pathname.slice('/api/api-keys/'.length)));
   if (pathname === '/api/permissions' && request.method === 'GET') return handleListPermissions(env, request);
+  if (pathname === '/api/oauth-client-info' && request.method === 'GET') return handleListOAuthClientInfo(env, request);
+  if (pathname.startsWith('/api/oauth-client-info/') && request.method === 'PUT')
+    return handleUpsertOAuthClientInfo(env, request, decodeURIComponent(pathname.slice('/api/oauth-client-info/'.length)));
   if (pathname === '/api/internal/api-keys' && request.method === 'POST') return handleIssueApiKey(env, request);
   if (pathname === '/api/sign-in/lookup' && request.method === 'GET') return handleSignInLookup(env, request);
   if (pathname === '/api/test/accounts' && request.method === 'POST') return handleCreateTestAccount(env, request);
