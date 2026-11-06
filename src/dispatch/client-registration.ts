@@ -2,6 +2,7 @@ import { createDb } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { and, eq } from 'drizzle-orm';
+import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import { withAuth } from '../lib/request-auth';
 
 type Db = ReturnType<typeof createDb>;
@@ -67,41 +68,54 @@ async function ensureClientLink(db: Db, clientId: string, identifier: string): P
   });
 }
 
-export async function handleClientRegistration(env: Env, request: Request): Promise<Response> {
-  const bodyText = await request.clone().text();
-  let requested: string[] = [];
-  try {
-    const parsed = JSON.parse(bodyText) as { resources?: unknown };
-    if (Array.isArray(parsed.resources)) {
-      requested = parsed.resources.filter((resource): resource is string => typeof resource === 'string' && resource.length > 0);
+export class ClientRegistrationDispatch implements Dispatchable {
+  private context: DispatchContext;
+
+  constructor(context: DispatchContext) {
+    this.context = context;
+  }
+
+  matches(): boolean {
+    return this.context.pathname === '/api/auth/oauth2/register' && this.context.request.method === 'POST';
+  }
+
+  async handle(): Promise<Response> {
+    const { env, request } = this.context;
+    const bodyText = await request.clone().text();
+    let requested: string[] = [];
+    try {
+      const parsed = JSON.parse(bodyText) as { resources?: unknown };
+      if (Array.isArray(parsed.resources)) {
+        requested = parsed.resources.filter((resource): resource is string => typeof resource === 'string' && resource.length > 0);
+      }
+    } catch {
+      requested = [];
     }
-  } catch {
-    requested = [];
+    const targets = requested.length > 0 ? [...new Set(requested)] : [env.MCP_URL];
+
+    const db = createDb(env.DATABASE_URL);
+    try {
+      for (const identifier of targets) await ensureResourceRow(db, identifier);
+    } finally {
+      waitUntil(db.$client.end());
+    }
+
+    const headers = new Headers(request.headers);
+    headers.delete('content-length');
+    const response = await withAuth(env, (auth) =>
+      auth.handler(new Request(request.url, { method: request.method, headers, body: bodyText }))
+    );
+    if (!response.ok) return response;
+
+    const data = (await response.clone().json().catch(() => null)) as { client_id?: string } | null;
+    if (!data?.client_id) return response;
+
+    const linkDb = createDb(env.DATABASE_URL);
+    try {
+      for (const identifier of targets) await ensureClientLink(linkDb, data.client_id, identifier);
+    } finally {
+      waitUntil(linkDb.$client.end());
+    }
+    return response;
   }
-  const targets = requested.length > 0 ? [...new Set(requested)] : [env.MCP_URL];
-
-  const db = createDb(env.DATABASE_URL);
-  try {
-    for (const identifier of targets) await ensureResourceRow(db, identifier);
-  } finally {
-    waitUntil(db.$client.end());
-  }
-
-  const headers = new Headers(request.headers);
-  headers.delete('content-length');
-  const response = await withAuth(env, (auth) =>
-    auth.handler(new Request(request.url, { method: request.method, headers, body: bodyText }))
-  );
-  if (!response.ok) return response;
-
-  const data = (await response.clone().json().catch(() => null)) as { client_id?: string } | null;
-  if (!data?.client_id) return response;
-
-  const linkDb = createDb(env.DATABASE_URL);
-  try {
-    for (const identifier of targets) await ensureClientLink(linkDb, data.client_id, identifier);
-  } finally {
-    waitUntil(linkDb.$client.end());
-  }
-  return response;
 }
