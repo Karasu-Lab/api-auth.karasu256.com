@@ -122,22 +122,34 @@ export async function handleUpsertOAuthClientInfo(env: Env, request: Request, cl
       .values({ clientId, authorId: session.user.id, ...values })
       .onConflictDoUpdate({ target: schema.oauthClientInfo.clientId, set: values });
 
+    const findResourceId = async (identifier: string) => {
+      const [row] = await db
+        .select({ id: schema.oauthResources.id })
+        .from(schema.oauthResources)
+        .where(eq(schema.oauthResources.identifier, identifier))
+        .limit(1);
+      return row?.id;
+    };
     if (previous?.resource && previous.resource !== values.resource) {
-      await db
-        .delete(schema.oauthClientResources)
-        .where(
-          and(
-            eq(schema.oauthClientResources.clientId, clientId),
-            eq(schema.oauthClientResources.resourceId, previous.resource),
-          ),
-        );
+      const previousResourceId = await findResourceId(previous.resource);
+      if (previousResourceId) {
+        await db
+          .delete(schema.oauthClientResources)
+          .where(
+            and(
+              eq(schema.oauthClientResources.clientId, clientId),
+              eq(schema.oauthClientResources.resourceId, previousResourceId),
+            ),
+          );
+      }
     }
     if (values.resource) {
       const now = new Date();
-      await db
-        .insert(schema.oauthResources)
-        .values({
-          id: values.resource,
+      let resourceId = await findResourceId(values.resource);
+      if (!resourceId) {
+        resourceId = values.resource;
+        await db.insert(schema.oauthResources).values({
+          id: resourceId,
           identifier: values.resource,
           name: values.resource,
           dpopBoundAccessTokensRequired: false,
@@ -145,15 +157,15 @@ export async function handleUpsertOAuthClientInfo(env: Env, request: Request, cl
           policyVersion: 1,
           createdAt: now,
           updatedAt: now,
-        })
-        .onConflictDoNothing({ target: schema.oauthResources.identifier });
+        });
+      }
       const [link] = await db
         .select({ id: schema.oauthClientResources.id })
         .from(schema.oauthClientResources)
         .where(
           and(
             eq(schema.oauthClientResources.clientId, clientId),
-            eq(schema.oauthClientResources.resourceId, values.resource),
+            eq(schema.oauthClientResources.resourceId, resourceId),
           ),
         )
         .limit(1);
@@ -161,7 +173,7 @@ export async function handleUpsertOAuthClientInfo(env: Env, request: Request, cl
         await db.insert(schema.oauthClientResources).values({
           id: crypto.randomUUID(),
           clientId,
-          resourceId: values.resource,
+          resourceId,
           createdAt: now,
         });
       }
