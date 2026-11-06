@@ -1,5 +1,13 @@
 import type { OAuth2Tokens } from '@better-auth/core/oauth2';
-import type { XboxProfile, XboxToken } from '@karasu-lab/types/server';
+import {
+  microsoftTokenResponseSchema,
+  xboxErrorResponseSchema,
+  xboxProfileResponseSchema,
+  xboxTokenResponseSchema,
+  type XboxProfile,
+  type XboxToken,
+  type XboxTokenResponse,
+} from '@karasu-lab/types/server';
 
 export type { XboxProfile, XboxToken };
 
@@ -10,11 +18,6 @@ const XBOX_PROFILE_URL = 'https://profile.xboxlive.com/users/xuid';
 const XBOX_AUTH_RELYING_PARTY = 'http://auth.xboxlive.com';
 export const XBOX_RELYING_PARTY = 'http://xboxlive.com';
 export const MINECRAFT_RELYING_PARTY = 'rp://api.minecraftservices.com/';
-
-interface XboxTokenResponse {
-  Token?: string;
-  DisplayClaims?: { xui?: Array<Record<string, string>> };
-}
 
 function toXboxToken(body: XboxTokenResponse): XboxToken | null {
   const claims = body.DisplayClaims?.xui?.[0];
@@ -56,10 +59,12 @@ async function postXbox(url: string, body: unknown, stage: string): Promise<Xbox
     let xErr: number | null = null;
     let detail: string | null = text || null;
     try {
-      const parsed = JSON.parse(text) as { XErr?: number | string; Message?: string };
-      const parsedXErr = typeof parsed.XErr === 'string' ? Number.parseInt(parsed.XErr, 10) : parsed.XErr;
-      if (typeof parsedXErr === 'number' && Number.isInteger(parsedXErr)) xErr = parsedXErr;
-      if (parsed.Message) detail = parsed.Message;
+      const parsed = xboxErrorResponseSchema.safeParse(JSON.parse(text));
+      if (parsed.success) {
+        const parsedXErr = typeof parsed.data.XErr === 'string' ? Number.parseInt(parsed.data.XErr, 10) : parsed.data.XErr;
+        if (typeof parsedXErr === 'number' && Number.isInteger(parsedXErr)) xErr = parsedXErr;
+        if (parsed.data.Message) detail = parsed.data.Message;
+      }
     } catch {}
     if (xErr == null) {
       const headerXErr = Number.parseInt(res?.headers.get('x-err') ?? '', 10);
@@ -67,7 +72,7 @@ async function postXbox(url: string, body: unknown, stage: string): Promise<Xbox
     }
     throw new XboxLiveError(stage, res?.status ?? null, xErr, detail);
   }
-  return JSON.parse(text) as XboxTokenResponse;
+  return xboxTokenResponseSchema.parse(JSON.parse(text));
 }
 
 export async function authenticateXboxLive(microsoftAccessToken: string): Promise<XboxToken> {
@@ -123,8 +128,9 @@ export async function refreshMicrosoftTokens(
     );
     return null;
   }
-  const body = (await res.json().catch(() => null)) as { access_token?: string; refresh_token?: string; expires_in?: number } | null;
-  if (!body?.access_token) return null;
+  const parsed = microsoftTokenResponseSchema.safeParse(await res.json().catch(() => null));
+  if (!parsed.success) return null;
+  const body = parsed.data;
   return {
     accessToken: body.access_token,
     refreshToken: body.refresh_token,
@@ -144,9 +150,8 @@ export async function getXboxProfile(xsts: XboxToken): Promise<XboxProfile | nul
   }).catch(() => null);
   if (!res?.ok) return xsts.gamertag ? { gamertag: xsts.gamertag, avatarUrl: null } : null;
 
-  const body = (await res.json().catch(() => null)) as {
-    profileUsers?: Array<{ settings?: Array<{ id?: string; value?: string | null }> }>;
-  } | null;
+  const parsed = xboxProfileResponseSchema.safeParse(await res.json().catch(() => null));
+  const body = parsed.success ? parsed.data : null;
   const values = new Map((body?.profileUsers?.[0]?.settings ?? []).map((setting) => [setting.id, setting.value ?? null]));
   return { gamertag: values.get('Gamertag') ?? xsts.gamertag, avatarUrl: values.get('GameDisplayPicRaw') ?? null };
 }

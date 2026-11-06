@@ -1,3 +1,5 @@
+import { avatarUserSchema, deviceSessionAvatarEntrySchema, userinfoAvatarClaimsSchema } from '@karasu-lab/types/server';
+
 const PROFILE_PATHS = new Set(['/api/auth/get-session', '/api/auth/multi-session/list-device-sessions', '/api/auth/oauth2/userinfo']);
 
 export function cdnProfileAvatarUrl(env: Env, userId: string, image: string | null | undefined): string | null {
@@ -13,12 +15,11 @@ export function cdnProfileAvatarUrl(env: Env, userId: string, image: string | nu
 }
 
 function rewriteUserImage(env: Env, user: unknown): boolean {
-  if (typeof user !== 'object' || user === null) return false;
-  const record = user as { id?: unknown; image?: unknown };
-  if (typeof record.id !== 'string' || typeof record.image !== 'string') return false;
-  const rewritten = cdnProfileAvatarUrl(env, record.id, record.image);
-  if (!rewritten || rewritten === record.image) return false;
-  record.image = rewritten;
+  const parsed = avatarUserSchema.safeParse(user);
+  if (!parsed.success) return false;
+  const rewritten = cdnProfileAvatarUrl(env, parsed.data.id, parsed.data.image);
+  if (!rewritten || rewritten === parsed.data.image) return false;
+  (user as { image: string }).image = rewritten;
   return true;
 }
 
@@ -35,17 +36,16 @@ export async function withCdnProfileAvatarUrls(env: Env, pathname: string, respo
   let changed = false;
   if (pathname === '/api/auth/multi-session/list-device-sessions' && Array.isArray(body)) {
     for (const entry of body) {
-      if (typeof entry === 'object' && entry !== null && rewriteUserImage(env, (entry as { user?: unknown }).user)) changed = true;
+      const parsed = deviceSessionAvatarEntrySchema.safeParse(entry);
+      if (parsed.success && rewriteUserImage(env, (entry as { user?: unknown }).user)) changed = true;
     }
   } else if (pathname === '/api/auth/oauth2/userinfo') {
-    if (typeof body === 'object' && body !== null) {
-      const claims = body as { sub?: unknown; picture?: unknown };
-      if (typeof claims.sub === 'string' && typeof claims.picture === 'string') {
-        const rewritten = cdnProfileAvatarUrl(env, claims.sub, claims.picture);
-        if (rewritten && rewritten !== claims.picture) {
-          claims.picture = rewritten;
-          changed = true;
-        }
+    const parsed = userinfoAvatarClaimsSchema.safeParse(body);
+    if (parsed.success) {
+      const rewritten = cdnProfileAvatarUrl(env, parsed.data.sub, parsed.data.picture);
+      if (rewritten && rewritten !== parsed.data.picture) {
+        (body as { picture: string }).picture = rewritten;
+        changed = true;
       }
     }
   } else if (typeof body === 'object' && body !== null) {

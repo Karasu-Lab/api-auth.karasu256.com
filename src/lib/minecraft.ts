@@ -1,4 +1,9 @@
-import type { MinecraftProfile, XboxToken } from '@karasu-lab/types/server';
+import {
+  minecraftLoginResponseSchema,
+  minecraftProfileResponseSchema,
+  type MinecraftProfile,
+  type XboxToken,
+} from '@karasu-lab/types/server';
 
 export type { MinecraftProfile };
 
@@ -19,9 +24,9 @@ export async function loginToMinecraft(xsts: XboxToken): Promise<string> {
     body: JSON.stringify({ identityToken: `XBL3.0 x=${xsts.userHash};${xsts.token}` }),
   }).catch(() => null);
   const text = await readMinecraftResponse(res, 'Minecraft login');
-  const body = JSON.parse(text) as { access_token?: string };
-  if (!body.access_token) throw new Error(`Minecraft login failed: the response did not include an access token: ${text.slice(0, 300)}`);
-  return body.access_token;
+  const parsed = minecraftLoginResponseSchema.safeParse(JSON.parse(text));
+  if (!parsed.success) throw new Error(`Minecraft login failed: the response did not include an access token: ${text.slice(0, 300)}`);
+  return parsed.data.access_token;
 }
 
 export async function getMinecraftProfile(minecraftAccessToken: string): Promise<MinecraftProfile> {
@@ -29,12 +34,9 @@ export async function getMinecraftProfile(minecraftAccessToken: string): Promise
     headers: { authorization: `Bearer ${minecraftAccessToken}`, accept: 'application/json', 'user-agent': MINECRAFT_USER_AGENT },
   }).catch(() => null);
   const text = await readMinecraftResponse(res, 'Minecraft profile');
-  const body = JSON.parse(text) as {
-    id?: string;
-    name?: string;
-    skins?: Array<{ state?: string; url?: string }>;
-  };
-  if (!body.id || !body.name) throw new Error(`Minecraft profile failed: the response did not include a profile: ${text.slice(0, 300)}`);
+  const parsed = minecraftProfileResponseSchema.safeParse(JSON.parse(text));
+  if (!parsed.success) throw new Error(`Minecraft profile failed: the response did not include a profile: ${text.slice(0, 300)}`);
+  const body = parsed.data;
   const activeSkin = body.skins?.find((skin) => skin.state === 'ACTIVE') ?? body.skins?.[0];
   return { id: body.id, name: body.name, skinTextureUrl: activeSkin?.url ?? null };
 }

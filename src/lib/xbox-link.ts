@@ -1,6 +1,6 @@
 import { setTokenUtil } from 'better-auth/oauth2';
 import type { AuthContext } from '@better-auth/core';
-import type { XboxLinkExchange, XboxLinkTokens } from '@karasu-lab/types/server';
+import { xboxLinkStatePayloadSchema, type XboxLinkExchange, type XboxLinkTokens } from '@karasu-lab/types/server';
 import { authenticateXboxLive, authorizeXsts, XBOX_RELYING_PARTY } from './xbox-live';
 
 export type { XboxLinkExchange, XboxLinkTokens };
@@ -44,9 +44,9 @@ export async function verifyXboxLinkState(secret: string, state: string): Promis
     .catch(() => false);
   if (!valid) return null;
   try {
-    const parsed = JSON.parse(new TextDecoder().decode(base64UrlDecode(payload))) as { userId?: string; exp?: number };
-    if (!parsed.userId || !parsed.exp || parsed.exp < Date.now()) return null;
-    return parsed.userId;
+    const parsed = xboxLinkStatePayloadSchema.safeParse(JSON.parse(new TextDecoder().decode(base64UrlDecode(payload))));
+    if (!parsed.success || parsed.data.exp < Date.now()) return null;
+    return parsed.data.userId;
   } catch {
     return null;
   }

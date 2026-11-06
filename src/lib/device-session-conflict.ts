@@ -1,5 +1,6 @@
 import { APIError } from 'better-auth/api';
 import { parseCookies } from 'better-auth/cookies';
+import { z } from 'zod';
 import type { DeviceSessionSource } from '@karasu-lab/types/server';
 
 export type { DeviceSessionSource };
@@ -14,7 +15,7 @@ export async function assertNoDeviceSessionConflict(source: DeviceSessionSource,
         .filter((name) => name.includes('_multi-'))
         .map((name) => source.getSignedCookie(name)),
     )
-  ).filter((token): token is string => typeof token === 'string');
+  ).filter((token): token is string => z.string().safeParse(token).success);
   if (tokens.length === 0) return;
   const deviceSessions = await source.findSessions(tokens);
   const conflict = deviceSessions.some((entry) => entry !== null && entry.session.expiresAt > new Date() && entry.user.id === userId);
