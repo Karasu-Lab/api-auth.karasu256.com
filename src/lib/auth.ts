@@ -31,6 +31,7 @@ function createPlugins(env: Env) {
       allowDynamicClientRegistration: true,
       allowUnauthenticatedClientRegistration: true,
       accessTokenExpiresIn: 15 * 60,
+      refreshTokenReuseInterval: 30,
     }),
     passkey({
       rpID: webauthn.rpId,
