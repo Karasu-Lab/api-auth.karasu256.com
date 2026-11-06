@@ -12,6 +12,7 @@ const upsertBodySchema = z.object({
   name: z.string().trim().min(1).max(255),
   icon_url: z.string().max(2048).nullable().optional(),
   description: z.string().max(2000).nullable().optional(),
+  resource: z.string().max(2048).nullable().optional(),
 });
 
 const prepareIconBodySchema = z.object({
@@ -36,6 +37,7 @@ interface OAuthClientInfoResponse {
   author_id: string | null;
   icon_url: string | null;
   description: string | null;
+  resource: string | null;
 }
 
 async function ownsClient(env: Env, clientId: string, userId: string): Promise<boolean> {
@@ -80,6 +82,7 @@ export async function handleListOAuthClientInfo(env: Env, request: Request): Pro
       author_id: row.authorId,
       icon_url: row.iconUrl,
       description: row.description,
+      resource: row.resource,
     }));
     return Response.json(body);
   } finally {
@@ -107,11 +110,62 @@ export async function handleUpsertOAuthClientInfo(env: Env, request: Request, cl
       name: parsed.data.name,
       iconUrl: parsed.data.icon_url ?? null,
       description: parsed.data.description ?? null,
+      resource: parsed.data.resource ?? null,
     };
+    const [previous] = await db
+      .select({ resource: schema.oauthClientInfo.resource })
+      .from(schema.oauthClientInfo)
+      .where(eq(schema.oauthClientInfo.clientId, clientId))
+      .limit(1);
     await db
       .insert(schema.oauthClientInfo)
       .values({ clientId, authorId: session.user.id, ...values })
       .onConflictDoUpdate({ target: schema.oauthClientInfo.clientId, set: values });
+
+    if (previous?.resource && previous.resource !== values.resource) {
+      await db
+        .delete(schema.oauthClientResources)
+        .where(
+          and(
+            eq(schema.oauthClientResources.clientId, clientId),
+            eq(schema.oauthClientResources.resourceId, previous.resource),
+          ),
+        );
+    }
+    if (values.resource) {
+      const now = new Date();
+      await db
+        .insert(schema.oauthResources)
+        .values({
+          id: values.resource,
+          identifier: values.resource,
+          name: values.resource,
+          dpopBoundAccessTokensRequired: false,
+          disabled: false,
+          policyVersion: 1,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoNothing({ target: schema.oauthResources.identifier });
+      const [link] = await db
+        .select({ id: schema.oauthClientResources.id })
+        .from(schema.oauthClientResources)
+        .where(
+          and(
+            eq(schema.oauthClientResources.clientId, clientId),
+            eq(schema.oauthClientResources.resourceId, values.resource),
+          ),
+        )
+        .limit(1);
+      if (!link) {
+        await db.insert(schema.oauthClientResources).values({
+          id: crypto.randomUUID(),
+          clientId,
+          resourceId: values.resource,
+          createdAt: now,
+        });
+      }
+    }
 
     const body: OAuthClientInfoResponse = {
       client_id: clientId,
@@ -119,6 +173,7 @@ export async function handleUpsertOAuthClientInfo(env: Env, request: Request, cl
       author_id: session.user.id,
       icon_url: values.iconUrl,
       description: values.description,
+      resource: values.resource,
     };
     return Response.json(body);
   } finally {
