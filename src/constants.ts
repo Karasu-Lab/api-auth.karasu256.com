@@ -13,6 +13,7 @@ const PRODUCTION_DEFAULTS = {
   AUTH_UI_URL: 'https://auth.karasu256.com',
   SSO_UI_URL: 'https://sso.karasu256.com',
   ACCOUNTS_URL: 'https://accounts.karasu256.com',
+  ACCOUNTS_MCP_URL: 'https://accounts.karasu256.com/mcp',
   API_URL: 'https://api.karasu256.com',
   FEATURE_FLAGS_API_URL: 'https://flags.karasu256.com',
   FEATURE_FLAGS_ORIGIN: 'https://api-auth.karasu256.com',
@@ -24,6 +25,7 @@ const PREVIEW_DEFAULTS = {
   AUTH_UI_URL: 'https://dev-auth.karasu256.com',
   SSO_UI_URL: 'https://dev-sso.karasu256.com',
   ACCOUNTS_URL: 'https://dev.accounts.karasu256.com',
+  ACCOUNTS_MCP_URL: 'https://dev.accounts.karasu256.com/mcp',
   API_URL: 'https://dev-api.karasu256.com',
   FEATURE_FLAGS_API_URL: 'https://dev-flags.karasu256.com',
   FEATURE_FLAGS_ORIGIN: 'https://dev-api-auth.karasu256.com',
@@ -35,6 +37,7 @@ const LOCAL_DEFAULTS = {
   AUTH_UI_URL: 'http://localhost:3004',
   SSO_UI_URL: 'http://localhost:3007',
   ACCOUNTS_URL: 'http://localhost:3001',
+  ACCOUNTS_MCP_URL: 'http://localhost:3001/mcp',
   API_URL: 'http://localhost:8789',
   FEATURE_FLAGS_API_URL: 'https://dev-flags.karasu256.com',
   FEATURE_FLAGS_ORIGIN: 'https://dev-api-auth.karasu256.com',
@@ -48,6 +51,7 @@ type DomainDefaults = {
   AUTH_UI_URL: string;
   SSO_UI_URL: string;
   ACCOUNTS_URL: string;
+  ACCOUNTS_MCP_URL: string;
   API_URL: string;
   FEATURE_FLAGS_API_URL: string;
   FEATURE_FLAGS_ORIGIN: string;
@@ -60,6 +64,7 @@ function domainEnvSchema(defaults: DomainDefaults) {
     AUTH_UI_URL: z.url().default(defaults.AUTH_UI_URL),
     SSO_UI_URL: z.url().default(defaults.SSO_UI_URL),
     ACCOUNTS_URL: z.url().default(defaults.ACCOUNTS_URL),
+    ACCOUNTS_MCP_URL: z.url().default(defaults.ACCOUNTS_MCP_URL),
     API_URL: z.url().default(defaults.API_URL),
     FEATURE_FLAGS_API_URL: z.url().default(defaults.FEATURE_FLAGS_API_URL),
     FEATURE_FLAGS_ORIGIN: z.url().default(defaults.FEATURE_FLAGS_ORIGIN),

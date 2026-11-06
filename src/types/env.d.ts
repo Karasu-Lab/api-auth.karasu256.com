@@ -7,6 +7,7 @@ declare global {
     AUTH_UI_URL: string;
     SSO_UI_URL: string;
     ACCOUNTS_URL: string;
+    ACCOUNTS_MCP_URL: string;
     API_URL: string;
     FEATURE_FLAGS_API_URL: string;
     FEATURE_FLAGS_ORIGIN: string;
