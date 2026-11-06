@@ -48,7 +48,7 @@ export async function withCdnProfileAvatarUrls(env: Env, pathname: string, respo
         changed = true;
       }
     }
-  } else if (typeof body === 'object' && body !== null) {
+  } else if (deviceSessionAvatarEntrySchema.safeParse(body).success) {
     changed = rewriteUserImage(env, (body as { user?: unknown }).user);
   }
 
