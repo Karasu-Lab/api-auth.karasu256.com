@@ -41,6 +41,23 @@ interface OAuthClientInfoResponse {
   description: string | null;
   resource: string | null;
   public: boolean;
+  client_secret?: string;
+}
+
+const CLIENT_SECRET_ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+function generateClientSecret(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => CLIENT_SECRET_ALPHABET[byte % CLIENT_SECRET_ALPHABET.length]).join('');
+}
+
+async function hashClientSecret(secret: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
 async function ownsClient(env: Env, clientId: string, userId: string): Promise<boolean> {
@@ -104,7 +121,12 @@ export async function handleUpsertOAuthClientInfo(env: Env, request: Request, cl
   const db = createDb(env.DATABASE_URL);
   try {
     const [client] = await db
-      .select({ clientId: schema.oauthClients.clientId })
+      .select({
+        clientId: schema.oauthClients.clientId,
+        clientSecret: schema.oauthClients.clientSecret,
+        grantTypes: schema.oauthClients.grantTypes,
+        tokenEndpointAuthMethod: schema.oauthClients.tokenEndpointAuthMethod,
+      })
       .from(schema.oauthClients)
       .where(and(eq(schema.oauthClients.clientId, clientId), eq(schema.oauthClients.userId, session.user.id)))
       .limit(1);
@@ -126,6 +148,32 @@ export async function handleUpsertOAuthClientInfo(env: Env, request: Request, cl
       .insert(schema.oauthClientInfo)
       .values({ clientId, authorId: session.user.id, ...values })
       .onConflictDoUpdate({ target: schema.oauthClientInfo.clientId, set: values });
+
+    let newClientSecret: string | undefined;
+    const grantTypes = client.grantTypes ?? [];
+    const isDeviceClient = grantTypes.includes(DEVICE_CODE_GRANT_TYPE) && !grantTypes.includes('authorization_code');
+    const targetAuthMethod = isDeviceClient || values.public ? 'none' : 'client_secret_basic';
+    const currentAuthMethod = client.tokenEndpointAuthMethod ?? 'client_secret_basic';
+    const authMethodIsManaged = client.tokenEndpointAuthMethod === null || client.tokenEndpointAuthMethod === 'none' || client.tokenEndpointAuthMethod === 'client_secret_basic';
+    if (authMethodIsManaged && targetAuthMethod !== currentAuthMethod) {
+      if (targetAuthMethod === 'none') {
+        await db
+          .update(schema.oauthClients)
+          .set({ tokenEndpointAuthMethod: 'none', clientSecret: null, jwks: null, jwksUri: null, updatedAt: new Date() })
+          .where(eq(schema.oauthClients.clientId, clientId));
+      } else if (client.clientSecret) {
+        await db
+          .update(schema.oauthClients)
+          .set({ tokenEndpointAuthMethod: 'client_secret_basic', updatedAt: new Date() })
+          .where(eq(schema.oauthClients.clientId, clientId));
+      } else {
+        newClientSecret = generateClientSecret();
+        await db
+          .update(schema.oauthClients)
+          .set({ tokenEndpointAuthMethod: 'client_secret_basic', clientSecret: await hashClientSecret(newClientSecret), updatedAt: new Date() })
+          .where(eq(schema.oauthClients.clientId, clientId));
+      }
+    }
 
     const findResource = async (identifier: string) => {
       const [row] = await db
@@ -201,6 +249,7 @@ export async function handleUpsertOAuthClientInfo(env: Env, request: Request, cl
       description: values.description,
       resource: values.resource,
       public: values.public,
+      client_secret: newClientSecret,
     };
     return Response.json(body);
   } finally {
