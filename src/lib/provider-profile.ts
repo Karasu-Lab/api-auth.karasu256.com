@@ -245,6 +245,25 @@ export async function getProviderProfile(
   });
 }
 
+export async function getProviderAccessToken(auth: Auth, uid: string, providerId: string): Promise<string | null> {
+  const ctx = (await auth.$context) as unknown as AuthContext;
+
+  const account = (await ctx.internalAdapter.findAccounts(uid)).find((entry) => entry.providerId === providerId);
+  if (!account) return null;
+
+  const provider = ctx.socialProviders.find((entry) => entry.id === providerId);
+  if (!provider) return null;
+
+  const stored = await decryptStoredTokens(ctx, account);
+  if (!stored?.accessToken) return null;
+  if (hasLiveAccessToken(stored) || !stored.refreshToken || !provider.refreshAccessToken) return stored.accessToken;
+
+  const refreshed = await provider.refreshAccessToken(stored.refreshToken).catch(() => null);
+  if (!refreshed?.accessToken) return stored.accessToken;
+  await persistRefreshedTokens(ctx, account.id, refreshed);
+  return refreshed.accessToken;
+}
+
 async function getMicrosoftPhotoDataUrl(accessToken: string): Promise<string | null> {
   const res = await fetch('https://graph.microsoft.com/v1.0/me/photos/48x48/$value', {
     headers: { authorization: `Bearer ${accessToken}` },

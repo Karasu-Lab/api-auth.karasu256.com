@@ -26,7 +26,17 @@ function createPlugins(env: Env) {
     oauthProvider({
       loginPage: `${env.AUTH_UI_URL}/sign-in`,
       consentPage: `${env.AUTH_UI_URL}/oauth/consent`,
-      scopes: ['openid', 'profile', 'email', 'offline_access', 'read:profile', 'write:profile'],
+      scopes: [
+        'openid',
+        'profile',
+        'email',
+        'offline_access',
+        'read:users.profile',
+        'write:users.profile',
+        'read:github.user',
+        'read:github.avatar',
+        'read:github.repositories',
+      ],
       resources: [env.MCP_URL],
       clientRegistrationAllowedResources: [env.MCP_URL],
       allowDynamicClientRegistration: true,
