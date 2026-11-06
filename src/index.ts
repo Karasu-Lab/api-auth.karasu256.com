@@ -15,6 +15,7 @@ import {
   handleUpsertOAuthClientInfo,
 } from './routes/oauth-client-info';
 import { SecretRotationNotAllowedError } from './lib/secret-rotation-error';
+import { handleClientRegistration } from './routes/client-registration';
 import { handleMcpIconUploadUrl, handleMcpSessionToken } from './routes/mcp';
 import { handleProviderDetails } from './routes/providers';
 import { handleXboxCallback, handleXboxLink } from './routes/xbox';
@@ -55,6 +56,7 @@ async function dispatch(request: Request): Promise<Response> {
     const rejectedTurnstile = await rejectUnverifiedTurnstile(env, request);
     if (rejectedTurnstile) return rejectedTurnstile;
     if (pathname === '/api/auth/oauth2/client/rotate-secret' && request.method === 'POST') return app.fetch(request);
+    if (pathname === '/api/auth/oauth2/register' && request.method === 'POST') return handleClientRegistration(env, request);
     const response = await withAuth(env, (auth) => auth.handler(request));
     return withCdnProfileAvatarUrls(env, pathname, response);
   }
