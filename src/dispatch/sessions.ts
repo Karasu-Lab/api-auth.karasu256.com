@@ -2,17 +2,41 @@ import { createDb } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { and, desc, eq, gt } from 'drizzle-orm';
+import { z } from 'zod';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
-import { NotFoundError } from '@karasu-lab/types/server';
+import { BadRequestError, NotFoundError } from '@karasu-lab/types/server';
 import { sessionSourceSchema, type AuthSession, type SessionDeviceSource } from '@karasu-lab/types/shared';
 
 const LIST_SESSIONS_PATH = /^\/api\/internal\/users\/([^/]+)\/sessions$/;
 const LIST_SOURCES_PATH = /^\/api\/internal\/users\/([^/]+)\/session-sources$/;
 const REVOKE_SESSION_PATH = /^\/api\/internal\/users\/([^/]+)\/sessions\/([^/]+)$/;
 
+const sessionFilterSchema = z.object({
+  userId: z.string().min(1),
+  sessionId: z.string().min(1).optional(),
+});
+
+type SessionFilter = z.infer<typeof sessionFilterSchema>;
+
 function pathParam(pathname: string, pattern: RegExp, index: number): string | null {
   const match = pattern.exec(pathname);
   return match ? decodeURIComponent(match[index]) : null;
+}
+
+function sessionFilter(context: DispatchContext, userId: string | null): SessionFilter {
+  const sessionId = new URL(context.request.url).searchParams.get('sessionId');
+  const parsed = sessionFilterSchema.safeParse({ userId, ...(sessionId !== null ? { sessionId } : {}) });
+  if (!parsed.success) throw new BadRequestError();
+  return parsed.data;
+}
+
+function revokeFilter(context: DispatchContext): SessionFilter & { sessionId: string } {
+  const parsed = sessionFilterSchema.safeParse({
+    userId: pathParam(context.pathname, REVOKE_SESSION_PATH, 1),
+    sessionId: pathParam(context.pathname, REVOKE_SESSION_PATH, 2),
+  });
+  if (!parsed.success || !parsed.data.sessionId) throw new BadRequestError();
+  return parsed.data as SessionFilter & { sessionId: string };
 }
 
 async function withDb<T>(env: Env, fn: (db: ReturnType<typeof createDb>) => Promise<T>): Promise<T> {
@@ -36,13 +60,11 @@ export class ListAuthSessionsDispatch implements Dispatchable {
   }
 
   async handle(): Promise<Response> {
-    const userId = pathParam(this.context.pathname, LIST_SESSIONS_PATH, 1) as string;
+    const filter = sessionFilter(this.context, pathParam(this.context.pathname, LIST_SESSIONS_PATH, 1));
+    const conditions = [eq(schema.sessions.userId, filter.userId), gt(schema.sessions.expiresAt, new Date())];
+    if (filter.sessionId) conditions.push(eq(schema.sessions.id, filter.sessionId));
     const rows = await withDb(this.context.env, (db) =>
-      db
-        .select()
-        .from(schema.sessions)
-        .where(and(eq(schema.sessions.userId, userId), gt(schema.sessions.expiresAt, new Date())))
-        .orderBy(desc(schema.sessions.createdAt))
+      db.select().from(schema.sessions).where(and(...conditions)).orderBy(desc(schema.sessions.createdAt))
     );
     const sessions: AuthSession[] = rows.map((row) => ({
       id: row.id,
@@ -69,9 +91,11 @@ export class ListSessionDevicesSourceDispatch implements Dispatchable {
   }
 
   async handle(): Promise<Response> {
-    const userId = pathParam(this.context.pathname, LIST_SOURCES_PATH, 1) as string;
+    const filter = sessionFilter(this.context, pathParam(this.context.pathname, LIST_SOURCES_PATH, 1));
+    const conditions = [eq(schema.sessionDevicesSource.userId, filter.userId)];
+    if (filter.sessionId) conditions.push(eq(schema.sessionDevicesSource.sessionId, filter.sessionId));
     const rows = await withDb(this.context.env, (db) =>
-      db.select().from(schema.sessionDevicesSource).where(eq(schema.sessionDevicesSource.userId, userId))
+      db.select().from(schema.sessionDevicesSource).where(and(...conditions))
     );
     const sources: SessionDeviceSource[] = [];
     for (const row of rows) {
@@ -94,12 +118,11 @@ export class RevokeAuthSessionDispatch implements Dispatchable {
   }
 
   async handle(): Promise<Response> {
-    const userId = pathParam(this.context.pathname, REVOKE_SESSION_PATH, 1) as string;
-    const sessionId = pathParam(this.context.pathname, REVOKE_SESSION_PATH, 2) as string;
+    const filter = revokeFilter(this.context);
     const deleted = await withDb(this.context.env, (db) =>
       db
         .delete(schema.sessions)
-        .where(and(eq(schema.sessions.id, sessionId), eq(schema.sessions.userId, userId)))
+        .where(and(eq(schema.sessions.id, filter.sessionId), eq(schema.sessions.userId, filter.userId)))
         .returning({ id: schema.sessions.id })
     );
     if (deleted.length === 0) throw new NotFoundError();
