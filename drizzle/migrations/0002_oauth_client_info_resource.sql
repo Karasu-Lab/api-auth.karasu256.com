@@ -1,0 +1,1 @@
+ALTER TABLE "oauth_client_info" ADD COLUMN "resource" text;

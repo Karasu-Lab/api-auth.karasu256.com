@@ -29,7 +29,6 @@ function createPlugins(env: Env) {
       scopes: ['openid', 'profile', 'email', 'offline_access', 'read:profile', 'write:profile'],
       resources: [env.ACCOUNTS_MCP_URL],
       clientRegistrationAllowedResources: [env.ACCOUNTS_MCP_URL],
-      clientRegistrationDefaultResources: [env.ACCOUNTS_MCP_URL],
       allowDynamicClientRegistration: true,
       allowUnauthenticatedClientRegistration: true,
       accessTokenExpiresIn: 15 * 60,
