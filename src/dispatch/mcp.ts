@@ -3,11 +3,18 @@ import { sessions } from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
 import { decodeJwt } from 'jose';
+import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import { BadRequestError, UnauthorizedError } from '../lib/errors';
 import { withAuth } from '../lib/request-auth';
 import { presignUploadUrl } from '../lib/storage';
+
+function sessionCookieHeader(env: Env, token: string): string {
+  const signature = createHmac('sha256', env.BETTER_AUTH_SECRET).update(token).digest('base64url');
+  const value = `${token}.${signature}`;
+  return `better-auth.session_token=${value}; __Secure-better-auth.session_token=${value}`;
+}
 
 const sessionTokenBodySchema = z.object({ accessToken: z.string().min(1) });
 const iconUploadUrlBodySchema = z.object({ userId: z.string().min(1), contentType: z.string().min(1) });
@@ -58,8 +65,8 @@ export class McpSessionTokenDispatch implements Dispatchable {
       if (!session || session.userId !== sub || session.expiresAt.getTime() <= Date.now()) throw new UnauthorizedError();
 
       const { token } = await withAuth(env, (auth) =>
-        auth.api.getToken({ headers: new Headers({ cookie: `better-auth.session_token=${session.token}` }) })
-      );
+        auth.api.getToken({ headers: new Headers({ cookie: sessionCookieHeader(env, session.token) }) })
+      ).catch(() => ({ token: null }));
       if (!token) throw new UnauthorizedError();
       return Response.json({ token });
     } finally {
