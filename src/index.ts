@@ -6,7 +6,7 @@ import { dispatchables } from './dispatch';
 import { handlePreflight, withCors } from './lib/cors';
 import type { DispatchContext } from './lib/dispatch';
 import { HttpError } from './lib/errors';
-import { toHandlerRequest, withAuth } from './lib/request-auth';
+import { withAuth } from './lib/request-auth';
 import { rejectInvalidSignature } from './lib/signature-gate';
 import { assertSecretRotationAllowed } from './dispatch/oauth-client-info';
 import { SecretRotationNotAllowedError } from './lib/secret-rotation-error';
@@ -28,18 +28,28 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
   .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
   .get('/api/xbox/link', ({ request }) => handleXboxLink(env, request))
   .get('/api/xbox/callback', ({ request }) => handleXboxCallback(env, request))
-  .post('/api/auth/oauth2/client/rotate-secret', async ({ request, body }) => {
-    await assertSecretRotationAllowed(env, body);
-    return withAuth(env, (auth) => auth.handler(toHandlerRequest(request, body)));
-  })
-  .all('/*', async ({ request, body }) => {
-    const context: DispatchContext = { env, request, pathname: new URL(request.url).pathname, body };
-    for (const Dispatchable of dispatchables) {
-      const dispatchable = new Dispatchable(context);
-      if (dispatchable.matches()) return dispatchable.handle();
-    }
-    return new Response('NOT_FOUND', { status: 404 });
-  });
+  .post(
+    '/api/auth/oauth2/client/rotate-secret',
+    async ({ request }) => {
+      await assertSecretRotationAllowed(env, request);
+      return withAuth(env, (auth) => auth.handler(request));
+    },
+    { type: 'none' }
+  )
+  .all(
+    '/*',
+    async ({ request }) => {
+      const body =
+        request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.clone().json().catch(() => null);
+      const context: DispatchContext = { env, request, pathname: new URL(request.url).pathname, body };
+      for (const Dispatchable of dispatchables) {
+        const dispatchable = new Dispatchable(context);
+        if (dispatchable.matches()) return dispatchable.handle();
+      }
+      return new Response('NOT_FOUND', { status: 404 });
+    },
+    { type: 'none' }
+  );
 
 function normalizePath(request: Request): Request {
   const url = new URL(request.url);

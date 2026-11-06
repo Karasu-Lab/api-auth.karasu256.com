@@ -4,7 +4,7 @@ import { waitUntil } from 'cloudflare:workers';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
-import { toHandlerRequest, withAuth } from '../lib/request-auth';
+import { withAuth } from '../lib/request-auth';
 
 const registrationBodySchema = z.object({ resources: z.array(z.unknown()).catch([]) }).catch({ resources: [] });
 const resourceSchema = z.string().min(1);
@@ -99,7 +99,7 @@ export class ClientRegistrationDispatch implements Dispatchable {
       waitUntil(db.$client.end());
     }
 
-    const response = await withAuth(env, (auth) => auth.handler(toHandlerRequest(request, body)));
+    const response = await withAuth(env, (auth) => auth.handler(request));
     if (!response.ok) return response;
 
     const registration = registrationResponseSchema.safeParse(await response.clone().json().catch(() => null));
