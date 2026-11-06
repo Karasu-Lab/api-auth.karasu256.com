@@ -1,19 +1,11 @@
 import { z } from 'zod';
 
-/**
- * The configurable values that point at the Karasu Lab domains. Their
- * production values are the defaults here, so the worker needs no URL
- * configuration in its wrangler vars — only secrets are provisioned from
- * outside. An environment variable of the same name still overrides the
- * default, and the defaults branch on APP_ENV so local and preview runs
- * resolve their own domains.
- */
 const PRODUCTION_DEFAULTS = {
   BETTER_AUTH_URL: 'https://api-auth.karasu256.com',
   AUTH_UI_URL: 'https://auth.karasu256.com',
   SSO_UI_URL: 'https://sso.karasu256.com',
   ACCOUNTS_URL: 'https://accounts.karasu256.com',
-  ACCOUNTS_MCP_URL: 'https://accounts.karasu256.com/mcp',
+  MCP_URL: 'https://mcp.karasu256.com/mcp',
   API_URL: 'https://api.karasu256.com',
   FEATURE_FLAGS_API_URL: 'https://flags.karasu256.com',
   FEATURE_FLAGS_ORIGIN: 'https://api-auth.karasu256.com',
@@ -25,7 +17,7 @@ const PREVIEW_DEFAULTS = {
   AUTH_UI_URL: 'https://dev-auth.karasu256.com',
   SSO_UI_URL: 'https://dev-sso.karasu256.com',
   ACCOUNTS_URL: 'https://dev.accounts.karasu256.com',
-  ACCOUNTS_MCP_URL: 'https://dev.accounts.karasu256.com/mcp',
+  MCP_URL: 'https://dev.mcp.karasu256.com/mcp',
   API_URL: 'https://dev-api.karasu256.com',
   FEATURE_FLAGS_API_URL: 'https://dev-flags.karasu256.com',
   FEATURE_FLAGS_ORIGIN: 'https://dev-api-auth.karasu256.com',
@@ -37,13 +29,10 @@ const LOCAL_DEFAULTS = {
   AUTH_UI_URL: 'http://localhost:3004',
   SSO_UI_URL: 'http://localhost:3007',
   ACCOUNTS_URL: 'http://localhost:3001',
-  ACCOUNTS_MCP_URL: 'http://localhost:3001/mcp',
+  MCP_URL: 'http://localhost:8791/mcp',
   API_URL: 'http://localhost:8789',
   FEATURE_FLAGS_API_URL: 'https://dev-flags.karasu256.com',
   FEATURE_FLAGS_ORIGIN: 'https://dev-api-auth.karasu256.com',
-  // No BASE_DOMAIN locally: the local wrangler environment never defined
-  // one, and setting it would turn on cross-subdomain cookies, whose
-  // Domain attribute a localhost caller cannot send back.
 };
 
 type DomainDefaults = {
@@ -51,7 +40,7 @@ type DomainDefaults = {
   AUTH_UI_URL: string;
   SSO_UI_URL: string;
   ACCOUNTS_URL: string;
-  ACCOUNTS_MCP_URL: string;
+  MCP_URL: string;
   API_URL: string;
   FEATURE_FLAGS_API_URL: string;
   FEATURE_FLAGS_ORIGIN: string;
@@ -64,7 +53,7 @@ function domainEnvSchema(defaults: DomainDefaults) {
     AUTH_UI_URL: z.url().default(defaults.AUTH_UI_URL),
     SSO_UI_URL: z.url().default(defaults.SSO_UI_URL),
     ACCOUNTS_URL: z.url().default(defaults.ACCOUNTS_URL),
-    ACCOUNTS_MCP_URL: z.url().default(defaults.ACCOUNTS_MCP_URL),
+    MCP_URL: z.url().default(defaults.MCP_URL),
     API_URL: z.url().default(defaults.API_URL),
     FEATURE_FLAGS_API_URL: z.url().default(defaults.FEATURE_FLAGS_API_URL),
     FEATURE_FLAGS_ORIGIN: z.url().default(defaults.FEATURE_FLAGS_ORIGIN),
@@ -72,12 +61,6 @@ function domainEnvSchema(defaults: DomainDefaults) {
   });
 }
 
-/**
- * Materializes the worker's environment: every domain value the worker
- * was not explicitly given is filled in from the constants above,
- * branched on APP_ENV (local / preview / production). Called once where
- * the worker materializes its env, before any handler reads it.
- */
 export function resolveEnv(raw: Env): Env {
   const defaults =
     raw.APP_ENV === 'local' ? LOCAL_DEFAULTS : raw.APP_ENV === 'preview' ? PREVIEW_DEFAULTS : PRODUCTION_DEFAULTS;
