@@ -12,12 +12,9 @@ import {
   XBOX_RELYING_PARTY,
 } from './xbox-live';
 import { XBOX_PROVIDER_ID } from './xbox-link';
+import type { ProviderProfile } from '@karasu-lab/types/shared';
 
-export interface ProviderProfile {
-  name: string | null;
-  email: string | null;
-  avatarUrl: string | null;
-}
+export type { ProviderProfile };
 
 export interface ProviderProfileOptions {
   microsoftClientId?: string;
@@ -37,12 +34,6 @@ interface StoredAccount {
   accessTokenExpiresAt?: Date | string | null;
 }
 
-/**
- * One external provider's profile sync: how the provider exchanges its
- * stored refresh token for fresh tokens, and how it fetches its
- * current profile with a token set. Every provider's profile is synced
- * through this interface by {@link syncProviderProfile}.
- */
 interface ProviderProfileSync {
   refreshTokens(refreshToken: string): Promise<OAuth2Tokens | null>;
   fetchProfile(tokens: OAuth2Tokens): Promise<ProviderProfile | null>;
@@ -81,20 +72,6 @@ async function persistRefreshedTokens(ctx: AuthContext, accountId: string, refre
   });
 }
 
-/**
- * The flow every provider's profile sync shares: a stored access token
- * that is still live is used as is; once it has expired (access tokens
- * are short-lived), the stored refresh token is exchanged for fresh
- * tokens and synced back to the account first (providers may rotate
- * refresh tokens, so the fresh set must replace the stored one), and
- * the profile is fetched with the freshest token set available.
- *
- * Two derived providers (xbox, minecraft) share one account row, so
- * parallel syncs refresh the same rotating refresh token: the sync
- * that loses that race fails its refresh and falls back to the expired
- * stored token. When a fetch fails, the account is therefore re-read
- * and the fetch retried with the tokens the winning sync stored.
- */
 async function syncProviderProfile(
   ctx: AuthContext,
   accountId: string,
@@ -146,8 +123,6 @@ async function syncProviderProfile(
   }
 
   if (!result.profile && !refreshed && reloadStored) {
-    // The winning sync may not have stored its fresh tokens yet when
-    // this sync first re-reads the account, so re-read a few times.
     let reloaded: OAuth2Tokens | null = null;
     for (let i = 0; i < 3; i++) {
       reloaded = await reloadStored().catch(() => null);
@@ -186,9 +161,6 @@ function socialProfileSync(provider: SocialProvider): ProviderProfileSync {
   };
 }
 
-// Microsoft's profile photo is not part of its user info (embedding it
-// once broke account linking), so it is read from Microsoft Graph with
-// the same live token the sync refreshed.
 function microsoftProfileSync(provider: SocialProvider): ProviderProfileSync {
   const social = socialProfileSync(provider);
   return {
@@ -245,26 +217,6 @@ function minecraftProfileSync(options?: ProviderProfileOptions): ProviderProfile
   };
 }
 
-/**
- * Fetches a linked provider's current profile (name, email, avatar).
- * better-auth's `account` table only stores tokens, not a denormalized
- * profile snapshot, so the profile is synced fresh on every call
- * through the provider's {@link ProviderProfileSync}.
- *
- * The cast to the generic `AuthContext` is safe: `decryptOAuthToken`
- * only reads `options` and `secretConfig`, which exist independent of
- * the instance's specific `Options` type.
- *
- * Decrypting can throw (better-auth's `isLikelyEncrypted` heuristic
- * misjudges some plaintext tokens, e.g. legacy 40-char hex GitHub
- * tokens, as ciphertext), which is treated like any other unresolvable
- * profile.
- *
- * @returns `null` when the provider isn't linked or its profile can't
- * be resolved. A derived provider (xbox, minecraft) is linked exactly
- * when its Xbox account row exists, so an unresolvable profile there
- * returns an empty profile instead of `null`.
- */
 export async function getProviderProfile(
   auth: Auth,
   uid: string,
@@ -325,9 +277,6 @@ async function getDerivedProviderProfile(
 
   const sync = providerId === 'xbox' ? xboxProfileSync(options) : minecraftProfileSync(options);
 
-  // The Xbox account row exists at this point, so the provider is
-  // linked; a profile that cannot be resolved (for example an account
-  // that owns no Minecraft) yields an empty profile, not null.
   try {
     const profile = await syncProviderProfile(ctx, account.id, stored, sync, async () => {
       const again = (await ctx.internalAdapter.findAccounts(uid)).find((entry) => entry.id === account.id);

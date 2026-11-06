@@ -3,7 +3,7 @@ import * as schema from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { and, eq, isNotNull } from 'drizzle-orm';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
-import { BadRequestError, NotFoundError, RateLimitedError } from '../lib/errors';
+import { BadRequestError, NotFoundError, RateLimitedError } from '@karasu-lab/types/server';
 import { checkSignInLookupRateLimit } from '../lib/rate-limit';
 
 export class SignInLookupDispatch implements Dispatchable {

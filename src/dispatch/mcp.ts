@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { decodeJwt } from 'jose';
 import { z } from 'zod';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
-import { BadRequestError, UnauthorizedError } from '../lib/errors';
+import { BadRequestError, UnauthorizedError } from '@karasu-lab/types/server';
 import { withAuth } from '../lib/request-auth';
 import { presignUploadUrl } from '../lib/storage';
 

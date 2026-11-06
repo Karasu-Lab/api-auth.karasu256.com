@@ -1,7 +1,7 @@
 import { APIError } from 'better-auth/api';
 import { z } from 'zod';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
-import { BadRequestError } from '../lib/errors';
+import { BadRequestError } from '@karasu-lab/types/server';
 import { withAuth } from '../lib/request-auth';
 
 const bodySchema = z.object({ newPassword: z.string().min(1) });

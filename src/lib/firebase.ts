@@ -1,4 +1,7 @@
 import { importPKCS8, SignJWT } from 'jose';
+import type { FirebaseUserInput } from '@karasu-lab/types/server';
+
+export type { FirebaseUserInput };
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
@@ -10,7 +13,6 @@ interface CachedToken {
 
 let cachedToken: CachedToken | undefined;
 
-/** Exchanges a service-account JWT for an OAuth access token, reusing it until shortly before expiry. */
 async function getAccessToken(env: Env): Promise<string> {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.value;
 
@@ -36,7 +38,6 @@ async function getAccessToken(env: Env): Promise<string> {
   return access_token;
 }
 
-/** Calls the Identity Toolkit admin API, against the Auth emulator when `FIREBASE_AUTH_EMULATOR_HOST` is set. */
 async function identityToolkit<T>(env: Env, path: string, body: unknown): Promise<T> {
   const emulator = env.FIREBASE_AUTH_EMULATOR_HOST;
   const origin = emulator ? `http://${emulator}/identitytoolkit.googleapis.com` : 'https://identitytoolkit.googleapis.com';
@@ -51,25 +52,16 @@ async function identityToolkit<T>(env: Env, path: string, body: unknown): Promis
   return (await response.json()) as T;
 }
 
-export interface FirebaseUserInput {
-  email?: string;
-  emailVerified?: boolean;
-  displayName?: string;
-}
-
-/** Creates a Firebase user and returns its generated UID. */
 export async function createFirebaseUser(env: Env, input: FirebaseUserInput): Promise<string> {
   const { localId } = await identityToolkit<{ localId: string }>(env, '/accounts', input);
   return localId;
 }
 
-/** Finds a Firebase user by email address and returns its UID, or null when no such user exists. */
 export async function findFirebaseUidByEmail(env: Env, email: string): Promise<string | null> {
   const { users } = await identityToolkit<{ users?: { localId: string }[] }>(env, '/accounts:lookup', { email: [email] });
   return users?.[0]?.localId ?? null;
 }
 
-/** Updates a Firebase user's display name and photo. */
 export async function updateFirebaseUser(env: Env, uid: string, update: { displayName?: string; photoURL?: string }): Promise<void> {
   await identityToolkit(env, '/accounts:update', {
     localId: uid,
@@ -78,7 +70,6 @@ export async function updateFirebaseUser(env: Env, uid: string, update: { displa
   });
 }
 
-/** Deletes a Firebase user. */
 export async function deleteFirebaseUser(env: Env, uid: string): Promise<void> {
   await identityToolkit(env, '/accounts:delete', { localId: uid });
 }

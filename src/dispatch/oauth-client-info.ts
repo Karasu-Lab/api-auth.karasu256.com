@@ -3,44 +3,30 @@ import * as schema from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
+import {
+  imageContentTypeSchema,
+  intentTokenBodySchema,
+  sha256Schema,
+  upsertOAuthClientInfoBodySchema,
+  type OAuthClientInfoResponse,
+} from '@karasu-lab/types/shared';
+import { BadRequestError, HttpError, NotFoundError, UnauthorizedError } from '@karasu-lab/types/server';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
-import { BadRequestError, HttpError, NotFoundError, UnauthorizedError } from '../lib/errors';
 import { withAuth } from '../lib/request-auth';
 import { SecretRotationNotAllowedError } from '../lib/secret-rotation-error';
 import { presignUploadUrl, storageEnv } from '../lib/storage';
 import { signUploadIntent, verifyUploadIntent } from '../lib/upload-intent';
 import { UploadVerificationError } from '../lib/upload-verification-error';
 
-const upsertBodySchema = z.object({
-  name: z.string().trim().min(1).max(255),
-  icon_url: z.string().max(2048).nullable().optional(),
-  description: z.string().max(2000).nullable().optional(),
-  resource: z.string().max(2048).nullable().optional(),
-  public: z.boolean().optional(),
-});
-
 const prepareIconBodySchema = z.object({
-  content_type: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  content_type: imageContentTypeSchema,
   size: z
     .number()
     .int()
     .positive()
     .max(5 * 1024 * 1024),
-  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  sha256: sha256Schema,
 });
-
-const completeIconBodySchema = z.object({ intent: z.string().min(1) });
-
-interface OAuthClientInfoResponse {
-  client_id: string;
-  name: string;
-  author_id: string | null;
-  icon_url: string | null;
-  description: string | null;
-  resource: string | null;
-  public: boolean;
-  client_secret?: string;
-}
 
 const CLIENT_SECRET_ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -189,7 +175,7 @@ export class UpsertOAuthClientInfoDispatch implements Dispatchable {
     const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
     if (!session) throw new UnauthorizedError();
 
-    const parsed = upsertBodySchema.safeParse(this.context.body);
+    const parsed = upsertOAuthClientInfoBodySchema.safeParse(this.context.body);
     if (!parsed.success) throw new BadRequestError();
 
     const db = createDb(env.DATABASE_URL);
@@ -377,7 +363,7 @@ export class CompleteOAuthClientIconDispatch implements Dispatchable {
     const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
     if (!session) throw new UnauthorizedError();
 
-    const parsed = completeIconBodySchema.safeParse(this.context.body);
+    const parsed = intentTokenBodySchema.safeParse(this.context.body);
     if (!parsed.success) throw new BadRequestError();
     const intent = verifyUploadIntent(env, parsed.data.intent, session.user.id, clientId);
     if (!intent) throw new BadRequestError();

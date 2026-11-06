@@ -1,4 +1,7 @@
 import type { OAuth2Tokens } from '@better-auth/core/oauth2';
+import type { XboxProfile, XboxToken } from '@karasu-lab/types/server';
+
+export type { XboxProfile, XboxToken };
 
 const MICROSOFT_TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
 const XBOX_LIVE_AUTH_URL = 'https://user.auth.xboxlive.com/user/authenticate';
@@ -7,13 +10,6 @@ const XBOX_PROFILE_URL = 'https://profile.xboxlive.com/users/xuid';
 const XBOX_AUTH_RELYING_PARTY = 'http://auth.xboxlive.com';
 export const XBOX_RELYING_PARTY = 'http://xboxlive.com';
 export const MINECRAFT_RELYING_PARTY = 'rp://api.minecraftservices.com/';
-
-export interface XboxToken {
-  token: string;
-  userHash: string;
-  xuid: string | null;
-  gamertag: string | null;
-}
 
 interface XboxTokenResponse {
   Token?: string;
@@ -37,8 +33,6 @@ const XBOX_ERROR_MESSAGES: Record<number, string> = {
   2148916238: 'The account is under 18 and must be added to a Microsoft family by an adult first.',
 };
 
-// Xbox Live failures carry an XErr code; keep it (and its known
-// explanation) in the message instead of collapsing the failure.
 export class XboxLiveError extends Error {
   readonly status: number | null;
   readonly xErr: number | null;
@@ -106,8 +100,6 @@ export async function authorizeXsts(xboxLiveToken: string, relyingParty: string)
   return token;
 }
 
-// Exchanges a Microsoft refresh token for a fresh Xbox-scoped token
-// set, including the rotated refresh token the caller must sync back.
 export async function refreshMicrosoftTokens(
   refreshToken: string,
   clientId: string,
@@ -138,11 +130,6 @@ export async function refreshMicrosoftTokens(
     refreshToken: body.refresh_token,
     accessTokenExpiresAt: body.expires_in ? new Date(Date.now() + body.expires_in * 1000) : undefined,
   };
-}
-
-export interface XboxProfile {
-  gamertag: string | null;
-  avatarUrl: string | null;
 }
 
 export async function getXboxProfile(xsts: XboxToken): Promise<XboxProfile | null> {

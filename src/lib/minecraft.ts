@@ -1,21 +1,11 @@
-import type { XboxToken } from './xbox-live';
+import type { MinecraftProfile, XboxToken } from '@karasu-lab/types/server';
+
+export type { MinecraftProfile };
 
 const MINECRAFT_LOGIN_URL = 'https://api.minecraftservices.com/authentication/login_with_xbox';
 const MINECRAFT_PROFILE_URL = 'https://api.minecraftservices.com/minecraft/profile';
-// api.minecraftservices.com answers requests without the launcher's
-// user agent with an HTML 403 page.
 const MINECRAFT_USER_AGENT = 'MinecraftLauncher/2.2.10675';
 
-export interface MinecraftProfile {
-  id: string;
-  name: string;
-  // Mojang's raw UV-mapped skin texture URL; clients convert it into
-  // an avatar themselves.
-  skinTextureUrl: string | null;
-}
-
-// Minecraft's failure bodies carry the reason; keep the status and
-// body in the error instead of collapsing the failure into null.
 async function readMinecraftResponse(res: Response | null, stage: string): Promise<string> {
   const text = res ? await res.text().catch(() => '') : '';
   if (!res?.ok) throw new Error(`${stage} failed: HTTP ${res?.status ?? 'no response'}: ${text.slice(0, 300)}`);
