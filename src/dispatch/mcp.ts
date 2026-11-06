@@ -11,8 +11,8 @@ import { withAuth } from '../lib/request-auth';
 import { presignUploadUrl } from '../lib/storage';
 
 function sessionCookieHeader(env: Env, token: string): string {
-  const signature = createHmac('sha256', env.BETTER_AUTH_SECRET).update(token).digest('base64url');
-  const value = `${token}.${signature}`;
+  const signature = createHmac('sha256', env.BETTER_AUTH_SECRET).update(token).digest('base64');
+  const value = encodeURIComponent(`${token}.${signature}`);
   return `better-auth.session_token=${value}; __Secure-better-auth.session_token=${value}`;
 }
 
