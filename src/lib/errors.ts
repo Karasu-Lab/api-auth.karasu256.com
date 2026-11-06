@@ -1,10 +1,17 @@
+import { z } from 'zod';
+
+const errorMessageSchema = z.object({ error: z.string() });
+const textBodySchema = z.string();
+const recordBodySchema = z.record(z.string(), z.unknown());
+
 export class HttpError extends Error {
   readonly status: number;
   readonly body: Record<string, unknown>;
   readonly headers?: Record<string, string>;
 
   constructor(status: number, body: Record<string, unknown>, headers?: Record<string, string>) {
-    super(typeof body.error === 'string' ? body.error : `HTTP ${status}`);
+    const message = errorMessageSchema.safeParse(body);
+    super(message.success ? message.data.error : `HTTP ${status}`);
     this.name = 'HttpError';
     this.status = status;
     this.body = body;
@@ -28,7 +35,9 @@ export class UnauthorizedError extends HttpError {
 
 export class NotFoundError extends HttpError {
   constructor(body: string | Record<string, unknown> = 'Not Found') {
-    super(404, typeof body === 'string' ? { error: body } : body);
+    const text = textBodySchema.safeParse(body);
+    const record = recordBodySchema.safeParse(body);
+    super(404, text.success ? { error: text.data } : record.success ? record.data : {});
     this.name = 'NotFoundError';
   }
 }

@@ -189,7 +189,7 @@ export class UpsertOAuthClientInfoDispatch implements Dispatchable {
     const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
     if (!session) throw new UnauthorizedError();
 
-    const parsed = upsertBodySchema.safeParse(await request.json().catch(() => null));
+    const parsed = upsertBodySchema.safeParse(this.context.body);
     if (!parsed.success) throw new BadRequestError();
 
     const db = createDb(env.DATABASE_URL);
@@ -333,7 +333,7 @@ export class PrepareOAuthClientIconDispatch implements Dispatchable {
     const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
     if (!session) throw new UnauthorizedError();
 
-    const parsed = prepareIconBodySchema.safeParse(await request.json().catch(() => null));
+    const parsed = prepareIconBodySchema.safeParse(this.context.body);
     if (!parsed.success) throw new BadRequestError();
     if (!(await ownsClient(env, clientId, session.user.id))) throw new NotFoundError();
 
@@ -377,7 +377,7 @@ export class CompleteOAuthClientIconDispatch implements Dispatchable {
     const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
     if (!session) throw new UnauthorizedError();
 
-    const parsed = completeIconBodySchema.safeParse(await request.json().catch(() => null));
+    const parsed = completeIconBodySchema.safeParse(this.context.body);
     if (!parsed.success) throw new BadRequestError();
     const intent = verifyUploadIntent(env, parsed.data.intent, session.user.id, clientId);
     if (!intent) throw new BadRequestError();
@@ -404,13 +404,12 @@ export class CompleteOAuthClientIconDispatch implements Dispatchable {
 
 const DEVICE_CODE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code';
 
-export async function assertSecretRotationAllowed(env: Env, request: Request): Promise<void> {
-  const parsed = (await request
-    .clone()
-    .json()
-    .catch(() => null)) as { client_id?: unknown } | null;
-  const clientId = typeof parsed?.client_id === 'string' ? parsed.client_id : null;
-  if (!clientId) return;
+const rotateSecretBodySchema = z.object({ client_id: z.string().min(1) });
+
+export async function assertSecretRotationAllowed(env: Env, body: unknown): Promise<void> {
+  const parsed = rotateSecretBodySchema.safeParse(body);
+  if (!parsed.success) return;
+  const clientId = parsed.data.client_id;
 
   const db = createDb(env.DATABASE_URL);
   try {

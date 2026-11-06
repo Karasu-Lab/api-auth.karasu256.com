@@ -3,10 +3,16 @@ import { sessions } from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
 import { decodeJwt } from 'jose';
+import { z } from 'zod';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import { BadRequestError, UnauthorizedError } from '../lib/errors';
 import { withAuth } from '../lib/request-auth';
 import { presignUploadUrl } from '../lib/storage';
+
+const sessionTokenBodySchema = z.object({ accessToken: z.string().min(1) });
+const iconUploadUrlBodySchema = z.object({ userId: z.string().min(1), contentType: z.string().min(1) });
+const userinfoSchema = z.object({ sub: z.string() });
+const sessionClaimsSchema = z.object({ sid: z.string() });
 
 export class McpSessionTokenDispatch implements Dispatchable {
   private context: DispatchContext;
@@ -20,10 +26,10 @@ export class McpSessionTokenDispatch implements Dispatchable {
   }
 
   async handle(): Promise<Response> {
-    const { env, request } = this.context;
-    const body = (await request.json().catch(() => null)) as { accessToken?: unknown } | null;
-    const accessToken = typeof body?.accessToken === 'string' ? body.accessToken : null;
-    if (!accessToken) throw new BadRequestError('invalid_request');
+    const { env } = this.context;
+    const parsedBody = sessionTokenBodySchema.safeParse(this.context.body);
+    if (!parsedBody.success) throw new BadRequestError('invalid_request');
+    const accessToken = parsedBody.data.accessToken;
 
     const userinfo = await withAuth(env, (auth) =>
       auth.handler(
@@ -33,12 +39,13 @@ export class McpSessionTokenDispatch implements Dispatchable {
       )
     );
     if (!userinfo.ok) throw new UnauthorizedError();
-    const { sub } = (await userinfo.json().catch(() => ({}))) as { sub?: string };
+    const parsedUserinfo = userinfoSchema.safeParse(await userinfo.json().catch(() => null));
+    const sub = parsedUserinfo.success ? parsedUserinfo.data.sub : null;
 
     let sessionId: string | null = null;
     try {
-      const payload = decodeJwt(accessToken);
-      sessionId = typeof payload.sid === 'string' ? payload.sid : null;
+      const claims = sessionClaimsSchema.safeParse(decodeJwt(accessToken));
+      sessionId = claims.success ? claims.data.sid : null;
     } catch {
       sessionId = null;
     }
@@ -73,14 +80,12 @@ export class McpIconUploadUrlDispatch implements Dispatchable {
   }
 
   async handle(): Promise<Response> {
-    const { env, request } = this.context;
-    const body = (await request.json().catch(() => null)) as { userId?: unknown; contentType?: unknown } | null;
-    const userId = typeof body?.userId === 'string' ? body.userId : null;
-    const contentType = typeof body?.contentType === 'string' ? body.contentType : null;
-    if (!userId || !contentType) throw new BadRequestError('invalid_request');
+    const { env } = this.context;
+    const parsedBody = iconUploadUrlBodySchema.safeParse(this.context.body);
+    if (!parsedBody.success) throw new BadRequestError('invalid_request');
 
-    const path = `u/profiles/${userId}/avatar.png`;
-    const uploadUrl = presignUploadUrl(env, path, contentType);
+    const path = `u/profiles/${parsedBody.data.userId}/avatar.png`;
+    const uploadUrl = presignUploadUrl(env, path, parsedBody.data.contentType);
     return Response.json({ uploadUrl, path });
   }
 }

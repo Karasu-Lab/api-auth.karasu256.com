@@ -19,7 +19,7 @@ export class SetPasswordDispatch implements Dispatchable {
 
   async handle(): Promise<Response> {
     const { env, request } = this.context;
-    const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+    const parsed = bodySchema.safeParse(this.context.body);
     if (!parsed.success) throw new BadRequestError();
 
     try {

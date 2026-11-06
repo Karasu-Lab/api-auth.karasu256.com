@@ -33,10 +33,10 @@ export class CreateTestAccountDispatch implements Dispatchable {
   }
 
   async handle(): Promise<Response> {
-    const { env, request } = this.context;
+    const { env } = this.context;
     if (!isEnabled(env)) throw new NotFoundError('not found');
 
-    const parsed = postBodySchema.safeParse(await request.json().catch(() => null));
+    const parsed = postBodySchema.safeParse(this.context.body);
     if (!parsed.success) throw new BadRequestError('label required');
 
     const email = `e2e-${parsed.data.label}-${Date.now()}@example.test`;
@@ -72,10 +72,10 @@ export class DeleteTestAccountDispatch implements Dispatchable {
   }
 
   async handle(): Promise<Response> {
-    const { env, request } = this.context;
+    const { env } = this.context;
     if (!isEnabled(env)) throw new NotFoundError('not found');
 
-    const parsed = deleteBodySchema.safeParse(await request.json().catch(() => null));
+    const parsed = deleteBodySchema.safeParse(this.context.body);
     if (!parsed.success) throw new BadRequestError('uid required');
 
     return withTestAuth(env, async (testAuth) => {
