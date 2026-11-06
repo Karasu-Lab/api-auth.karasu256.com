@@ -15,6 +15,7 @@ import { deleteFirebaseUser, updateFirebaseUser } from './firebase';
 import { ensureFirebaseLink, getLinkedFirebaseUid } from './firebase-link';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { syncUserToNeonAuth } from './neon-auth';
+import { SESSION_SOURCE_HEADER, recordSessionSource } from './session-source';
 
 function createPlugins(env: Env) {
   const { webauthn } = getAuthConfig(env);
@@ -159,7 +160,14 @@ function createAuthOptions(env: Env, db: Db) {
               session.userId,
             );
           },
-          after: (session) => ensureFirebaseLink(env, db, session.userId),
+          after: async (session, context) => {
+            await recordSessionSource(db, session, {
+              path: context?.path ?? null,
+              userAgent: context?.headers?.get('user-agent') ?? null,
+              explicit: context?.headers?.get(SESSION_SOURCE_HEADER) ?? null,
+            });
+            await ensureFirebaseLink(env, db, session.userId);
+          },
         },
       },
     },

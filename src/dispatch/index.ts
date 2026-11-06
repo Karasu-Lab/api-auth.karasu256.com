@@ -9,6 +9,7 @@ import {
   PrepareOAuthClientIconDispatch,
   UpsertOAuthClientInfoDispatch,
 } from './oauth-client-info';
+import { ListAuthSessionsDispatch, ListSessionDevicesSourceDispatch, RevokeAuthSessionDispatch } from './sessions';
 import { SetPasswordDispatch } from './set-password';
 import { SignInLookupDispatch } from './sign-in-lookup';
 import { CreateTestAccountDispatch, DeleteTestAccountDispatch } from './test-accounts';
@@ -29,6 +30,9 @@ export const dispatchables: DispatchableClass[] = [
   IssueApiKeyDispatch,
   McpSessionTokenDispatch,
   McpIconUploadUrlDispatch,
+  ListAuthSessionsDispatch,
+  ListSessionDevicesSourceDispatch,
+  RevokeAuthSessionDispatch,
   SignInLookupDispatch,
   CreateTestAccountDispatch,
   DeleteTestAccountDispatch,
