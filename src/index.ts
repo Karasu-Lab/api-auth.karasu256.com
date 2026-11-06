@@ -14,6 +14,7 @@ import {
   handleUpsertOAuthClientInfo,
 } from './routes/oauth-client-info';
 import { SecretRotationNotAllowedError } from './lib/secret-rotation-error';
+import { handleMcpIconUploadUrl, handleMcpSessionToken } from './routes/mcp';
 import { handleProviderDetails } from './routes/providers';
 import { handleXboxCallback, handleXboxLink } from './routes/xbox';
 import { handleSetPassword } from './routes/set-password';
@@ -69,6 +70,8 @@ async function dispatch(request: Request): Promise<Response> {
   if (pathname.startsWith('/api/oauth-client-info/') && request.method === 'PUT')
     return handleUpsertOAuthClientInfo(env, request, decodeURIComponent(pathname.slice('/api/oauth-client-info/'.length)));
   if (pathname === '/api/internal/api-keys' && request.method === 'POST') return handleIssueApiKey(env, request);
+  if (pathname === '/api/internal/mcp/session-token' && request.method === 'POST') return handleMcpSessionToken(env, request);
+  if (pathname === '/api/internal/mcp/icon-upload-url' && request.method === 'POST') return handleMcpIconUploadUrl(env, request);
   if (pathname === '/api/sign-in/lookup' && request.method === 'GET') return handleSignInLookup(env, request);
   if (pathname === '/api/test/accounts' && request.method === 'POST') return handleCreateTestAccount(env, request);
   if (pathname === '/api/test/accounts' && request.method === 'DELETE') return handleDeleteTestAccount(env, request);
