@@ -4,6 +4,7 @@ import { waitUntil } from 'cloudflare:workers';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
+import { BadRequestError, HttpError, NotFoundError, UnauthorizedError } from '../lib/errors';
 import { withAuth } from '../lib/request-auth';
 import { SecretRotationNotAllowedError } from '../lib/secret-rotation-error';
 import { presignUploadUrl, storageEnv } from '../lib/storage';
@@ -29,10 +30,6 @@ const prepareIconBodySchema = z.object({
 });
 
 const completeIconBodySchema = z.object({ intent: z.string().min(1) });
-
-const badRequest = () => Response.json({ error: 'Bad Request' }, { status: 400 });
-const unauthorized = () => Response.json({ error: 'Unauthorized' }, { status: 401 });
-const notFound = () => Response.json({ error: 'Not Found' }, { status: 404 });
 
 interface OAuthClientInfoResponse {
   client_id: string;
@@ -125,7 +122,7 @@ export class ListOAuthClientInfoDispatch implements Dispatchable {
   async handle(): Promise<Response> {
     const { env, request } = this.context;
     const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
-    if (!session) return unauthorized();
+    if (!session) throw new UnauthorizedError();
 
     const db = createDb(env.DATABASE_URL);
     try {
@@ -190,10 +187,10 @@ export class UpsertOAuthClientInfoDispatch implements Dispatchable {
     const { env, request } = this.context;
     const clientId = this.clientId as string;
     const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
-    if (!session) return unauthorized();
+    if (!session) throw new UnauthorizedError();
 
     const parsed = upsertBodySchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return badRequest();
+    if (!parsed.success) throw new BadRequestError();
 
     const db = createDb(env.DATABASE_URL);
     try {
@@ -207,7 +204,7 @@ export class UpsertOAuthClientInfoDispatch implements Dispatchable {
         .from(schema.oauthClients)
         .where(and(eq(schema.oauthClients.clientId, clientId), eq(schema.oauthClients.userId, session.user.id)))
         .limit(1);
-      if (!client) return notFound();
+      if (!client) throw new NotFoundError();
 
       const values = {
         name: parsed.data.name,
@@ -334,11 +331,11 @@ export class PrepareOAuthClientIconDispatch implements Dispatchable {
     const { env, request } = this.context;
     const clientId = this.clientId as string;
     const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
-    if (!session) return unauthorized();
+    if (!session) throw new UnauthorizedError();
 
     const parsed = prepareIconBodySchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return badRequest();
-    if (!(await ownsClient(env, clientId, session.user.id))) return notFound();
+    if (!parsed.success) throw new BadRequestError();
+    if (!(await ownsClient(env, clientId, session.user.id))) throw new NotFoundError();
 
     const path = `i/oauth/${clientId}/avatar.png`;
     return Response.json({
@@ -378,12 +375,12 @@ export class CompleteOAuthClientIconDispatch implements Dispatchable {
     const { env, request } = this.context;
     const clientId = this.clientId as string;
     const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
-    if (!session) return unauthorized();
+    if (!session) throw new UnauthorizedError();
 
     const parsed = completeIconBodySchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return badRequest();
+    if (!parsed.success) throw new BadRequestError();
     const intent = verifyUploadIntent(env, parsed.data.intent, session.user.id, clientId);
-    if (!intent) return badRequest();
+    if (!intent) throw new BadRequestError();
 
     const { token } = await withAuth(env, (auth) => auth.api.getToken({ headers: request.headers }));
     const verified = await fetch(`${env.API_URL}/upload/verify`, {
@@ -397,7 +394,7 @@ export class CompleteOAuthClientIconDispatch implements Dispatchable {
         uploaderId: session.user.id,
       }),
     });
-    if (verified.status === 422) return Response.json({ error: 'upload_verification_failed' }, { status: 422 });
+    if (verified.status === 422) throw new HttpError(422, { error: 'upload_verification_failed' });
     if (!verified.ok) throw new UploadVerificationError();
 
     const { sha256 } = (await verified.json()) as { sha256: string };

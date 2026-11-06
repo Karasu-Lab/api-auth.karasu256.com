@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Auth } from '../lib/auth';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
+import { BadRequestError, NotFoundError, UnauthorizedError } from '../lib/errors';
 import {
   UnknownPermissionError,
   getGrantedPermissions,
@@ -17,10 +18,6 @@ const createBodySchema = z.object({
   name: z.string().trim().min(1).max(255),
   permissions: z.array(z.string().min(1)).default([]),
 });
-
-const badRequest = () => Response.json({ error: 'Bad Request' }, { status: 400 });
-const unauthorized = () => Response.json({ error: 'Unauthorized' }, { status: 401 });
-const notFound = () => Response.json({ error: 'Not Found' }, { status: 404 });
 
 async function verifyApiKey(auth: Auth, key: string): Promise<{ userId: string; keyId: string } | null> {
   const result = await auth.api.verifyApiKey({ body: { key } });
@@ -42,10 +39,10 @@ export class VerifyApiKeyDispatch implements Dispatchable {
   async handle(): Promise<Response> {
     const { env, request } = this.context;
     const parsed = verifyBodySchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return badRequest();
+    if (!parsed.success) throw new BadRequestError();
 
     const result = await withAuth(env, (auth) => verifyApiKey(auth, parsed.data.key));
-    if (!result) return unauthorized();
+    if (!result) throw new UnauthorizedError();
     return Response.json(result);
   }
 }
@@ -64,7 +61,7 @@ export class IssueApiKeyDispatch implements Dispatchable {
   async handle(): Promise<Response> {
     const { env, request } = this.context;
     const parsed = issueBodySchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return badRequest();
+    if (!parsed.success) throw new BadRequestError();
 
     const created = await withAuth(env, (auth) => auth.api.createApiKey({ body: { name: parsed.data.name, userId: parsed.data.userId } }));
     return Response.json({
@@ -92,7 +89,7 @@ export class ListApiKeysDispatch implements Dispatchable {
     const { env, request } = this.context;
     return withAuth(env, async (auth) => {
       const session = await auth.api.getSession({ headers: request.headers });
-      if (!session) return unauthorized();
+      if (!session) throw new UnauthorizedError();
 
       const { apiKeys } = await auth.api.listApiKeys({ headers: request.headers });
       const granted = await getGrantedPermissions(
@@ -128,11 +125,11 @@ export class CreateApiKeyDispatch implements Dispatchable {
   async handle(): Promise<Response> {
     const { env, request } = this.context;
     const parsed = createBodySchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return badRequest();
+    if (!parsed.success) throw new BadRequestError();
 
     return withAuth(env, async (auth) => {
       const session = await auth.api.getSession({ headers: request.headers });
-      if (!session) return unauthorized();
+      if (!session) throw new UnauthorizedError();
 
       const created = await auth.api.createApiKey({ body: { name: parsed.data.name, userId: session.user.id } });
 
@@ -141,7 +138,7 @@ export class CreateApiKeyDispatch implements Dispatchable {
         permissions = await grantPermissions(env, created.id, parsed.data.permissions);
       } catch (err) {
         await auth.api.deleteApiKey({ body: { keyId: created.id }, headers: request.headers });
-        if (err instanceof UnknownPermissionError) return badRequest();
+        if (err instanceof UnknownPermissionError) throw new BadRequestError();
         throw err;
       }
 
@@ -178,12 +175,12 @@ export class DeleteApiKeyDispatch implements Dispatchable {
     const keyId = this.keyId as string;
     return withAuth(env, async (auth) => {
       const session = await auth.api.getSession({ headers: request.headers });
-      if (!session) return unauthorized();
+      if (!session) throw new UnauthorizedError();
 
       try {
         await auth.api.deleteApiKey({ body: { keyId }, headers: request.headers });
       } catch {
-        return notFound();
+        throw new NotFoundError();
       }
       return new Response(null, { status: 204 });
     });
@@ -205,7 +202,7 @@ export class ListPermissionsDispatch implements Dispatchable {
     const { env, request } = this.context;
     return withAuth(env, async (auth) => {
       const session = await auth.api.getSession({ headers: request.headers });
-      if (!session) return unauthorized();
+      if (!session) throw new UnauthorizedError();
 
       return Response.json(await listActivePermissions(env));
     });

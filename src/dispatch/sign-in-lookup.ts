@@ -3,6 +3,7 @@ import * as schema from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { and, eq, isNotNull } from 'drizzle-orm';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
+import { BadRequestError, NotFoundError, RateLimitedError } from '../lib/errors';
 import { checkSignInLookupRateLimit } from '../lib/rate-limit';
 
 export class SignInLookupDispatch implements Dispatchable {
@@ -19,15 +20,10 @@ export class SignInLookupDispatch implements Dispatchable {
   async handle(): Promise<Response> {
     const { env, request } = this.context;
     const rateLimit = await checkSignInLookupRateLimit(env, request.headers.get('CF-Connecting-IP') ?? 'unknown');
-    if (!rateLimit.allowed) {
-      return Response.json(
-        { code: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds },
-        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
-      );
-    }
+    if (!rateLimit.allowed) throw new RateLimitedError(rateLimit.retryAfterSeconds);
 
     const email = new URL(request.url).searchParams.get('email')?.trim().toLowerCase() ?? '';
-    if (!email.includes('@')) return Response.json({ error: 'email required' }, { status: 400 });
+    if (!email.includes('@')) throw new BadRequestError('email required');
 
     const db = createDb(env.DATABASE_URL);
     try {
@@ -55,7 +51,7 @@ export class SignInLookupDispatch implements Dispatchable {
         hasPasskey = Boolean(passkey);
       }
 
-      if (!user && !provider) return Response.json({ code: 'account_not_found' }, { status: 404 });
+      if (!user && !provider) throw new NotFoundError({ code: 'account_not_found' });
 
       return Response.json({ sso: Boolean(provider), hasPassword, hasPasskey });
     } finally {

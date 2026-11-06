@@ -3,6 +3,7 @@ import { waitUntil } from 'cloudflare:workers';
 import { z } from 'zod';
 import { createTestAuth } from '../lib/auth';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
+import { BadRequestError, NotFoundError } from '../lib/errors';
 
 const postBodySchema = z.object({ label: z.string().min(1) });
 const deleteBodySchema = z.object({ uid: z.string().min(1) });
@@ -10,8 +11,6 @@ const deleteBodySchema = z.object({ uid: z.string().min(1) });
 function isEnabled(env: Env): boolean {
   return env.APP_ENV === 'local';
 }
-
-const notFound = () => Response.json({ error: 'not found' }, { status: 404 });
 
 async function withTestAuth<T>(env: Env, fn: (auth: ReturnType<typeof createTestAuth>) => Promise<T>): Promise<T> {
   const db = createDb(env.DATABASE_URL);
@@ -35,10 +34,10 @@ export class CreateTestAccountDispatch implements Dispatchable {
 
   async handle(): Promise<Response> {
     const { env, request } = this.context;
-    if (!isEnabled(env)) return notFound();
+    if (!isEnabled(env)) throw new NotFoundError('not found');
 
     const parsed = postBodySchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return Response.json({ error: 'label required' }, { status: 400 });
+    if (!parsed.success) throw new BadRequestError('label required');
 
     const email = `e2e-${parsed.data.label}-${Date.now()}@example.test`;
     const password = crypto.randomUUID();
@@ -74,10 +73,10 @@ export class DeleteTestAccountDispatch implements Dispatchable {
 
   async handle(): Promise<Response> {
     const { env, request } = this.context;
-    if (!isEnabled(env)) return notFound();
+    if (!isEnabled(env)) throw new NotFoundError('not found');
 
     const parsed = deleteBodySchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return Response.json({ error: 'uid required' }, { status: 400 });
+    if (!parsed.success) throw new BadRequestError('uid required');
 
     return withTestAuth(env, async (testAuth) => {
       const ctx = await testAuth.$context;

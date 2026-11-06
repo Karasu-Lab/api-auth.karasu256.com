@@ -1,6 +1,6 @@
 import type { DispatchableClass } from '../lib/dispatch';
 import { CreateApiKeyDispatch, DeleteApiKeyDispatch, IssueApiKeyDispatch, ListApiKeysDispatch, ListPermissionsDispatch, VerifyApiKeyDispatch } from './api-keys';
-import { AuthDispatch, RotateSecretDispatch } from './auth';
+import { AuthDispatch } from './auth';
 import { ClientRegistrationDispatch } from './client-registration';
 import { McpIconUploadUrlDispatch, McpSessionTokenDispatch } from './mcp';
 import {
@@ -15,7 +15,6 @@ import { CreateTestAccountDispatch, DeleteTestAccountDispatch } from './test-acc
 
 export const dispatchables: DispatchableClass[] = [
   SetPasswordDispatch,
-  RotateSecretDispatch,
   ClientRegistrationDispatch,
   AuthDispatch,
   VerifyApiKeyDispatch,
