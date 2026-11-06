@@ -60,6 +60,42 @@ async function hashClientSecret(secret: string): Promise<string> {
     .replace(/=+$/, '');
 }
 
+async function syncClientAuthMethod(
+  db: ReturnType<typeof createDb>,
+  client: { clientId: string; clientSecret: string | null; grantTypes: string[] | null; tokenEndpointAuthMethod: string | null },
+  publicFlag: boolean,
+  issueSecret: boolean,
+): Promise<string | undefined> {
+  const grantTypes = client.grantTypes ?? [];
+  const isDeviceClient = grantTypes.includes(DEVICE_CODE_GRANT_TYPE) && !grantTypes.includes('authorization_code');
+  const targetAuthMethod = isDeviceClient || publicFlag ? 'none' : 'client_secret_basic';
+  const currentAuthMethod = client.tokenEndpointAuthMethod ?? 'client_secret_basic';
+  const authMethodIsManaged =
+    client.tokenEndpointAuthMethod === null || client.tokenEndpointAuthMethod === 'none' || client.tokenEndpointAuthMethod === 'client_secret_basic';
+  if (!authMethodIsManaged || targetAuthMethod === currentAuthMethod) return undefined;
+  if (targetAuthMethod === 'none') {
+    await db
+      .update(schema.oauthClients)
+      .set({ tokenEndpointAuthMethod: 'none', clientSecret: null, jwks: null, jwksUri: null, updatedAt: new Date() })
+      .where(eq(schema.oauthClients.clientId, client.clientId));
+    return undefined;
+  }
+  if (client.clientSecret) {
+    await db
+      .update(schema.oauthClients)
+      .set({ tokenEndpointAuthMethod: 'client_secret_basic', updatedAt: new Date() })
+      .where(eq(schema.oauthClients.clientId, client.clientId));
+    return undefined;
+  }
+  if (!issueSecret) return undefined;
+  const newClientSecret = generateClientSecret();
+  await db
+    .update(schema.oauthClients)
+    .set({ tokenEndpointAuthMethod: 'client_secret_basic', clientSecret: await hashClientSecret(newClientSecret), updatedAt: new Date() })
+    .where(eq(schema.oauthClients.clientId, client.clientId));
+  return newClientSecret;
+}
+
 async function ownsClient(env: Env, clientId: string, userId: string): Promise<boolean> {
   const db = createDb(env.DATABASE_URL);
   try {
@@ -81,7 +117,12 @@ export async function handleListOAuthClientInfo(env: Env, request: Request): Pro
   const db = createDb(env.DATABASE_URL);
   try {
     const clients = await db
-      .select({ clientId: schema.oauthClients.clientId })
+      .select({
+        clientId: schema.oauthClients.clientId,
+        clientSecret: schema.oauthClients.clientSecret,
+        grantTypes: schema.oauthClients.grantTypes,
+        tokenEndpointAuthMethod: schema.oauthClients.tokenEndpointAuthMethod,
+      })
       .from(schema.oauthClients)
       .where(eq(schema.oauthClients.userId, session.user.id));
     if (clients.length === 0) return Response.json([]);
@@ -95,6 +136,12 @@ export async function handleListOAuthClientInfo(env: Env, request: Request): Pro
           clients.map((client) => client.clientId)
         )
       );
+
+    const clientById = new Map(clients.map((client) => [client.clientId, client]));
+    for (const row of rows) {
+      const client = clientById.get(row.clientId);
+      if (client) await syncClientAuthMethod(db, client, row.public, false);
+    }
 
     const body: OAuthClientInfoResponse[] = rows.map((row) => ({
       client_id: row.clientId,
@@ -149,31 +196,7 @@ export async function handleUpsertOAuthClientInfo(env: Env, request: Request, cl
       .values({ clientId, authorId: session.user.id, ...values })
       .onConflictDoUpdate({ target: schema.oauthClientInfo.clientId, set: values });
 
-    let newClientSecret: string | undefined;
-    const grantTypes = client.grantTypes ?? [];
-    const isDeviceClient = grantTypes.includes(DEVICE_CODE_GRANT_TYPE) && !grantTypes.includes('authorization_code');
-    const targetAuthMethod = isDeviceClient || values.public ? 'none' : 'client_secret_basic';
-    const currentAuthMethod = client.tokenEndpointAuthMethod ?? 'client_secret_basic';
-    const authMethodIsManaged = client.tokenEndpointAuthMethod === null || client.tokenEndpointAuthMethod === 'none' || client.tokenEndpointAuthMethod === 'client_secret_basic';
-    if (authMethodIsManaged && targetAuthMethod !== currentAuthMethod) {
-      if (targetAuthMethod === 'none') {
-        await db
-          .update(schema.oauthClients)
-          .set({ tokenEndpointAuthMethod: 'none', clientSecret: null, jwks: null, jwksUri: null, updatedAt: new Date() })
-          .where(eq(schema.oauthClients.clientId, clientId));
-      } else if (client.clientSecret) {
-        await db
-          .update(schema.oauthClients)
-          .set({ tokenEndpointAuthMethod: 'client_secret_basic', updatedAt: new Date() })
-          .where(eq(schema.oauthClients.clientId, clientId));
-      } else {
-        newClientSecret = generateClientSecret();
-        await db
-          .update(schema.oauthClients)
-          .set({ tokenEndpointAuthMethod: 'client_secret_basic', clientSecret: await hashClientSecret(newClientSecret), updatedAt: new Date() })
-          .where(eq(schema.oauthClients.clientId, clientId));
-      }
-    }
+    const newClientSecret = await syncClientAuthMethod(db, client, values.public, true);
 
     const findResource = async (identifier: string) => {
       const [row] = await db
