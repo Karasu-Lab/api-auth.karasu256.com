@@ -1,18 +1,13 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
+import { clientUploadIntentPayloadSchema, type ClientUploadIntentPayload } from '@karasu-lab/types/server';
 import { storageEnv } from './storage';
 
-const intentSchema = z.object({
-  userId: z.string(),
-  clientId: z.string(),
-  path: z.string(),
-  sha256: z.string(),
-  contentType: z.string(),
-  size: z.number(),
+const intentSchema = clientUploadIntentPayloadSchema.extend({
   exp: z.number(),
 });
 
-export type UploadIntent = Omit<z.infer<typeof intentSchema>, 'exp'>;
+export type UploadIntent = ClientUploadIntentPayload;
 
 function sign(env: Env, payload: string): string {
   return createHmac('sha256', env.BETTER_AUTH_SECRET).update(payload).digest('base64url');

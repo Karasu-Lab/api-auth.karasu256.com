@@ -1,6 +1,22 @@
 import { setTokenUtil } from 'better-auth/oauth2';
 import type { AuthContext } from '@better-auth/core';
+import { xboxLinkStatePayloadSchema, type XboxLinkExchange, type XboxLinkTokens } from '@karasu-lab/types/server';
 import { authenticateXboxLive, authorizeXsts, XBOX_RELYING_PARTY } from './xbox-live';
+
+export type { XboxLinkExchange, XboxLinkTokens };
+
+export class XboxLinkError extends Error {
+  readonly error: string;
+  readonly errorDescription: string | null;
+
+  constructor(error: string, errorDescription?: string | null, cause?: unknown) {
+    const description = errorDescription ?? (cause instanceof Error ? cause.message : cause != null ? String(cause) : null);
+    super(description ?? error, cause !== undefined ? { cause } : undefined);
+    this.name = 'XboxLinkError';
+    this.error = error;
+    this.errorDescription = description;
+  }
+}
 
 export const XBOX_PROVIDER_ID = 'xbox';
 export const XBOX_SCOPE = 'XboxLive.signin offline_access';
@@ -41,9 +57,9 @@ export async function verifyXboxLinkState(secret: string, state: string): Promis
     .catch(() => false);
   if (!valid) return null;
   try {
-    const parsed = JSON.parse(new TextDecoder().decode(base64UrlDecode(payload))) as { userId?: string; exp?: number };
-    if (!parsed.userId || !parsed.exp || parsed.exp < Date.now()) return null;
-    return parsed.userId;
+    const parsed = xboxLinkStatePayloadSchema.safeParse(JSON.parse(new TextDecoder().decode(base64UrlDecode(payload))));
+    if (!parsed.success || parsed.data.exp < Date.now()) return null;
+    return parsed.data.userId;
   } catch {
     return null;
   }
@@ -58,18 +74,6 @@ export function buildXboxAuthorizeUrl(clientId: string, redirectUri: string, sta
   url.searchParams.set('state', state);
   url.searchParams.set('prompt', 'select_account');
   return url.toString();
-}
-
-export interface XboxLinkTokens {
-  accessToken: string;
-  refreshToken: string | null;
-  accessTokenExpiresAt: Date | null;
-}
-
-export interface XboxLinkExchange {
-  tokens: XboxLinkTokens | null;
-  error: string | null;
-  errorDescription: string | null;
 }
 
 export async function exchangeXboxLinkCode(
@@ -87,8 +91,6 @@ export async function exchangeXboxLinkCode(
       grant_type: 'authorization_code',
       code,
       redirect_uri: redirectUri,
-      // The scope must be sent here: a code issued for the Xbox Live
-      // resource cannot be redeemed without it (AADSTS70011).
       scope: XBOX_SCOPE,
     }),
   }).catch(() => null);
@@ -117,10 +119,6 @@ export async function exchangeXboxLinkCode(
   };
 }
 
-// Stores the link and returns the XUID. Xbox Live failures throw.
-// A Microsoft account without an Xbox profile gets a user token with
-// no XUID; the XSTS call is what answers why (its XErr), so it runs
-// before the XUID is read.
 export async function storeXboxLink(ctx: AuthContext, userId: string, tokens: XboxLinkTokens): Promise<string> {
   const xboxLive = await authenticateXboxLive(tokens.accessToken);
   const xsts = await authorizeXsts(xboxLive.token, XBOX_RELYING_PARTY);

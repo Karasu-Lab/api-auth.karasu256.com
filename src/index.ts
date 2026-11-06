@@ -5,7 +5,7 @@ import { resolveEnv } from './constants';
 import { dispatchables } from './dispatch';
 import { handlePreflight, withCors } from './lib/cors';
 import type { DispatchContext } from './lib/dispatch';
-import { HttpError, NotFoundError } from './lib/errors';
+import { HttpError, NotFoundError } from '@karasu-lab/types/server';
 import { withAuth } from './lib/request-auth';
 import { rejectInvalidSignature } from './lib/signature-gate';
 import { assertSecretRotationAllowed } from './dispatch/oauth-client-info';

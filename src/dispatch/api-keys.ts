@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Auth } from '../lib/auth';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
-import { BadRequestError, NotFoundError, UnauthorizedError } from '../lib/errors';
+import { BadRequestError, NotFoundError, UnauthorizedError } from '@karasu-lab/types/server';
 import {
   UnknownPermissionError,
   getGrantedPermissions,

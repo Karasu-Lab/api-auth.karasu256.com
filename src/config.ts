@@ -1,14 +1,11 @@
+import type { AuthConfig } from '@karasu-lab/types/server';
+
+export type { AuthConfig };
+
 const ANDROID_ORIGINS = [
   'android:apk-key-hash:bfKpYRlXNOkeRYJCoMaSQi9kSA6IKX4TYjuCHg35mws',
   'android:apk-key-hash:uo795W5PTsfIrzRiahbhbBMqqve55APHGJ3H55qPlDk',
 ];
-
-export interface AuthConfig {
-  webauthn: { rpId: string; rpName: string; expectedOrigins: string[] };
-  trustedOrigins: string[];
-  /** Hostnames a Turnstile challenge may run on for this environment (the auth and sso sign-in pages). */
-  turnstileHostnames: string[];
-}
 
 const CONFIGS: Record<Env['APP_ENV'], AuthConfig> = {
   local: {
@@ -67,11 +64,6 @@ const CONFIGS: Record<Env['APP_ENV'], AuthConfig> = {
   },
 };
 
-/**
- * Returns the webauthn and trusted-origin tables for the worker's `APP_ENV`.
- * Android passkeys report their origin as `android:apk-key-hash:...`, so those
- * entries belong in `expectedOrigins`, not `trustedOrigins`.
- */
 export function getAuthConfig(env: Env): AuthConfig {
   return CONFIGS[env.APP_ENV];
 }

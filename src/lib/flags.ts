@@ -1,13 +1,4 @@
-import { z } from 'zod';
-
-const flagResponseSchema = z.discriminatedUnion('ok', [
-  z.object({
-    ok: z.literal(true),
-    value: z.boolean(),
-    type: z.literal('boolean'),
-  }),
-  z.object({ ok: z.literal(false), error: z.string() }),
-]);
+import { flagResponseSchema } from '@karasu-lab/types/server';
 
 export async function isMinecraftAuthEnabled(env: Env): Promise<boolean> {
   try {

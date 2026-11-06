@@ -1,4 +1,15 @@
 import type { OAuth2Tokens } from '@better-auth/core/oauth2';
+import {
+  microsoftTokenResponseSchema,
+  xboxErrorResponseSchema,
+  xboxProfileResponseSchema,
+  xboxTokenResponseSchema,
+  type XboxProfile,
+  type XboxToken,
+  type XboxTokenResponse,
+} from '@karasu-lab/types/server';
+
+export type { XboxProfile, XboxToken };
 
 const MICROSOFT_TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
 const XBOX_LIVE_AUTH_URL = 'https://user.auth.xboxlive.com/user/authenticate';
@@ -7,18 +18,6 @@ const XBOX_PROFILE_URL = 'https://profile.xboxlive.com/users/xuid';
 const XBOX_AUTH_RELYING_PARTY = 'http://auth.xboxlive.com';
 export const XBOX_RELYING_PARTY = 'http://xboxlive.com';
 export const MINECRAFT_RELYING_PARTY = 'rp://api.minecraftservices.com/';
-
-export interface XboxToken {
-  token: string;
-  userHash: string;
-  xuid: string | null;
-  gamertag: string | null;
-}
-
-interface XboxTokenResponse {
-  Token?: string;
-  DisplayClaims?: { xui?: Array<Record<string, string>> };
-}
 
 function toXboxToken(body: XboxTokenResponse): XboxToken | null {
   const claims = body.DisplayClaims?.xui?.[0];
@@ -37,14 +36,28 @@ const XBOX_ERROR_MESSAGES: Record<number, string> = {
   2148916238: 'The account is under 18 and must be added to a Microsoft family by an adult first.',
 };
 
-// Xbox Live failures carry an XErr code; keep it (and its known
-// explanation) in the message instead of collapsing the failure.
 export class XboxLiveError extends Error {
   readonly status: number | null;
   readonly xErr: number | null;
 
-  constructor(stage: string, status: number | null, xErr: number | null, detail: string | null) {
-    super([`${stage} failed`, status != null ? `HTTP ${status}` : null, xErr != null ? `XErr ${xErr}` : null, (xErr != null ? XBOX_ERROR_MESSAGES[xErr] : undefined) ?? detail].filter(Boolean).join(': '));
+  constructor(stage: string, status: number | null, responseBody?: string | null, xErrHeader?: string | null, detail?: string | null) {
+    let xErr: number | null = null;
+    let resolvedDetail: string | null = detail ?? (responseBody || null);
+    if (responseBody) {
+      try {
+        const parsed = xboxErrorResponseSchema.safeParse(JSON.parse(responseBody));
+        if (parsed.success) {
+          const parsedXErr = typeof parsed.data.XErr === 'string' ? Number.parseInt(parsed.data.XErr, 10) : parsed.data.XErr;
+          if (typeof parsedXErr === 'number' && Number.isInteger(parsedXErr)) xErr = parsedXErr;
+          if (detail == null && parsed.data.Message) resolvedDetail = parsed.data.Message;
+        }
+      } catch {}
+    }
+    if (xErr == null && xErrHeader != null) {
+      const headerXErr = Number.parseInt(xErrHeader, 10);
+      if (Number.isInteger(headerXErr)) xErr = headerXErr;
+    }
+    super([`${stage} failed`, status != null ? `HTTP ${status}` : null, xErr != null ? `XErr ${xErr}` : null, (xErr != null ? XBOX_ERROR_MESSAGES[xErr] : undefined) ?? resolvedDetail].filter(Boolean).join(': '));
     this.name = 'XboxLiveError';
     this.status = status;
     this.xErr = xErr;
@@ -59,21 +72,9 @@ async function postXbox(url: string, body: unknown, stage: string): Promise<Xbox
   }).catch(() => null);
   const text = res ? await res.text().catch(() => '') : '';
   if (!res?.ok) {
-    let xErr: number | null = null;
-    let detail: string | null = text || null;
-    try {
-      const parsed = JSON.parse(text) as { XErr?: number | string; Message?: string };
-      const parsedXErr = typeof parsed.XErr === 'string' ? Number.parseInt(parsed.XErr, 10) : parsed.XErr;
-      if (typeof parsedXErr === 'number' && Number.isInteger(parsedXErr)) xErr = parsedXErr;
-      if (parsed.Message) detail = parsed.Message;
-    } catch {}
-    if (xErr == null) {
-      const headerXErr = Number.parseInt(res?.headers.get('x-err') ?? '', 10);
-      if (Number.isInteger(headerXErr)) xErr = headerXErr;
-    }
-    throw new XboxLiveError(stage, res?.status ?? null, xErr, detail);
+    throw new XboxLiveError(stage, res?.status ?? null, text, res?.headers.get('x-err'));
   }
-  return JSON.parse(text) as XboxTokenResponse;
+  return xboxTokenResponseSchema.parse(JSON.parse(text));
 }
 
 export async function authenticateXboxLive(microsoftAccessToken: string): Promise<XboxToken> {
@@ -87,7 +88,7 @@ export async function authenticateXboxLive(microsoftAccessToken: string): Promis
     'Xbox Live authentication'
   );
   const token = toXboxToken(body);
-  if (!token) throw new XboxLiveError('Xbox Live authentication', 200, null, 'The response did not include a token.');
+  if (!token) throw new XboxLiveError('Xbox Live authentication', 200, null, null, 'The response did not include a token.');
   return token;
 }
 
@@ -102,12 +103,10 @@ export async function authorizeXsts(xboxLiveToken: string, relyingParty: string)
     'XSTS authorization'
   );
   const token = toXboxToken(body);
-  if (!token) throw new XboxLiveError('XSTS authorization', 200, null, 'The response did not include a token.');
+  if (!token) throw new XboxLiveError('XSTS authorization', 200, null, null, 'The response did not include a token.');
   return token;
 }
 
-// Exchanges a Microsoft refresh token for a fresh Xbox-scoped token
-// set, including the rotated refresh token the caller must sync back.
 export async function refreshMicrosoftTokens(
   refreshToken: string,
   clientId: string,
@@ -131,18 +130,14 @@ export async function refreshMicrosoftTokens(
     );
     return null;
   }
-  const body = (await res.json().catch(() => null)) as { access_token?: string; refresh_token?: string; expires_in?: number } | null;
-  if (!body?.access_token) return null;
+  const parsed = microsoftTokenResponseSchema.safeParse(await res.json().catch(() => null));
+  if (!parsed.success) return null;
+  const body = parsed.data;
   return {
     accessToken: body.access_token,
     refreshToken: body.refresh_token,
     accessTokenExpiresAt: body.expires_in ? new Date(Date.now() + body.expires_in * 1000) : undefined,
   };
-}
-
-export interface XboxProfile {
-  gamertag: string | null;
-  avatarUrl: string | null;
 }
 
 export async function getXboxProfile(xsts: XboxToken): Promise<XboxProfile | null> {
@@ -157,9 +152,8 @@ export async function getXboxProfile(xsts: XboxToken): Promise<XboxProfile | nul
   }).catch(() => null);
   if (!res?.ok) return xsts.gamertag ? { gamertag: xsts.gamertag, avatarUrl: null } : null;
 
-  const body = (await res.json().catch(() => null)) as {
-    profileUsers?: Array<{ settings?: Array<{ id?: string; value?: string | null }> }>;
-  } | null;
+  const parsed = xboxProfileResponseSchema.safeParse(await res.json().catch(() => null));
+  const body = parsed.success ? parsed.data : null;
   const values = new Map((body?.profileUsers?.[0]?.settings ?? []).map((setting) => [setting.id, setting.value ?? null]));
   return { gamertag: values.get('Gamertag') ?? xsts.gamertag, avatarUrl: values.get('GameDisplayPicRaw') ?? null };
 }

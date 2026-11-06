@@ -3,7 +3,7 @@ import { waitUntil } from 'cloudflare:workers';
 import { z } from 'zod';
 import { createTestAuth } from '../lib/auth';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
-import { BadRequestError, NotFoundError } from '../lib/errors';
+import { BadRequestError, NotFoundError } from '@karasu-lab/types/server';
 
 const postBodySchema = z.object({ label: z.string().min(1) });
 const deleteBodySchema = z.object({ uid: z.string().min(1) });
