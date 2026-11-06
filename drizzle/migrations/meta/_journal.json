@@ -36,6 +36,13 @@
       "when": 1793957490691,
       "tag": "0004_session_devices_source",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793960847607,
+      "tag": "0005_operation_permissions",
+      "breakpoints": true
     }
   ]
 }
