@@ -406,8 +406,8 @@ const DEVICE_CODE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code';
 
 const rotateSecretBodySchema = z.object({ client_id: z.string().min(1) });
 
-export async function assertSecretRotationAllowed(env: Env, body: unknown): Promise<void> {
-  const parsed = rotateSecretBodySchema.safeParse(body);
+export async function assertSecretRotationAllowed(env: Env, request: Request): Promise<void> {
+  const parsed = rotateSecretBodySchema.safeParse(await request.clone().json().catch(() => null));
   if (!parsed.success) return;
   const clientId = parsed.data.client_id;
 
