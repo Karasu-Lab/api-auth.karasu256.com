@@ -2,6 +2,7 @@ export interface DispatchContext {
   env: Env;
   request: Request;
   pathname: string;
+  body: unknown;
 }
 
 export interface Dispatchable {

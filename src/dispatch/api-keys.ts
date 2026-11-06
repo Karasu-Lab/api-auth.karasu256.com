@@ -37,8 +37,8 @@ export class VerifyApiKeyDispatch implements Dispatchable {
   }
 
   async handle(): Promise<Response> {
-    const { env, request } = this.context;
-    const parsed = verifyBodySchema.safeParse(await request.json().catch(() => null));
+    const { env } = this.context;
+    const parsed = verifyBodySchema.safeParse(this.context.body);
     if (!parsed.success) throw new BadRequestError();
 
     const result = await withAuth(env, (auth) => verifyApiKey(auth, parsed.data.key));
@@ -59,8 +59,8 @@ export class IssueApiKeyDispatch implements Dispatchable {
   }
 
   async handle(): Promise<Response> {
-    const { env, request } = this.context;
-    const parsed = issueBodySchema.safeParse(await request.json().catch(() => null));
+    const { env } = this.context;
+    const parsed = issueBodySchema.safeParse(this.context.body);
     if (!parsed.success) throw new BadRequestError();
 
     const created = await withAuth(env, (auth) => auth.api.createApiKey({ body: { name: parsed.data.name, userId: parsed.data.userId } }));
@@ -124,7 +124,7 @@ export class CreateApiKeyDispatch implements Dispatchable {
 
   async handle(): Promise<Response> {
     const { env, request } = this.context;
-    const parsed = createBodySchema.safeParse(await request.json().catch(() => null));
+    const parsed = createBodySchema.safeParse(this.context.body);
     if (!parsed.success) throw new BadRequestError();
 
     return withAuth(env, async (auth) => {
