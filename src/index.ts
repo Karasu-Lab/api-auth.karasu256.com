@@ -5,7 +5,7 @@ import { resolveEnv } from './constants';
 import { dispatchables } from './dispatch';
 import { handlePreflight, withCors } from './lib/cors';
 import type { DispatchContext } from './lib/dispatch';
-import { HttpError } from './lib/errors';
+import { HttpError, NotFoundError } from './lib/errors';
 import { withAuth } from './lib/request-auth';
 import { rejectInvalidSignature } from './lib/signature-gate';
 import { assertSecretRotationAllowed } from './dispatch/oauth-client-info';
@@ -46,7 +46,7 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
         const dispatchable = new Dispatchable(context);
         if (dispatchable.matches()) return dispatchable.handle();
       }
-      return new Response('NOT_FOUND', { status: 404 });
+      throw new NotFoundError();
     },
     { type: 'none' }
   );
