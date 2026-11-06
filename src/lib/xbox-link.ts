@@ -5,6 +5,19 @@ import { authenticateXboxLive, authorizeXsts, XBOX_RELYING_PARTY } from './xbox-
 
 export type { XboxLinkExchange, XboxLinkTokens };
 
+export class XboxLinkError extends Error {
+  readonly error: string;
+  readonly errorDescription: string | null;
+
+  constructor(error: string, errorDescription?: string | null, cause?: unknown) {
+    const description = errorDescription ?? (cause instanceof Error ? cause.message : cause != null ? String(cause) : null);
+    super(description ?? error, cause !== undefined ? { cause } : undefined);
+    this.name = 'XboxLinkError';
+    this.error = error;
+    this.errorDescription = description;
+  }
+}
+
 export const XBOX_PROVIDER_ID = 'xbox';
 export const XBOX_SCOPE = 'XboxLive.signin offline_access';
 const MICROSOFT_AUTHORIZE_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize';

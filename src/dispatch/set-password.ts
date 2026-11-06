@@ -26,7 +26,8 @@ export class SetPasswordDispatch implements Dispatchable {
       await withAuth(env, (auth) => auth.api.setPassword({ body: { newPassword: parsed.data.newPassword }, headers: request.headers }));
       return Response.json({ ok: true });
     } catch (err) {
-      throw new BadRequestError(err instanceof APIError ? err.message : 'Failed to set password');
+      if (err instanceof APIError) throw new BadRequestError(err.message);
+      throw err;
     }
   }
 }

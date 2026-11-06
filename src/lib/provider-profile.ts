@@ -68,7 +68,7 @@ async function persistRefreshedTokens(ctx: AuthContext, accountId: string, refre
   if (refreshed.idToken !== undefined) data.idToken = (await setTokenUtil(refreshed.idToken, ctx)) ?? null;
   if (refreshed.accessTokenExpiresAt) data.accessTokenExpiresAt = refreshed.accessTokenExpiresAt;
   await ctx.internalAdapter.updateAccount(accountId, data).catch((error) => {
-    console.error('Failed to sync the refreshed provider tokens:', error instanceof Error ? error.message : error);
+    console.error('Failed to sync the refreshed provider tokens:', error);
   });
 }
 
@@ -284,7 +284,7 @@ async function getDerivedProviderProfile(
     });
     if (profile) return profile;
   } catch (error) {
-    console.error(`Failed to resolve the ${providerId} profile:`, error instanceof Error ? error.message : error);
+    console.error(`Failed to resolve the ${providerId} profile:`, error);
   }
   return { name: null, email: null, avatarUrl: null };
 }
