@@ -23,7 +23,7 @@
     "yaml": "^2.9.0"
   },
   "dependencies": {
-    "@karasu-lab/db": "0.1.0-00cc786",
+    "@karasu-lab/db": "0.1.0-2518fa1",
     "@karasu-lab/utils": "0.1.0-be51f04",
     "@better-auth/api-key": "1.7.12",
     "@better-auth/core": "^1.7.12",

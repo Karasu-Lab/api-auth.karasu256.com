@@ -14,6 +14,7 @@ const upsertBodySchema = z.object({
   icon_url: z.string().max(2048).nullable().optional(),
   description: z.string().max(2000).nullable().optional(),
   resource: z.string().max(2048).nullable().optional(),
+  public: z.boolean().optional(),
 });
 
 const prepareIconBodySchema = z.object({
@@ -39,6 +40,7 @@ interface OAuthClientInfoResponse {
   icon_url: string | null;
   description: string | null;
   resource: string | null;
+  public: boolean;
 }
 
 async function ownsClient(env: Env, clientId: string, userId: string): Promise<boolean> {
@@ -84,6 +86,7 @@ export async function handleListOAuthClientInfo(env: Env, request: Request): Pro
       icon_url: row.iconUrl,
       description: row.description,
       resource: row.resource,
+      public: row.public,
     }));
     return Response.json(body);
   } finally {
@@ -112,6 +115,7 @@ export async function handleUpsertOAuthClientInfo(env: Env, request: Request, cl
       iconUrl: parsed.data.icon_url ?? null,
       description: parsed.data.description ?? null,
       resource: parsed.data.resource ?? null,
+      public: parsed.data.public ?? false,
     };
     const [previous] = await db
       .select({ resource: schema.oauthClientInfo.resource })
@@ -196,6 +200,7 @@ export async function handleUpsertOAuthClientInfo(env: Env, request: Request, cl
       icon_url: values.iconUrl,
       description: values.description,
       resource: values.resource,
+      public: values.public,
     };
     return Response.json(body);
   } finally {
