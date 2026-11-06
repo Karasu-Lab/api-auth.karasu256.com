@@ -39,24 +39,43 @@ vi.mock('../src/lib/request-auth', () => ({
 
 type AuthInstance = ReturnType<typeof buildAuth>;
 
-function buildAuth() {
+type MemoryDb = {
+  user: Record<string, unknown>[];
+  session: Record<string, unknown>[];
+  account: Record<string, unknown>[];
+  verification: Record<string, unknown>[];
+  jwks: Record<string, unknown>[];
+  oauthClient: Record<string, unknown>[];
+  oauthAccessToken: Record<string, unknown>[];
+  oauthRefreshToken: Record<string, unknown>[];
+  oauthConsent: Record<string, unknown>[];
+  oauthResource: Record<string, unknown>[];
+  oauthClientResource: Record<string, unknown>[];
+  oauthClientAssertion: Record<string, unknown>[];
+};
+
+function createDb(): MemoryDb {
+  return {
+    user: [],
+    session: [],
+    account: [],
+    verification: [],
+    jwks: [],
+    oauthClient: [],
+    oauthAccessToken: [],
+    oauthRefreshToken: [],
+    oauthConsent: [],
+    oauthResource: [],
+    oauthClientResource: [],
+    oauthClientAssertion: [],
+  };
+}
+
+function buildAuth(db: MemoryDb = createDb()) {
   return betterAuth({
     secret: SECRET,
     baseURL: 'https://auth.test',
-    database: memoryAdapter({
-      user: [],
-      session: [],
-      account: [],
-      verification: [],
-      jwks: [],
-      oauthClient: [],
-      oauthAccessToken: [],
-      oauthRefreshToken: [],
-      oauthConsent: [],
-      oauthResource: [],
-      oauthClientResource: [],
-      oauthClientAssertion: [],
-    }),
+    database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
     plugins: [
       jwt(),
@@ -485,5 +504,126 @@ describe('MCP session token exchange with provider-issued tokens', () => {
     const afterReuse = await postToken({ grant_type: 'refresh_token', refresh_token: secondRefreshToken, client_id: client.client_id });
     expect(afterReuse.status).toBe(200);
     expect(afterReuse.body.access_token).toBeTruthy();
+  });
+
+  it('revokes the family when a rotated token is presented after the reuse interval', async () => {
+    const db = createDb();
+    const auth = buildAuth(db);
+    const authContext = await auth.$context;
+    const user = await authContext.internalAdapter.createUser({
+      email: 'fourth@example.com',
+      name: 'Fourth User',
+      emailVerified: true,
+    });
+    const session = await authContext.internalAdapter.createSession(user.id, false);
+    holder.row = { id: session.id, userId: session.userId, token: session.token, expiresAt: session.expiresAt };
+    const cookie = sessionCookieHeader(session.token);
+
+    const registration = await auth.handler(
+      new Request('https://auth.test/api/auth/oauth2/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          client_name: 'Late Reuse Client',
+          redirect_uris: [REDIRECT_URI],
+          scope: 'openid profile email offline_access read:profile write:profile',
+          grant_types: ['authorization_code', 'refresh_token'],
+          response_types: ['code'],
+          token_endpoint_auth_method: 'none',
+          resources: [MCP_URL],
+        }),
+      })
+    );
+    expect(registration.status).toBe(201);
+    const client = (await registration.json()) as { client_id: string };
+
+    const verifier = randomBytes(32).toString('base64url');
+    const challenge = createHash('sha256').update(verifier).digest('base64url');
+    const authorizeParams = new URLSearchParams({
+      response_type: 'code',
+      client_id: client.client_id,
+      redirect_uri: REDIRECT_URI,
+      scope: 'openid profile email offline_access read:profile write:profile',
+      resource: MCP_URL,
+      state: 'flow-state',
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+    });
+    let next: Response = await auth.handler(
+      new Request(`https://auth.test/api/auth/oauth2/authorize?${authorizeParams}`, { headers: { cookie }, redirect: 'manual' })
+    );
+    let code: string | null = null;
+    for (let step = 0; step < 6 && !code; step++) {
+      const location = next.headers.get('location');
+      if (next.status >= 300 && next.status < 400 && location) {
+        const url = new URL(location, 'https://auth.test');
+        if (url.href.startsWith(REDIRECT_URI)) {
+          code = url.searchParams.get('code');
+          break;
+        }
+        if (url.pathname === '/oauth/consent') {
+          next = await auth.handler(
+            new Request('https://auth.test/api/auth/oauth2/consent', {
+              method: 'POST',
+              headers: { cookie, 'content-type': 'application/json' },
+              body: JSON.stringify({ accept: true, oauth_query: url.search.replace(/^\?/, '') }),
+              redirect: 'manual',
+            })
+          );
+          const consentBody = (await next.clone().json().catch(() => null)) as { url?: string } | null;
+          if (consentBody?.url) {
+            next = new Response(null, { status: 302, headers: { location: consentBody.url } });
+          }
+          continue;
+        }
+        next = await auth.handler(new Request(url, { headers: { cookie }, redirect: 'manual' }));
+        continue;
+      }
+      const continueBody = (await next.clone().json().catch(() => null)) as { url?: string } | null;
+      if (continueBody?.url) {
+        next = new Response(null, { status: 302, headers: { location: continueBody.url } });
+        continue;
+      }
+      throw new Error(`authorize stopped at step ${step} with status ${next.status}`);
+    }
+    expect(code).toBeTruthy();
+
+    const postToken = async (form: Record<string, string>): Promise<{ status: number; body: { access_token?: string; refresh_token?: string; error?: string } }> => {
+      const response = await auth.handler(
+        new Request('https://auth.test/api/auth/oauth2/token', {
+          method: 'POST',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(form).toString(),
+        })
+      );
+      return { status: response.status, body: (await response.json().catch(() => ({}))) as { access_token?: string; refresh_token?: string; error?: string } };
+    };
+
+    const initial = await postToken({
+      grant_type: 'authorization_code',
+      code: code as string,
+      redirect_uri: REDIRECT_URI,
+      client_id: client.client_id,
+      code_verifier: verifier,
+    });
+    expect(initial.status).toBe(200);
+    const firstRefreshToken = initial.body.refresh_token as string;
+
+    const firstRefresh = await postToken({ grant_type: 'refresh_token', refresh_token: firstRefreshToken, client_id: client.client_id });
+    expect(firstRefresh.status).toBe(200);
+    const secondRefreshToken = firstRefresh.body.refresh_token as string;
+    expect(secondRefreshToken).toBeTruthy();
+
+    const rotatedRow = db.oauthRefreshToken.find((row) => row.revoked != null && row.rotationReplayExpiresAt != null);
+    expect(rotatedRow).toBeTruthy();
+    (rotatedRow as Record<string, unknown>).rotationReplayExpiresAt = new Date(0);
+
+    const lateReuse = await postToken({ grant_type: 'refresh_token', refresh_token: firstRefreshToken, client_id: client.client_id });
+    expect(lateReuse.status).toBe(400);
+    expect(lateReuse.body.error).toBe('invalid_grant');
+
+    const afterLateReuse = await postToken({ grant_type: 'refresh_token', refresh_token: secondRefreshToken, client_id: client.client_id });
+    expect(afterLateReuse.status).toBe(400);
+    expect(afterLateReuse.body.error).toBe('invalid_grant');
   });
 });
