@@ -7,6 +7,7 @@ import { withAuth } from '../lib/request-auth';
 import { presignUploadUrl, storageEnv } from '../lib/storage';
 import { signUploadIntent, verifyUploadIntent } from '../lib/upload-intent';
 import { UploadVerificationError } from '../lib/upload-verification-error';
+import { SecretRotationNotAllowedError } from '../lib/secret-rotation-error';
 
 const upsertBodySchema = z.object({
   name: z.string().trim().min(1).max(255),
@@ -250,4 +251,33 @@ export async function handleCompleteOAuthClientIcon(env: Env, request: Request, 
 
   const { sha256 } = (await verified.json()) as { sha256: string };
   return Response.json({ icon_url: `${storageEnv(env).CDN_URL}/${intent.path}?v=${sha256.slice(0, 16)}` });
+}
+
+const DEVICE_CODE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code';
+
+export async function assertSecretRotationAllowed(env: Env, request: Request): Promise<void> {
+  const parsed = (await request
+    .clone()
+    .json()
+    .catch(() => null)) as { client_id?: unknown } | null;
+  const clientId = typeof parsed?.client_id === 'string' ? parsed.client_id : null;
+  if (!clientId) return;
+
+  const db = createDb(env.DATABASE_URL);
+  try {
+    const [client] = await db
+      .select({
+        grantTypes: schema.oauthClients.grantTypes,
+        tokenEndpointAuthMethod: schema.oauthClients.tokenEndpointAuthMethod,
+      })
+      .from(schema.oauthClients)
+      .where(eq(schema.oauthClients.clientId, clientId))
+      .limit(1);
+    if (!client) return;
+    const grantTypes = client.grantTypes ?? [];
+    const isDevice = grantTypes.includes(DEVICE_CODE_GRANT_TYPE) && !grantTypes.includes('authorization_code');
+    if (isDevice || client.tokenEndpointAuthMethod === 'none') throw new SecretRotationNotAllowedError();
+  } finally {
+    waitUntil(db.$client.end());
+  }
 }

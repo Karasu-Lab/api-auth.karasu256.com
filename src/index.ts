@@ -7,11 +7,13 @@ import { withAuth } from './lib/request-auth';
 import { rejectInvalidSignature } from './lib/signature-gate';
 import { handleCreateApiKey, handleDeleteApiKey, handleIssueApiKey, handleListApiKeys, handleListPermissions, handleVerifyApiKey } from './routes/api-keys';
 import {
+  assertSecretRotationAllowed,
   handleCompleteOAuthClientIcon,
   handleListOAuthClientInfo,
   handlePrepareOAuthClientIcon,
   handleUpsertOAuthClientInfo,
 } from './routes/oauth-client-info';
+import { SecretRotationNotAllowedError } from './lib/secret-rotation-error';
 import { handleProviderDetails } from './routes/providers';
 import { handleXboxCallback, handleXboxLink } from './routes/xbox';
 import { handleSetPassword } from './routes/set-password';
@@ -22,9 +24,18 @@ import { handleCreateTestAccount, handleDeleteTestAccount } from './routes/test-
 const env = resolveEnv(cfEnv as Env);
 
 const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typebox' })
+  .onError(({ error }) => {
+    if (error instanceof SecretRotationNotAllowedError)
+      return Response.json({ error: 'invalid_client', error_description: error.message }, { status: 400 });
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
+  })
   .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
   .get('/api/xbox/link', ({ request }) => handleXboxLink(env, request))
-  .get('/api/xbox/callback', ({ request }) => handleXboxCallback(env, request));
+  .get('/api/xbox/callback', ({ request }) => handleXboxCallback(env, request))
+  .post('/api/auth/oauth2/client/rotate-secret', async ({ request }) => {
+    await assertSecretRotationAllowed(env, request);
+    return withAuth(env, (auth) => auth.handler(request));
+  });
 
 function normalizePath(request: Request): Request {
   const url = new URL(request.url);
@@ -41,6 +52,7 @@ async function dispatch(request: Request): Promise<Response> {
   if (pathname.startsWith('/api/auth/')) {
     const rejectedTurnstile = await rejectUnverifiedTurnstile(env, request);
     if (rejectedTurnstile) return rejectedTurnstile;
+    if (pathname === '/api/auth/oauth2/client/rotate-secret' && request.method === 'POST') return app.fetch(request);
     return withAuth(env, (auth) => auth.handler(request));
   }
   if (pathname === '/api/api-keys/verify' && request.method === 'POST') return handleVerifyApiKey(env, request);
