@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { memoryAdapter } from 'better-auth/adapters/memory';
 import { multiSession } from 'better-auth/plugins';
 import { jwt } from 'better-auth/plugins/jwt';
+import { createLocalJWKSet, jwtVerify } from 'jose';
 import { describe, expect, it, vi } from 'vitest';
 import { McpSessionTokenDispatch } from '../src/dispatch/mcp';
 import type { DispatchContext } from '../src/lib/dispatch';
@@ -63,6 +64,7 @@ describe('McpSessionTokenDispatch', () => {
         return new Response(null, { status: 401 });
       },
       api: realAuth.api,
+      $context: realAuth.$context,
     };
 
     const context: DispatchContext = {
@@ -81,6 +83,9 @@ describe('McpSessionTokenDispatch', () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as { token: string };
     expect(typeof body.token).toBe('string');
-    expect(body.token.split('.')).toHaveLength(3);
+    const jwksResponse = await realAuth.handler(new Request('https://auth.test/api/auth/jwks'));
+    const jwks = (await jwksResponse.json()) as { keys: Record<string, unknown>[] };
+    const { payload } = await jwtVerify(body.token, createLocalJWKSet({ keys: jwks.keys }), { issuer: 'https://auth.test' });
+    expect(payload.sub).toBe(user.id);
   });
 });
