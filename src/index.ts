@@ -3,6 +3,7 @@ import { CloudflareAdapter } from 'elysia/adapter/cloudflare-worker';
 import { env as cfEnv } from 'cloudflare:workers';
 import { resolveEnv } from './constants';
 import { handlePreflight, withCors } from './lib/cors';
+import { withCdnProfileAvatarUrls } from './lib/profile-avatar';
 import { withAuth } from './lib/request-auth';
 import { rejectInvalidSignature } from './lib/signature-gate';
 import { handleCreateApiKey, handleDeleteApiKey, handleIssueApiKey, handleListApiKeys, handleListPermissions, handleVerifyApiKey } from './routes/api-keys';
@@ -54,7 +55,8 @@ async function dispatch(request: Request): Promise<Response> {
     const rejectedTurnstile = await rejectUnverifiedTurnstile(env, request);
     if (rejectedTurnstile) return rejectedTurnstile;
     if (pathname === '/api/auth/oauth2/client/rotate-secret' && request.method === 'POST') return app.fetch(request);
-    return withAuth(env, (auth) => auth.handler(request));
+    const response = await withAuth(env, (auth) => auth.handler(request));
+    return withCdnProfileAvatarUrls(env, pathname, response);
   }
   if (pathname === '/api/api-keys/verify' && request.method === 'POST') return handleVerifyApiKey(env, request);
   if (pathname === '/api/api-keys' && request.method === 'GET') return handleListApiKeys(env, request);
