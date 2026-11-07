@@ -5,9 +5,12 @@ import { HttpError } from '@karasu-lab/types/server';
 const GITHUB_API_URL = 'https://api.github.com';
 
 export class GithubAppNotConfiguredError extends HttpError {
-  constructor() {
-    super(503, { error: 'github_app_not_configured' });
+  readonly missing: string[];
+
+  constructor(missing: string[]) {
+    super(503, { error: 'github_app_not_configured', missing });
     this.name = 'GithubAppNotConfiguredError';
+    this.missing = missing;
   }
 }
 
@@ -55,13 +58,27 @@ export type GithubPullRequest = z.infer<typeof pullRequestSchema>;
 const tokenCache = new Map<number, { token: string; expiresAt: number }>();
 
 function appCredentials(env: Env): { appId: string; privateKey: string } {
-  if (!env.GITHUB_APP_ID || !env.GITHUB_APP_PRIVATE_KEY) throw new GithubAppNotConfiguredError();
-  return { appId: env.GITHUB_APP_ID, privateKey: env.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, '\n') };
+  const appId = env.GITHUB_APP_ID;
+  const privateKey = env.GITHUB_APP_PRIVATE_KEY;
+  if (!appId || !privateKey) {
+    const missing: string[] = [];
+    if (!appId) missing.push('GITHUB_APP_ID');
+    if (!privateKey) missing.push('GITHUB_APP_PRIVATE_KEY');
+    throw new GithubAppNotConfiguredError(missing);
+  }
+  return { appId, privateKey: privateKey.replace(/\\n/g, '\n') };
 }
 
 export function appClientCredentials(env: Env): { clientId: string; clientSecret: string } {
-  if (!env.GH_APP_CLIENT_ID || !env.GH_APP_CLIENT_SECRET) throw new GithubAppNotConfiguredError();
-  return { clientId: env.GH_APP_CLIENT_ID, clientSecret: env.GH_APP_CLIENT_SECRET };
+  const clientId = env.GH_APP_CLIENT_ID;
+  const clientSecret = env.GH_APP_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    const missing: string[] = [];
+    if (!clientId) missing.push('GH_APP_CLIENT_ID');
+    if (!clientSecret) missing.push('GH_APP_CLIENT_SECRET');
+    throw new GithubAppNotConfiguredError(missing);
+  }
+  return { clientId, clientSecret };
 }
 
 const appSchema = z.object({

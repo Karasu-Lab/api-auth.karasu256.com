@@ -45,7 +45,7 @@ export async function handleGithubAppInstall(env: Env, request: Request): Promis
       publicLink = await getAppPublicLink(env);
     } catch (caught) {
       if (caught instanceof GithubAppNotConfiguredError) {
-        return Response.json({ error: 'github_app_not_configured' }, { status: 503 });
+        return Response.json(caught.body, { status: caught.status });
       }
       throw caught;
     }
