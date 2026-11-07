@@ -3,7 +3,7 @@ import { members, tenantGithubInstallations } from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { and, eq } from 'drizzle-orm';
 import { getAuthConfig } from '../config';
-import { getAppPublicLink, getInstallationInfo, GithubAppNotConfiguredError } from '../lib/github-app';
+import { getAppPublicLink, getInstallationInfo } from '../lib/github-app';
 import { createLinkState, verifyLinkState } from '../lib/link-state';
 import { withAuth } from '../lib/request-auth';
 
@@ -40,15 +40,7 @@ export async function handleGithubAppInstall(env: Env, request: Request): Promis
     } finally {
       waitUntil(db.$client.end());
     }
-    let publicLink: string;
-    try {
-      publicLink = await getAppPublicLink(env);
-    } catch (caught) {
-      if (caught instanceof GithubAppNotConfiguredError) {
-        return Response.json(caught.body, { status: caught.status });
-      }
-      throw caught;
-    }
+    const publicLink = await getAppPublicLink(env);
     const state = await createLinkState(env.BETTER_AUTH_SECRET, {
       kind: STATE_KIND,
       userId: session.user.id,
