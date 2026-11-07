@@ -64,6 +64,13 @@
       "when": 1794048199784,
       "tag": "0008_superb_firelord",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794058791014,
+      "tag": "0009_misty_black_bolt",
+      "breakpoints": true
     }
   ]
 }
