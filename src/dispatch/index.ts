@@ -21,6 +21,7 @@ import {
   SetSigningKeyEnabledDispatch,
   SigningKeyStatusDispatch,
 } from './signing-keys';
+import { SigningKeyMaterialDispatch } from './signing-key-material';
 import {
   CreateBotPullRequestDispatch,
   CreateTenantRepositoryDispatch,
@@ -63,6 +64,7 @@ export const dispatchables: DispatchableClass[] = [
   GithubRepositoriesDispatch,
   CreateSigningKeyDispatch,
   SigningKeyStatusDispatch,
+  SigningKeyMaterialDispatch,
   RotateSigningKeyDispatch,
   RenameSigningKeyDispatch,
   SetSigningKeyEnabledDispatch,

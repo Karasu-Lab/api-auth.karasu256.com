@@ -221,6 +221,18 @@ export async function storeSigningKeyAuthorization(
     .onConflictDoUpdate({ target: signingKeyAuthorizations.userId, set: values });
 }
 
+export async function encryptSigningKeyPrivateKey(auth: Auth, privateKey: string): Promise<string> {
+  const ctx = (await auth.$context) as unknown as AuthContext;
+  const encrypted = await setTokenUtil(privateKey, ctx);
+  if (!encrypted) throw new Error('signing_key_encryption_failed');
+  return encrypted;
+}
+
+export async function decryptSigningKeyPrivateKey(auth: Auth, encryptedPrivateKey: string): Promise<string | null> {
+  const ctx = (await auth.$context) as unknown as AuthContext;
+  return Promise.resolve(decryptOAuthToken(encryptedPrivateKey, ctx)).catch(() => null);
+}
+
 export async function getSigningKeyAccessToken(env: Env, auth: Auth, db: Db, userId: string): Promise<string | null> {
   const rows = await db.select().from(signingKeyAuthorizations).where(eq(signingKeyAuthorizations.userId, userId)).limit(1);
   const row = rows[0];

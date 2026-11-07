@@ -5,7 +5,7 @@ const STATE_TTL_MS = 10 * 60 * 1000;
 export const linkStatePayloadSchema = z.object({
   kind: z.string().min(1),
   userId: z.string().min(1),
-  organizationId: z.string().min(1),
+  organizationId: z.string().min(1).optional(),
   returnTo: z.string().min(1),
   exp: z.number(),
 });

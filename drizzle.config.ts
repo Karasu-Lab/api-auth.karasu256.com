@@ -13,7 +13,7 @@ export default defineConfig({
     '../../packages/db/src/schema/organization-teams.ts',
     '../../packages/db/src/schema/organization-team-members.ts',
     '../../packages/db/src/schema/tenant-github-installations.ts',
-    '../../packages/db/src/schema/tenant-signing-keys.ts',
+    '../../packages/db/src/schema/user-signing-keys.ts',
     '../../packages/db/src/schema/signing-key-authorizations.ts',
     '../../packages/db/src/schema/tenant-npm-configurations.ts',
     '../../packages/db/src/schema/tenant-linked-packages.ts',
