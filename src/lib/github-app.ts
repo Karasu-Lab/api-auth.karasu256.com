@@ -64,9 +64,14 @@ export function appClientCredentials(env: Env): { clientId: string; clientSecret
   return { clientId: env.GH_APP_CLIENT_ID, clientSecret: env.GH_APP_CLIENT_SECRET };
 }
 
-export function githubAppSlug(env: Env): string {
-  if (!env.GITHUB_APP_SLUG) throw new GithubAppNotConfiguredError();
-  return env.GITHUB_APP_SLUG;
+const appSchema = z.object({
+  html_url: z.string(),
+});
+
+export async function getAppPublicLink(env: Env): Promise<string> {
+  const jwt = await createAppJwt(env);
+  const app = await githubJson(jwt, '/app', appSchema);
+  return app.html_url;
 }
 
 async function createAppJwt(env: Env): Promise<string> {
