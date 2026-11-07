@@ -27,12 +27,3 @@ export async function grantPermissions(env: Env, apiKeyId: string, publicIds: st
   if (res.status === 400) throw new UnknownPermissionError();
   return readJson<PermissionSummary[]>(res);
 }
-
-export async function getGrantedPermissions(env: Env, apiKeyIds: string[]): Promise<Map<string, PermissionSummary[]>> {
-  if (apiKeyIds.length === 0) return new Map();
-  const res = await fetch(`${env.API_URL}/internal/api-keys/permissions?ids=${apiKeyIds.map(encodeURIComponent).join(',')}`, {
-    headers: internalHeaders(env),
-    cache: 'no-store',
-  });
-  return new Map(Object.entries(await readJson<Record<string, PermissionSummary[]>>(res)));
-}

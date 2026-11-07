@@ -11,7 +11,7 @@ import { rejectInvalidSignature } from './lib/signature-gate';
 import { assertSecretRotationAllowed } from './dispatch/oauth-client-info';
 import { SecretRotationNotAllowedError } from './lib/secret-rotation-error';
 import { UploadVerificationError } from './lib/upload-verification-error';
-import { handleProviderDetails } from './routes/providers';
+import { handleProviderDetails, handleProviderList } from './routes/providers';
 import { handleXboxCallback, handleXboxLink } from './routes/xbox';
 
 const env = resolveEnv(cfEnv as Env);
@@ -25,6 +25,7 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
     if (error instanceof ParseError) return Response.json({ error: 'Bad Request' }, { status: 400 });
     return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   })
+  .get('/api/users/me/providers', ({ request }) => handleProviderList(env, request))
   .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
   .get('/api/xbox/link', ({ request }) => handleXboxLink(env, request))
   .get('/api/xbox/callback', ({ request }) => handleXboxCallback(env, request))

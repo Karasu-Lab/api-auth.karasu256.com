@@ -217,21 +217,17 @@ function minecraftProfileSync(options?: ProviderProfileOptions): ProviderProfile
   };
 }
 
-export async function getProviderProfile(
-  auth: Auth,
+async function reloadStoredAccount(ctx: AuthContext, uid: string, accountId: string): Promise<OAuth2Tokens | null> {
+  const again = (await ctx.internalAdapter.findAccounts(uid)).find((entry) => entry.id === accountId);
+  return again ? decryptStoredTokens(ctx, again) : null;
+}
+
+async function resolveSocialProfile(
+  ctx: AuthContext,
   uid: string,
-  providerId: string,
-  options?: ProviderProfileOptions
+  account: StoredAccount & { providerId: string },
+  providerId: string
 ): Promise<ProviderProfile | null> {
-  const ctx = (await auth.$context) as unknown as AuthContext;
-
-  if ((DERIVED_PROVIDER_IDS as readonly string[]).includes(providerId)) {
-    return getDerivedProviderProfile(ctx, uid, providerId, options);
-  }
-
-  const account = (await ctx.internalAdapter.findAccounts(uid)).find((entry) => entry.providerId === providerId);
-  if (!account) return null;
-
   const provider = ctx.socialProviders.find((entry) => entry.id === providerId);
   if (!provider) return null;
 
@@ -239,10 +235,58 @@ export async function getProviderProfile(
   if (!stored) return null;
 
   const createSync = SOCIAL_PROFILE_SYNC_FACTORIES[providerId] ?? socialProfileSync;
-  return syncProviderProfile(ctx, account.id, stored, createSync(provider), async () => {
-    const again = (await ctx.internalAdapter.findAccounts(uid)).find((entry) => entry.id === account.id);
-    return again ? decryptStoredTokens(ctx, again) : null;
-  });
+  return syncProviderProfile(ctx, account.id, stored, createSync(provider), () => reloadStoredAccount(ctx, uid, account.id));
+}
+
+async function resolveProfileFromAccounts(
+  ctx: AuthContext,
+  accounts: (StoredAccount & { providerId: string })[],
+  uid: string,
+  providerId: string,
+  options?: ProviderProfileOptions
+): Promise<ProviderProfile | null> {
+  if ((DERIVED_PROVIDER_IDS as readonly string[]).includes(providerId)) {
+    const account = accounts.find((entry) => entry.providerId === XBOX_PROVIDER_ID);
+    if (!account) return null;
+    return resolveDerivedProfile(ctx, uid, account, providerId, options);
+  }
+
+  const account = accounts.find((entry) => entry.providerId === providerId);
+  if (!account) return null;
+  return resolveSocialProfile(ctx, uid, account, providerId);
+}
+
+export async function getProviderProfile(
+  auth: Auth,
+  uid: string,
+  providerId: string,
+  options?: ProviderProfileOptions
+): Promise<ProviderProfile | null> {
+  const ctx = (await auth.$context) as unknown as AuthContext;
+  const accounts = await ctx.internalAdapter.findAccounts(uid);
+  return resolveProfileFromAccounts(ctx, accounts, uid, providerId, options);
+}
+
+const PROVIDER_PROFILE_IDS = ['google', 'github', 'microsoft', 'xbox', 'minecraft'];
+
+export async function getProviderProfiles(
+  auth: Auth,
+  uid: string,
+  options?: ProviderProfileOptions
+): Promise<Record<string, ProviderProfile | null>> {
+  const ctx = (await auth.$context) as unknown as AuthContext;
+  const accounts = await ctx.internalAdapter.findAccounts(uid);
+  const entries = await Promise.all(
+    PROVIDER_PROFILE_IDS.map(async (providerId) => {
+      if (providerId === 'minecraft' && options?.minecraftAuthEnabled === false) return [providerId, null] as const;
+      try {
+        return [providerId, await resolveProfileFromAccounts(ctx, accounts, uid, providerId, options)] as const;
+      } catch {
+        return [providerId, null] as const;
+      }
+    })
+  );
+  return Object.fromEntries(entries);
 }
 
 export async function getProviderAccessToken(auth: Auth, uid: string, providerId: string): Promise<string | null> {
@@ -278,15 +322,13 @@ async function getMicrosoftPhotoDataUrl(accessToken: string): Promise<string | n
   return `data:image/jpeg;base64, ${btoa(binary)}`;
 }
 
-async function getDerivedProviderProfile(
+async function resolveDerivedProfile(
   ctx: AuthContext,
   uid: string,
+  account: StoredAccount & { providerId: string },
   providerId: string,
   options?: ProviderProfileOptions
 ): Promise<ProviderProfile | null> {
-  const account = (await ctx.internalAdapter.findAccounts(uid)).find((entry) => entry.providerId === XBOX_PROVIDER_ID);
-  if (!account) return null;
-
   if (providerId === 'minecraft' && options?.minecraftAuthEnabled === false) {
     return { name: null, email: null, avatarUrl: null };
   }
@@ -297,10 +339,7 @@ async function getDerivedProviderProfile(
   const sync = providerId === 'xbox' ? xboxProfileSync(options) : minecraftProfileSync(options);
 
   try {
-    const profile = await syncProviderProfile(ctx, account.id, stored, sync, async () => {
-      const again = (await ctx.internalAdapter.findAccounts(uid)).find((entry) => entry.id === account.id);
-      return again ? decryptStoredTokens(ctx, again) : null;
-    });
+    const profile = await syncProviderProfile(ctx, account.id, stored, sync, () => reloadStoredAccount(ctx, uid, account.id));
     if (profile) return profile;
   } catch (error) {
     console.error(`Failed to resolve the ${providerId} profile:`, error);

@@ -155,6 +155,58 @@ export class ListOAuthClientInfoDispatch implements Dispatchable {
   }
 }
 
+export class GetOAuthClientInfoDispatch implements Dispatchable {
+  private context: DispatchContext;
+  private clientId: string | null = null;
+
+  constructor(context: DispatchContext) {
+    this.context = context;
+  }
+
+  matches(): boolean {
+    if (!this.context.pathname.startsWith('/api/oauth-client-info/') || this.context.request.method !== 'GET') return false;
+    this.clientId = decodeURIComponent(this.context.pathname.slice('/api/oauth-client-info/'.length));
+    return true;
+  }
+
+  async handle(): Promise<Response> {
+    const { env, request } = this.context;
+    const clientId = this.clientId as string;
+    const session = await withAuth(env, (auth) => auth.api.getSession({ headers: request.headers }));
+    if (!session) throw new UnauthorizedError();
+
+    const db = createDb(env.DATABASE_URL);
+    try {
+      const [client] = await db
+        .select({ clientId: schema.oauthClients.clientId })
+        .from(schema.oauthClients)
+        .where(and(eq(schema.oauthClients.clientId, clientId), eq(schema.oauthClients.userId, session.user.id)))
+        .limit(1);
+      if (!client) throw new NotFoundError();
+
+      const [row] = await db
+        .select()
+        .from(schema.oauthClientInfo)
+        .where(eq(schema.oauthClientInfo.clientId, clientId))
+        .limit(1);
+      if (!row) throw new NotFoundError();
+
+      const body: OAuthClientInfoResponse = {
+        client_id: row.clientId,
+        name: row.name,
+        author_id: row.authorId,
+        icon_url: row.iconUrl,
+        description: row.description,
+        resource: row.resource,
+        public: row.public,
+      };
+      return Response.json(body);
+    } finally {
+      waitUntil(db.$client.end());
+    }
+  }
+}
+
 export class UpsertOAuthClientInfoDispatch implements Dispatchable {
   private context: DispatchContext;
   private clientId: string | null = null;
