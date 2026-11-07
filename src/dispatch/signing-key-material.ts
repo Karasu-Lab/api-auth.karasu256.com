@@ -2,7 +2,7 @@ import { createDb } from '@karasu-lab/db/create-db';
 import { userSigningKeys, users } from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
-import { HttpError, NotFoundError } from '@karasu-lab/types/server';
+import { HttpError } from '@karasu-lab/types/server';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import { withAuth } from '../lib/request-auth';
 import { decryptSigningKeyPrivateKey } from '../lib/signing-key';
@@ -34,7 +34,7 @@ export class SigningKeyMaterialDispatch implements Dispatchable {
       const payload = await withAuth(env, async (auth) => {
         const keyRows = await db.select().from(userSigningKeys).where(eq(userSigningKeys.userId, userId)).limit(1);
         const key = keyRows[0];
-        if (!key) throw new NotFoundError();
+        if (!key) throw new HttpError(404, { error: 'signing_key_not_registered' });
         if (!key.enabled) throw new HttpError(409, { error: 'signing_key_disabled' });
         const userRows = await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
         const user = userRows[0];
