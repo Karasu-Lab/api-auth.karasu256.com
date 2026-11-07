@@ -12,8 +12,8 @@ export class GithubAppNotConfiguredError extends HttpError {
 }
 
 const appCredentialsSchema = z.object({
-  GITHUB_APP_ID: z.string().min(1),
-  GITHUB_APP_PRIVATE_KEY: z.string().min(1),
+  GH_APP_ID: z.string().min(1),
+  GH_APP_PRIVATE_KEY: z.string().min(1),
 });
 
 const appClientCredentialsSchema = z.object({
@@ -67,7 +67,7 @@ const tokenCache = new Map<number, { token: string; expiresAt: number }>();
 function appCredentials(env: Env): { appId: string; privateKey: string } {
   const parsed = appCredentialsSchema.safeParse(env);
   if (!parsed.success) throw new GithubAppNotConfiguredError(Issue.fromZodError(parsed.error));
-  return { appId: parsed.data.GITHUB_APP_ID, privateKey: parsed.data.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, '\n') };
+  return { appId: parsed.data.GH_APP_ID, privateKey: parsed.data.GH_APP_PRIVATE_KEY.replace(/\\n/g, '\n') };
 }
 
 export function appClientCredentials(env: Env): { clientId: string; clientSecret: string } {
