@@ -1,10 +1,11 @@
 import type { AuthContext } from '@better-auth/core';
 import { decryptOAuthToken, setTokenUtil } from 'better-auth/oauth2';
-import { signingKeyAuthorizations } from '@karasu-lab/db/schema';
+import { accounts } from '@karasu-lab/db/schema';
 import type { Db } from '@karasu-lab/db/create-db';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Auth } from './auth';
+import { SIGNING_KEY_PROVIDER_ID } from './github-providers';
 
 const GITHUB_API_URL = 'https://api.github.com';
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -157,27 +158,6 @@ const githubTokenResponseSchema = z.object({
   scope: z.string().optional(),
 });
 
-export async function exchangeSigningKeyAuthorizationCode(
-  env: Env,
-  code: string,
-  redirectUri: string
-): Promise<z.infer<typeof githubTokenResponseSchema> | null> {
-  if (!env.GH_OATH_CLIENT_ID || !env.GH_OAUTH_CLIENT_SECRET) return null;
-  const response = await fetch(GITHUB_TOKEN_URL, {
-    method: 'POST',
-    headers: { accept: 'application/json', 'content-type': 'application/json' },
-    body: JSON.stringify({
-      client_id: env.GH_OATH_CLIENT_ID,
-      client_secret: env.GH_OAUTH_CLIENT_SECRET,
-      code,
-      redirect_uri: redirectUri,
-    }),
-  });
-  if (!response.ok) return null;
-  const parsed = githubTokenResponseSchema.safeParse(await response.json().catch(() => null));
-  return parsed.success ? parsed.data : null;
-}
-
 async function refreshSigningKeyTokens(
   env: Env,
   refreshToken: string
@@ -198,27 +178,27 @@ async function refreshSigningKeyTokens(
   return parsed.success ? parsed.data : null;
 }
 
-export async function storeSigningKeyAuthorization(
+async function storeRefreshedSigningKeyTokens(
   auth: Auth,
   db: Db,
-  userId: string,
+  accountId: string,
   tokens: z.infer<typeof githubTokenResponseSchema>
 ): Promise<void> {
   const ctx = (await auth.$context) as unknown as AuthContext;
   const now = Date.now();
-  const values = {
-    accessToken: (await setTokenUtil(tokens.access_token, ctx)) ?? null,
-    refreshToken: tokens.refresh_token ? ((await setTokenUtil(tokens.refresh_token, ctx)) ?? null) : null,
-    accessTokenExpiresAt: tokens.expires_in ? new Date(now + tokens.expires_in * 1000) : null,
-    refreshTokenExpiresAt: tokens.refresh_token_expires_in
-      ? new Date(now + tokens.refresh_token_expires_in * 1000)
-      : null,
-    scope: tokens.scope ?? 'admin:ssh_signing_key',
-  };
   await db
-    .insert(signingKeyAuthorizations)
-    .values({ id: crypto.randomUUID(), userId, ...values })
-    .onConflictDoUpdate({ target: signingKeyAuthorizations.userId, set: values });
+    .update(accounts)
+    .set({
+      accessToken: (await setTokenUtil(tokens.access_token, ctx)) ?? null,
+      refreshToken: tokens.refresh_token ? ((await setTokenUtil(tokens.refresh_token, ctx)) ?? null) : null,
+      accessTokenExpiresAt: tokens.expires_in ? new Date(now + tokens.expires_in * 1000) : null,
+      refreshTokenExpiresAt: tokens.refresh_token_expires_in
+        ? new Date(now + tokens.refresh_token_expires_in * 1000)
+        : null,
+      scope: tokens.scope ?? 'admin:ssh_signing_key',
+      updatedAt: new Date(now),
+    })
+    .where(eq(accounts.id, accountId));
 }
 
 export async function encryptSigningKeyPrivateKey(auth: Auth, privateKey: string): Promise<string> {
@@ -234,7 +214,11 @@ export async function decryptSigningKeyPrivateKey(auth: Auth, encryptedPrivateKe
 }
 
 export async function getSigningKeyAccessToken(env: Env, auth: Auth, db: Db, userId: string): Promise<string | null> {
-  const rows = await db.select().from(signingKeyAuthorizations).where(eq(signingKeyAuthorizations.userId, userId)).limit(1);
+  const rows = await db
+    .select()
+    .from(accounts)
+    .where(and(eq(accounts.userId, userId), eq(accounts.providerId, SIGNING_KEY_PROVIDER_ID)))
+    .limit(1);
   const row = rows[0];
   if (!row?.accessToken) return null;
   const ctx = (await auth.$context) as unknown as AuthContext;
@@ -246,7 +230,7 @@ export async function getSigningKeyAccessToken(env: Env, auth: Auth, db: Db, use
   if (!refreshToken) return accessToken;
   const refreshed = await refreshSigningKeyTokens(env, refreshToken).catch(() => null);
   if (!refreshed) return accessToken;
-  await storeSigningKeyAuthorization(auth, db, userId, {
+  await storeRefreshedSigningKeyTokens(auth, db, row.id, {
     ...refreshed,
     refresh_token: refreshed.refresh_token ?? refreshToken,
   }).catch(() => undefined);
