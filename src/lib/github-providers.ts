@@ -1,7 +1,7 @@
 import type { GenericOAuthConfig, GenericOAuthUserInfo } from 'better-auth/plugins';
 
 export const GITHUB_APP_PROVIDER_ID = 'github-app';
-export const SIGNING_KEY_PROVIDER_ID = 'github-signing-key';
+export const SIGNING_KEY_PROVIDER_ID = 'github-oauth-app';
 
 const GITHUB_AUTHORIZATION_URL = 'https://github.com/login/oauth/authorize';
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
