@@ -43,6 +43,13 @@
       "when": 1793960847607,
       "tag": "0005_operation_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794045406603,
+      "tag": "0006_flimsy_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

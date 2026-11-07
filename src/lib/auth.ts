@@ -5,7 +5,7 @@ import { sso } from '@better-auth/sso';
 import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-provider';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { jwt } from 'better-auth/plugins/jwt';
-import { genericOAuth, multiSession, testUtils } from 'better-auth/plugins';
+import { genericOAuth, multiSession, organization, testUtils } from 'better-auth/plugins';
 import type { Db } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
 import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
@@ -50,6 +50,7 @@ function createPlugins(env: Env) {
       origin: webauthn.expectedOrigins,
     }),
     multiSession({ maximumSessions: 5 }),
+    organization({ teams: { enabled: true } }),
     oauthDeviceAuthorization({ verificationUri: `${env.AUTH_UI_URL}/device` }),
     apiKey({ defaultPrefix: 'ksk_', rateLimit: { enabled: false } }),
     sso({
@@ -84,6 +85,11 @@ function createAuthOptions(env: Env, db: Db) {
         oauthClientResource: schema.oauthClientResources,
         oauthClientAssertion: schema.oauthClientAssertions,
         passkey: schema.passkeys,
+        organization: schema.organizations,
+        member: schema.members,
+        invitation: schema.invitations,
+        team: schema.teams,
+        teamMember: schema.teamMembers,
         deviceCode: schema.deviceCodes,
         apikey: schema.apiKeys,
         ssoProvider: schema.ssoProviders,

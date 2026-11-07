@@ -27,11 +27,11 @@ importers:
         specifier: 1.7.12
         version: 1.7.12(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-auth@1.7.14(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))))(better-call@1.4.4(zod@4.6.7))
       '@karasu-lab/db':
-        specifier: 0.1.0-6dfcf80
-        version: 0.1.0-6dfcf80(945244277216bdb279ae99a5359b9d5d)
+        specifier: 0.1.0-c99d531
+        version: 0.1.0-c99d531(945244277216bdb279ae99a5359b9d5d)
       '@karasu-lab/types':
-        specifier: 0.1.0-9459c85
-        version: 0.1.0-9459c85
+        specifier: 0.1.0-3099873
+        version: 0.1.0-3099873
       '@karasu-lab/utils':
         specifier: 0.1.0-be51f04
         version: 0.1.0-be51f04(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(@karasu-lab/api-permissions@0.1.0-4b04f47)(better-call@1.4.4(zod@4.6.7))(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(postgres@3.4.9))(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
@@ -1175,13 +1175,13 @@ packages:
   '@karasu-lab/api-permissions@0.1.0-4b04f47':
     resolution: {integrity: sha512-waPf+NZB15QztOTOLcZdmy/QfXJ/YFJgZGlIveSZcNRGdmStfAxNnjuddZO9CH/iVd0+qkud+7b+W8+Cc3qeUQ==, tarball: https://npm.pkg.github.com/download/@karasu-lab/api-permissions/0.1.0-4b04f47/b0dcdfd39bdfdfb806b719eaedaeba1edfff5dca}
 
-  '@karasu-lab/db@0.1.0-6dfcf80':
-    resolution: {integrity: sha512-xfwp/p0Ik1CYhiJJICNc5zmrT1NZhHdUYFkn+eivPATxUwkCQX4TZmrxBGEoWgGbpkszaWzUcPKdAAS1UNyM0g==, tarball: https://npm.pkg.github.com/download/@karasu-lab/db/0.1.0-6dfcf80/271df9d0f4c9d1219d69f97947b9808cc94a05c8}
+  '@karasu-lab/db@0.1.0-c99d531':
+    resolution: {integrity: sha512-WczaMyPkCJji++zP0Dcdt1OmjEmRmbqkXJ89EjYQXavZfm7M81pS4RyQihLuiFZC60Yd7SiZbUueHltsm1Io/g==, tarball: https://npm.pkg.github.com/download/@karasu-lab/db/0.1.0-c99d531/27d01531cf56a3120c9b88797e92e619a2ff3760}
     peerDependencies:
       drizzle-orm: ^0.44.7
 
-  '@karasu-lab/types@0.1.0-9459c85':
-    resolution: {integrity: sha512-CnbAf2jyj+/hfV+eZK2hNfnmY61vWuApL5mNC0pVkQZzbjXbie7EVraxfQdqIxVdV4Z6joBJDN5mREi3V1+qGg==, tarball: https://npm.pkg.github.com/download/@karasu-lab/types/0.1.0-9459c85/843f33a8afaff20e2c87f972781353e1e4c190d2}
+  '@karasu-lab/types@0.1.0-3099873':
+    resolution: {integrity: sha512-CEIMxmU/XogdhR2NghbfJGwJ2lcT2fRcFuqMbNdPxWHtuyAw0iIGqvsgrRZofz8MqibLS6jJm7Gia2w5wrL2pg==, tarball: https://npm.pkg.github.com/download/@karasu-lab/types/0.1.0-3099873/afc80220c6a33d3fbe18bb3bb3e676e3e32cf0a7}
 
   '@karasu-lab/utils@0.1.0-be51f04':
     resolution: {integrity: sha512-I6U7RD31Se7i7e+45HRkdTwo+Jm8sc+eMNZh81Z9kW1U+P+JHQINT/hRtVeshTylmKBGi+LjMqV3e+2IXA1bpQ==, tarball: https://npm.pkg.github.com/download/@karasu-lab/utils/0.1.0-be51f04/3b0dd9ed7fa40b441492d2e8c919733a916d0ba8}
@@ -4150,7 +4150,7 @@ snapshots:
 
   '@karasu-lab/api-permissions@0.1.0-4b04f47': {}
 
-  '@karasu-lab/db@0.1.0-6dfcf80(945244277216bdb279ae99a5359b9d5d)':
+  '@karasu-lab/db@0.1.0-c99d531(945244277216bdb279ae99a5359b9d5d)':
     dependencies:
       '@neondatabase/auth': 0.7.0-beta(945244277216bdb279ae99a5359b9d5d)
       '@paralleldrive/cuid2': 3.3.0
@@ -4210,7 +4210,7 @@ snapshots:
       - vue
       - yup
 
-  '@karasu-lab/types@0.1.0-9459c85':
+  '@karasu-lab/types@0.1.0-3099873':
     dependencies:
       zod: 4.6.7
 

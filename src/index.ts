@@ -14,6 +14,8 @@ import { UploadVerificationError } from './lib/upload-verification-error';
 import { handleProviderDetails, handleProviderList } from './routes/providers';
 import { handleAuthorizedAppDetails, handleAuthorizedAppList } from './routes/authorized-apps';
 import { handleXboxCallback, handleXboxLink } from './routes/xbox';
+import { handleGithubAppCallback, handleGithubAppInstall } from './routes/github-app';
+import { handleSigningKeyAuthorize, handleSigningKeyCallback } from './routes/signing-key-auth';
 
 const env = resolveEnv(cfEnv as Env);
 
@@ -32,6 +34,10 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
   .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
   .get('/api/xbox/link', ({ request }) => handleXboxLink(env, request))
   .get('/api/xbox/callback', ({ request }) => handleXboxCallback(env, request))
+  .get('/api/github-app/install', ({ request }) => handleGithubAppInstall(env, request))
+  .get('/api/github-app/callback', ({ request }) => handleGithubAppCallback(env, request))
+  .get('/api/signing-keys/authorize', ({ request }) => handleSigningKeyAuthorize(env, request))
+  .get('/api/signing-keys/callback', ({ request }) => handleSigningKeyCallback(env, request))
   .post(
     '/api/auth/oauth2/client/rotate-secret',
     async ({ request }) => {
