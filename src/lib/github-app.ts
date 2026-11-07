@@ -18,13 +18,6 @@ export class GithubInstallationNotFoundError extends HttpError {
   }
 }
 
-export class AutoMergeNotGatedError extends Error {
-  constructor() {
-    super('auto-merge is not available because the branch has no protection rules');
-    this.name = 'AutoMergeNotGatedError';
-  }
-}
-
 function isGithubApiErrorWithStatus(error: unknown, status: number): boolean {
   return error instanceof HttpError && error.body.error === 'github_api_error' && error.body.status === status;
 }
@@ -55,30 +48,6 @@ const installationTokenSchema = z.object({
   token: z.string(),
   expires_at: z.string(),
 });
-
-const repositorySchema = z.object({
-  id: z.number(),
-  full_name: z.string(),
-  name: z.string(),
-  private: z.boolean(),
-  html_url: z.string(),
-  default_branch: z.string(),
-});
-
-export type GithubRepository = z.infer<typeof repositorySchema>;
-
-const repositoryListSchema = z.object({
-  total_count: z.number(),
-  repositories: z.array(repositorySchema),
-});
-
-const pullRequestSchema = z.object({
-  number: z.number(),
-  html_url: z.string(),
-  node_id: z.string(),
-});
-
-export type GithubPullRequest = z.infer<typeof pullRequestSchema>;
 
 const tokenCache = new Map<number, { token: string; expiresAt: number }>();
 
@@ -209,95 +178,3 @@ export async function getInstallationToken(env: Env, installationId: number): Pr
   return { token: issued.token, expiresAt: issued.expires_at };
 }
 
-export async function listInstallationRepositories(env: Env, installationId: number): Promise<GithubRepository[]> {
-  const { token } = await getInstallationToken(env, installationId);
-  const repositories: GithubRepository[] = [];
-  let page = 1;
-  for (;;) {
-    const list = await githubJson(token, `/installation/repositories?per_page=100&page=${page}`, repositoryListSchema);
-    repositories.push(...list.repositories);
-    if (repositories.length >= list.total_count || list.repositories.length === 0) return repositories;
-    page += 1;
-  }
-}
-
-export async function createInstallationRepository(
-  env: Env,
-  installationId: number,
-  target: { type: string; login: string },
-  body: { name: string; description?: string; private?: boolean; isTemplate?: boolean }
-): Promise<GithubRepository> {
-  const { token } = await getInstallationToken(env, installationId);
-  const path = target.type === 'Organization' ? `/orgs/${target.login}/repos` : '/user/repos';
-  return githubJson(token, path, repositorySchema, {
-    method: 'POST',
-    body: JSON.stringify({
-      name: body.name,
-      description: body.description,
-      private: body.private ?? true,
-      is_template: body.isTemplate ?? false,
-      auto_init: true,
-    }),
-  });
-}
-
-export async function createPullRequest(
-  env: Env,
-  installationId: number,
-  repositoryFullName: string,
-  body: { title: string; head: string; base: string; body?: string }
-): Promise<GithubPullRequest> {
-  const { token } = await getInstallationToken(env, installationId);
-  return githubJson(token, `/repos/${repositoryFullName}/pulls`, pullRequestSchema, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-}
-
-export async function enableRepositoryAutoMerge(env: Env, installationId: number, repositoryFullName: string): Promise<void> {
-  const { token } = await getInstallationToken(env, installationId);
-  const path = `/repos/${repositoryFullName}`;
-  const response = await githubFetch(token, path, {
-    method: 'PATCH',
-    body: JSON.stringify({ allow_auto_merge: true }),
-  });
-  if (!response.ok) throw new HttpError(502, { error: 'github_api_error', status: response.status, path });
-}
-
-export async function enablePullRequestAutoMerge(
-  env: Env,
-  installationId: number,
-  pullRequestNodeId: string
-): Promise<void> {
-  const { token } = await getInstallationToken(env, installationId);
-  const response = await githubFetch(token, '/graphql', {
-    method: 'POST',
-    body: JSON.stringify({
-      query: 'mutation($id: ID!) { enablePullRequestAutoMerge(input: { pullRequestId: $id, mergeMethod: MERGE }) { clientMutationId } }',
-      variables: { id: pullRequestNodeId },
-    }),
-  });
-  if (!response.ok) throw new HttpError(502, { error: 'github_api_error', status: response.status, path: '/graphql' });
-  const payload = (await response.json().catch(() => null)) as { errors?: { message?: unknown }[] } | null;
-  if (!payload) throw new HttpError(502, { error: 'github_api_invalid_response', path: '/graphql' });
-  if (payload.errors) {
-    const messages = payload.errors.map((entry) => (typeof entry.message === 'string' ? entry.message : 'unknown error'));
-    if (messages.some((message) => message.includes('Protected branch rules not configured'))) throw new AutoMergeNotGatedError();
-    throw new HttpError(502, { error: 'github_graphql_error', path: '/graphql', message: messages.join('; ') });
-  }
-}
-
-export async function mergePullRequest(
-  env: Env,
-  installationId: number,
-  repositoryFullName: string,
-  pullRequestNumber: number
-): Promise<void> {
-  const { token } = await getInstallationToken(env, installationId);
-  const path = `/repos/${repositoryFullName}/pulls/${pullRequestNumber}/merge`;
-  const response = await githubFetch(token, path, {
-    method: 'PUT',
-    body: JSON.stringify({ merge_method: 'merge' }),
-  });
-  if (!response.ok) throw new HttpError(502, { error: 'github_api_error', status: response.status, path });
-}
