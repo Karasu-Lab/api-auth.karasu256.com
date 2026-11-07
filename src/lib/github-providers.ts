@@ -11,6 +11,19 @@ function mapGithubProfile(profile: GenericOAuthUserInfo) {
   return { image: typeof profile.avatar_url === 'string' ? profile.avatar_url : undefined };
 }
 
+async function fetchGithubUserInfo(tokens: { accessToken?: string }): Promise<GenericOAuthUserInfo | null> {
+  if (!tokens.accessToken) return null;
+  const response = await fetch(GITHUB_USER_INFO_URL, {
+    headers: {
+      accept: 'application/vnd.github+json',
+      authorization: ['Bearer', tokens.accessToken].join(' '),
+      'user-agent': 'better-auth',
+    },
+  });
+  if (!response.ok) return null;
+  return (await response.json().catch(() => null)) as GenericOAuthUserInfo | null;
+}
+
 export function getGithubOAuthProviders(env: Env): GenericOAuthConfig[] {
   const providers: GenericOAuthConfig[] = [];
   if (env.GH_APP_CLIENT_ID && env.GH_APP_CLIENT_SECRET) {
@@ -20,7 +33,7 @@ export function getGithubOAuthProviders(env: Env): GenericOAuthConfig[] {
       clientSecret: env.GH_APP_CLIENT_SECRET,
       authorizationUrl: GITHUB_AUTHORIZATION_URL,
       tokenUrl: GITHUB_TOKEN_URL,
-      userInfoUrl: GITHUB_USER_INFO_URL,
+      getUserInfo: fetchGithubUserInfo,
       disableImplicitSignUp: true,
       mapProfileToUser: mapGithubProfile,
     });
@@ -32,7 +45,7 @@ export function getGithubOAuthProviders(env: Env): GenericOAuthConfig[] {
       clientSecret: env.GH_OAUTH_CLIENT_SECRET,
       authorizationUrl: GITHUB_AUTHORIZATION_URL,
       tokenUrl: GITHUB_TOKEN_URL,
-      userInfoUrl: GITHUB_USER_INFO_URL,
+      getUserInfo: fetchGithubUserInfo,
       scopes: ['admin:ssh_signing_key'],
       disableImplicitSignUp: true,
       mapProfileToUser: mapGithubProfile,
