@@ -83,6 +83,8 @@ export async function handleGithubAppCallback(env: Env, request: Request): Promi
     destination.searchParams.set('error', error);
     return Response.redirect(destination.toString(), 302);
   };
+  if (!payload.organizationId) return fail('github_app_state_invalid');
+  const organizationId = payload.organizationId;
   if (url.searchParams.get('setup_action') === 'request') return fail('github_app_installation_requested');
   const installationIdRaw = url.searchParams.get('installation_id');
   const installationId = installationIdRaw ? Number(installationIdRaw) : NaN;
@@ -106,7 +108,7 @@ export async function handleGithubAppCallback(env: Env, request: Request): Promi
         };
         await db
           .insert(tenantGithubInstallations)
-          .values({ organizationId: payload.organizationId, ...values })
+          .values({ organizationId, ...values })
           .onConflictDoUpdate({ target: tenantGithubInstallations.organizationId, set: values });
       } finally {
         waitUntil(db.$client.end());

@@ -1,7 +1,5 @@
 import { createDb } from '@karasu-lab/db/create-db';
-import { members } from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
-import { and, eq } from 'drizzle-orm';
 import { getAuthConfig } from '../config';
 import { createLinkState, verifyLinkState } from '../lib/link-state';
 import { withAuth } from '../lib/request-auth';
@@ -22,7 +20,6 @@ function isTrustedReturnTo(env: Env, returnTo: string): boolean {
 
 export async function handleSigningKeyAuthorize(env: Env, request: Request): Promise<Response> {
   const url = new URL(request.url);
-  const organizationId = url.searchParams.get('organizationId');
   const returnTo = url.searchParams.get('returnTo');
   return withAuth(env, async (auth) => {
     const session = await auth.api.getSession({ headers: request.headers });
@@ -30,26 +27,13 @@ export async function handleSigningKeyAuthorize(env: Env, request: Request): Pro
       const next = encodeURIComponent(url.toString());
       return Response.redirect(`${env.AUTH_UI_URL.replace(/\/+$/, '')}/sign-in?next=${next}`, 302);
     }
-    if (!organizationId || !returnTo || !isTrustedReturnTo(env, returnTo)) {
+    if (!returnTo || !isTrustedReturnTo(env, returnTo)) {
       return Response.json({ error: 'Bad Request' }, { status: 400 });
     }
     if (!env.GITHUB_CLIENT_ID) return Response.json({ error: 'github_not_configured' }, { status: 503 });
-    const db = createDb(env.DATABASE_URL);
-    try {
-      const rows = await db
-        .select({ role: members.role })
-        .from(members)
-        .where(and(eq(members.userId, session.user.id), eq(members.organizationId, organizationId)))
-        .limit(1);
-      const role = rows[0]?.role;
-      if (role !== 'owner' && role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
-    } finally {
-      waitUntil(db.$client.end());
-    }
     const state = await createLinkState(env.BETTER_AUTH_SECRET, {
       kind: STATE_KIND,
       userId: session.user.id,
-      organizationId,
       returnTo,
     });
     const destination = new URL(GITHUB_AUTHORIZE_URL);
