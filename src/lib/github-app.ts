@@ -165,6 +165,16 @@ export async function getInstallationInfo(env: Env, installationId: number): Pro
   }
 }
 
+const appInfoSchema = z.object({
+  html_url: z.string(),
+});
+
+export async function getAppPublicLink(env: Env): Promise<string> {
+  const jwt = await createAppJwt(env);
+  const info = await githubJson(jwt, '/app', appInfoSchema);
+  return info.html_url;
+}
+
 export async function listAppInstallations(env: Env): Promise<GithubAppInstallationInfo[]> {
   const jwt = await createAppJwt(env);
   return githubJson(jwt, '/app/installations?per_page=100', z.array(installationSchema));
