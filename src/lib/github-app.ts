@@ -64,10 +64,35 @@ export type GithubPullRequest = z.infer<typeof pullRequestSchema>;
 
 const tokenCache = new Map<number, { token: string; expiresAt: number }>();
 
+function derLength(length: number): number[] {
+  if (length < 0x80) return [length];
+  const bytes: number[] = [];
+  for (let value = length; value > 0; value >>= 8) bytes.unshift(value & 0xff);
+  return [0x80 | bytes.length, ...bytes];
+}
+
+function toPkcs8Pem(pem: string): string {
+  if (!pem.includes('BEGIN RSA PRIVATE KEY')) return pem;
+  const pkcs1Der = Buffer.from(
+    pem.replace('-----BEGIN RSA PRIVATE KEY-----', '').replace('-----END RSA PRIVATE KEY-----', '').replace(/\s+/g, ''),
+    'base64',
+  );
+  const algorithmIdentifier = Buffer.from([0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00]);
+  const body = Buffer.concat([
+    Buffer.from([0x02, 0x01, 0x00]),
+    algorithmIdentifier,
+    Buffer.from([0x04, ...derLength(pkcs1Der.length)]),
+    pkcs1Der,
+  ]);
+  const pkcs8Der = Buffer.concat([Buffer.from([0x30, ...derLength(body.length)]), body]);
+  const lines = pkcs8Der.toString('base64').match(/.{1,64}/g) ?? [];
+  return `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----`;
+}
+
 function appCredentials(env: Env): { appId: string; privateKey: string } {
   const parsed = appCredentialsSchema.safeParse(env);
   if (!parsed.success) throw new GithubAppNotConfiguredError(Issue.fromZodError(parsed.error));
-  return { appId: parsed.data.GH_APP_ID, privateKey: parsed.data.GH_APP_PRIVATE_KEY.replace(/\\n/g, '\n') };
+  return { appId: parsed.data.GH_APP_ID, privateKey: toPkcs8Pem(parsed.data.GH_APP_PRIVATE_KEY.replace(/\\n/g, '\n')) };
 }
 
 export function appClientCredentials(env: Env): { clientId: string; clientSecret: string } {
