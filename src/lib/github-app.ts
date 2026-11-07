@@ -18,6 +18,13 @@ export class GithubInstallationNotFoundError extends HttpError {
   }
 }
 
+export class AutoMergeNotGatedError extends Error {
+  constructor() {
+    super('auto-merge is not available because the branch has no protection rules');
+    this.name = 'AutoMergeNotGatedError';
+  }
+}
+
 function isGithubApiErrorWithStatus(error: unknown, status: number): boolean {
   return error instanceof HttpError && error.body.error === 'github_api_error' && error.body.status === status;
 }
@@ -265,6 +272,22 @@ export async function enablePullRequestAutoMerge(
   if (!payload) throw new HttpError(502, { error: 'github_api_invalid_response', path: '/graphql' });
   if (payload.errors) {
     const messages = payload.errors.map((entry) => (typeof entry.message === 'string' ? entry.message : 'unknown error'));
+    if (messages.some((message) => message.includes('Protected branch rules not configured'))) throw new AutoMergeNotGatedError();
     throw new HttpError(502, { error: 'github_graphql_error', path: '/graphql', message: messages.join('; ') });
   }
+}
+
+export async function mergePullRequest(
+  env: Env,
+  installationId: number,
+  repositoryFullName: string,
+  pullRequestNumber: number
+): Promise<void> {
+  const { token } = await getInstallationToken(env, installationId);
+  const path = `/repos/${repositoryFullName}/pulls/${pullRequestNumber}/merge`;
+  const response = await githubFetch(token, path, {
+    method: 'PUT',
+    body: JSON.stringify({ merge_method: 'merge' }),
+  });
+  if (!response.ok) throw new HttpError(502, { error: 'github_api_error', status: response.status, path });
 }
