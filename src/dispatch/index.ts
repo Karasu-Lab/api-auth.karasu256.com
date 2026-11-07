@@ -33,6 +33,7 @@ import {
   SetLinkedPackageEnabledDispatch,
   TenantInstallationDispatch,
   TenantOverviewDispatch,
+  UninstallBotDispatch,
   TenantRepositoriesDispatch,
   UpdateLinkedPackagePointerDispatch,
 } from './tenants';
@@ -71,6 +72,7 @@ export const dispatchables: DispatchableClass[] = [
   ListUserTenantsDispatch,
   TenantOverviewDispatch,
   TenantInstallationDispatch,
+  UninstallBotDispatch,
   TenantRepositoriesDispatch,
   CreateTenantRepositoryDispatch,
   InstallationTokenDispatch,
