@@ -14,6 +14,26 @@ import {
 import { ListAuthSessionsDispatch, ListSessionDevicesSourceDispatch, RevokeAuthSessionDispatch } from './sessions';
 import { SetPasswordDispatch } from './set-password';
 import { SignInLookupDispatch } from './sign-in-lookup';
+import {
+  CreateSigningKeyDispatch,
+  RenameSigningKeyDispatch,
+  RotateSigningKeyDispatch,
+  SetSigningKeyEnabledDispatch,
+  SigningKeyStatusDispatch,
+} from './signing-keys';
+import {
+  CreateBotPullRequestDispatch,
+  CreateTenantRepositoryDispatch,
+  InstallationTokenDispatch,
+  LinkPackageDispatch,
+  ListUserTenantsDispatch,
+  RecordNpmConfigurationDispatch,
+  SetLinkedPackageEnabledDispatch,
+  TenantInstallationDispatch,
+  TenantOverviewDispatch,
+  TenantRepositoriesDispatch,
+  UpdateLinkedPackagePointerDispatch,
+} from './tenants';
 import { CreateTestAccountDispatch, DeleteTestAccountDispatch } from './test-accounts';
 
 export const dispatchables: DispatchableClass[] = [
@@ -40,6 +60,22 @@ export const dispatchables: DispatchableClass[] = [
   RevokeAuthSessionDispatch,
   GithubUserDispatch,
   GithubRepositoriesDispatch,
+  CreateSigningKeyDispatch,
+  SigningKeyStatusDispatch,
+  RotateSigningKeyDispatch,
+  RenameSigningKeyDispatch,
+  SetSigningKeyEnabledDispatch,
+  ListUserTenantsDispatch,
+  TenantOverviewDispatch,
+  TenantInstallationDispatch,
+  TenantRepositoriesDispatch,
+  CreateTenantRepositoryDispatch,
+  RecordNpmConfigurationDispatch,
+  InstallationTokenDispatch,
+  LinkPackageDispatch,
+  SetLinkedPackageEnabledDispatch,
+  UpdateLinkedPackagePointerDispatch,
+  CreateBotPullRequestDispatch,
   SignInLookupDispatch,
   CreateTestAccountDispatch,
   DeleteTestAccountDispatch,

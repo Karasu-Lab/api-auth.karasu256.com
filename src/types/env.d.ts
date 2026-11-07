@@ -28,6 +28,9 @@ declare global {
     GOOGLE_CLIENT_SECRET?: string;
     GITHUB_CLIENT_ID?: string;
     GITHUB_CLIENT_SECRET?: string;
+    GITHUB_APP_ID?: string;
+    GITHUB_APP_SLUG?: string;
+    GITHUB_APP_PRIVATE_KEY?: string;
     MICROSOFT_CLIENT_ID?: string;
     MICROSOFT_CLIENT_SECRET?: string;
     E2E_MOCK_OAUTH_URL?: string;
