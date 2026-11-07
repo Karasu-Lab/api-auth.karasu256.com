@@ -112,16 +112,6 @@ export function appClientCredentials(env: Env): { clientId: string; clientSecret
   return { clientId: parsed.data.GH_APP_CLIENT_ID, clientSecret: parsed.data.GH_APP_CLIENT_SECRET };
 }
 
-const appSchema = z.object({
-  html_url: z.string(),
-});
-
-export async function getAppPublicLink(env: Env): Promise<string> {
-  const jwt = await createAppJwt(env);
-  const app = await githubJson(jwt, '/app', appSchema);
-  return app.html_url;
-}
-
 async function createAppJwt(env: Env): Promise<string> {
   const { appId, privateKey } = appCredentials(env);
   const key = await importPKCS8(privateKey, 'RS256');

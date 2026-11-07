@@ -13,6 +13,8 @@ import { getAuthConfig } from '../config';
 import { assertNoDeviceSessionConflict } from './device-session-conflict';
 import { deleteFirebaseUser, updateFirebaseUser } from './firebase';
 import { ensureFirebaseLink, getLinkedFirebaseUid } from './firebase-link';
+import { githubAppInstallationPlugin } from './github-app-installation';
+import { getGithubOAuthProviders } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { syncUserToNeonAuth } from './neon-auth';
 import { SESSION_SOURCE_HEADER, recordSessionSource } from './session-source';
@@ -20,6 +22,7 @@ import { SESSION_SOURCE_HEADER, recordSessionSource } from './session-source';
 function createPlugins(env: Env) {
   const { webauthn } = getAuthConfig(env);
   const mockOAuthUrl = getMockOAuthUrl(env);
+  const oauthProviders = mockOAuthUrl ? getMockOAuthProviders(mockOAuthUrl) : getGithubOAuthProviders(env);
 
   return [
     jwt(),
@@ -60,7 +63,8 @@ function createPlugins(env: Env) {
         idpInitiatedCallbackUrl: `${env.SSO_UI_URL}/sign-in`,
       },
     }),
-    ...(mockOAuthUrl ? [genericOAuth({ config: getMockOAuthProviders(mockOAuthUrl) })] : []),
+    ...(oauthProviders.length > 0 ? [genericOAuth({ config: oauthProviders })] : []),
+    githubAppInstallationPlugin(env),
   ];
 }
 
