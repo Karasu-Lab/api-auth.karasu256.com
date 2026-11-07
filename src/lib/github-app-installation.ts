@@ -4,7 +4,7 @@ import { log } from '@karasu-lab/utils/server';
 import { createAuthMiddleware, getOAuthState } from 'better-auth/api';
 import { waitUntil } from 'cloudflare:workers';
 import { and, eq } from 'drizzle-orm';
-import { getInstallationInfo } from './github-app';
+import { getInstallationInfo, listAppInstallations } from './github-app';
 import { GITHUB_APP_PROVIDER_ID } from './github-providers';
 
 export function githubAppInstallationPlugin(env: Env) {
@@ -19,16 +19,10 @@ export function githubAppInstallationPlugin(env: Env) {
             const organizationId = typeof state?.organizationId === 'string' ? state.organizationId : null;
             const userId = state?.link?.userId ?? null;
             if (!organizationId || !userId) return;
-            const installationIdRaw = typeof ctx.query?.installation_id === 'string' ? ctx.query.installation_id : null;
-            const installationId = installationIdRaw ? Number(installationIdRaw) : NaN;
-            if (!Number.isFinite(installationId)) {
-              log('github_app_installation_not_recorded', { reason: 'installation_id_missing', organizationId, userId }, 'warn');
-              return;
-            }
             const db = createDb(env.DATABASE_URL);
             try {
               const linked = await db
-                .select({ id: accounts.id })
+                .select({ id: accounts.id, accountId: accounts.accountId })
                 .from(accounts)
                 .where(and(eq(accounts.userId, userId), eq(accounts.providerId, GITHUB_APP_PROVIDER_ID)))
                 .limit(1);
@@ -42,6 +36,24 @@ export function githubAppInstallationPlugin(env: Env) {
               if (role !== 'owner' && role !== 'admin') {
                 log('github_app_installation_not_recorded', { reason: 'tenant_setup_role_required', organizationId, userId }, 'warn');
                 return;
+              }
+              const installationIdRaw = typeof ctx.query?.installation_id === 'string' ? ctx.query.installation_id : null;
+              let installationId = installationIdRaw ? Number(installationIdRaw) : NaN;
+              if (!Number.isFinite(installationId)) {
+                const candidates = await listAppInstallations(env);
+                const personal = candidates.filter(
+                  (candidate) => candidate.account.type === 'User' && candidate.account.id === Number(linked[0].accountId)
+                );
+                if (personal.length === 1) installationId = personal[0].id;
+                else if (candidates.length === 1) installationId = candidates[0].id;
+                else {
+                  log(
+                    'github_app_installation_not_recorded',
+                    { reason: candidates.length === 0 ? 'installation_id_missing' : 'installation_ambiguous', organizationId, userId },
+                    'warn'
+                  );
+                  return;
+                }
               }
               const info = await getInstallationInfo(env, installationId);
               const values = {

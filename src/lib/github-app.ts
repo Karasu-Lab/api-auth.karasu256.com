@@ -158,6 +158,11 @@ export async function getInstallationInfo(env: Env, installationId: number): Pro
   }
 }
 
+export async function listAppInstallations(env: Env): Promise<GithubAppInstallationInfo[]> {
+  const jwt = await createAppJwt(env);
+  return githubJson(jwt, '/app/installations?per_page=100', z.array(installationSchema));
+}
+
 export async function deleteInstallation(env: Env, installationId: number): Promise<void> {
   const jwt = await createAppJwt(env);
   const path = `/app/installations/${installationId}`;
