@@ -20,6 +20,7 @@ import {
   createPullRequest,
   deleteInstallation,
   enablePullRequestAutoMerge,
+  enableRepositoryAutoMerge,
   getInstallationInfo,
   getInstallationToken,
   listInstallationRepositories,
@@ -684,6 +685,9 @@ export class CreateBotPullRequestDispatch implements Dispatchable {
       const installation = await requireInstallation(db, organizationId);
       let created: Awaited<ReturnType<typeof createPullRequest>>;
       try {
+        if (enableAutoMerge) {
+          await enableRepositoryAutoMerge(env, installation.installationId, repositoryFullName);
+        }
         created = await createPullRequest(env, installation.installationId, repositoryFullName, pull);
         if (enableAutoMerge) {
           await enablePullRequestAutoMerge(env, installation.installationId, created.node_id);

@@ -237,6 +237,16 @@ export async function createPullRequest(
   });
 }
 
+export async function enableRepositoryAutoMerge(env: Env, installationId: number, repositoryFullName: string): Promise<void> {
+  const { token } = await getInstallationToken(env, installationId);
+  const path = `/repos/${repositoryFullName}`;
+  const response = await githubFetch(token, path, {
+    method: 'PATCH',
+    body: JSON.stringify({ allow_auto_merge: true }),
+  });
+  if (!response.ok) throw new HttpError(502, { error: 'github_api_error', status: response.status, path });
+}
+
 export async function enablePullRequestAutoMerge(
   env: Env,
   installationId: number,
@@ -251,6 +261,10 @@ export async function enablePullRequestAutoMerge(
     }),
   });
   if (!response.ok) throw new HttpError(502, { error: 'github_api_error', status: response.status, path: '/graphql' });
-  const payload = (await response.json().catch(() => null)) as { errors?: unknown } | null;
-  if (!payload || payload.errors) throw new HttpError(502, { error: 'github_api_invalid_response', path: '/graphql' });
+  const payload = (await response.json().catch(() => null)) as { errors?: { message?: unknown }[] } | null;
+  if (!payload) throw new HttpError(502, { error: 'github_api_invalid_response', path: '/graphql' });
+  if (payload.errors) {
+    const messages = payload.errors.map((entry) => (typeof entry.message === 'string' ? entry.message : 'unknown error'));
+    throw new HttpError(502, { error: 'github_graphql_error', path: '/graphql', message: messages.join('; ') });
+  }
 }
