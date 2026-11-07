@@ -144,6 +144,10 @@ export async function getAppPublicLink(env: Env): Promise<string> {
   return info.html_url;
 }
 
+export async function getAppJwt(env: Env): Promise<string> {
+  return createAppJwt(env);
+}
+
 export async function listAppInstallations(env: Env): Promise<GithubAppInstallationInfo[]> {
   const jwt = await createAppJwt(env);
   return githubJson(jwt, '/app/installations?per_page=100', z.array(installationSchema));

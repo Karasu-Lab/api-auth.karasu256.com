@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { githubRepositorySchema, githubUserSchema, type GitHubRepository, type GitHubUser } from '@karasu-lab/types/shared';
 import { BadRequestError, HttpError, NotFoundError } from '@karasu-lab/types/server';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
-import { getAppPublicLink } from '../lib/github-app';
+import { getAppJwt, getAppPublicLink } from '../lib/github-app';
 import { getProviderAccessToken } from '../lib/provider-profile';
 import { withAuth } from '../lib/request-auth';
 
@@ -120,5 +120,22 @@ export class GithubAppInstallUrlDispatch implements Dispatchable {
   async handle(): Promise<Response> {
     const publicLink = await getAppPublicLink(this.context.env);
     return Response.json({ installUrl: `${publicLink}/installations/new` });
+  }
+}
+
+export class GithubAppTokenDispatch implements Dispatchable {
+  private context: DispatchContext;
+
+  constructor(context: DispatchContext) {
+    this.context = context;
+  }
+
+  matches(): boolean {
+    return this.context.request.method === 'POST' && this.context.pathname === '/api/internal/github-app/token';
+  }
+
+  async handle(): Promise<Response> {
+    const token = await getAppJwt(this.context.env);
+    return Response.json({ token });
   }
 }
