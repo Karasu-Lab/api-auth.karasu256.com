@@ -33,7 +33,7 @@
     "@better-auth/sso": "1.7.12",
     "@karasu-lab/db": "0.1.0-000d4c7",
     "@karasu-lab/types": "0.1.0-7225769",
-    "@karasu-lab/utils": "0.1.0-be51f04",
+    "@karasu-lab/utils": "0.1.0-11f53a9",
     "better-auth": "^1.7.12",
     "drizzle-orm": "^0.44.0",
     "elysia": "^1.4.29",

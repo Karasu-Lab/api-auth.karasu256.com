@@ -6,6 +6,7 @@ import { dispatchables } from './dispatch';
 import { handlePreflight, withCors } from './lib/cors';
 import type { DispatchContext } from './lib/dispatch';
 import { HttpError, NotFoundError } from '@karasu-lab/types/server';
+import { log } from '@karasu-lab/utils/server';
 import { withAuth } from './lib/request-auth';
 import { rejectInvalidSignature } from './lib/signature-gate';
 import { assertSecretRotationAllowed } from './dispatch/oauth-client-info';
@@ -20,7 +21,7 @@ import { handleSigningKeyAuthorize, handleSigningKeyCallback } from './routes/si
 const env = resolveEnv(cfEnv as Env);
 
 const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typebox' })
-  .onError(({ error }) => {
+  .onError(({ error, request }) => {
     if (error instanceof SecretRotationNotAllowedError)
       return Response.json({ error: 'invalid_client', error_description: error.message }, { status: 400 });
     if (error instanceof UploadVerificationError) return Response.json({ error: error.message }, { status: 502 });
@@ -30,6 +31,17 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
         headers: error.headers,
       });
     if (error instanceof ParseError) return Response.json({ error: 'Bad Request' }, { status: 400 });
+    log(
+      'request_error',
+      {
+        name: error instanceof Error ? error.name : typeof error,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        method: request.method,
+        path: new URL(request.url).pathname,
+      },
+      'error',
+    );
     return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   })
   .get('/api/users/me/providers', ({ request }) => handleProviderList(env, request))
