@@ -23,6 +23,8 @@ import {
   getInstallationInfo,
   getInstallationToken,
   listInstallationRepositories,
+  GithubInstallationNotFoundError,
+  type GithubAppInstallationInfo,
 } from '../lib/github-app';
 import { TENANT_SETUP_ROLES, requireTenantRole } from '../lib/tenant';
 
@@ -58,6 +60,10 @@ async function requireInstallation(db: Db, organizationId: string): Promise<Tena
     .limit(1);
   if (!rows[0]) throw new HttpError(409, { error: 'github_app_not_installed' });
   return rows[0];
+}
+
+async function deleteInstallationRecord(db: Db, organizationId: string): Promise<void> {
+  await db.delete(tenantGithubInstallations).where(eq(tenantGithubInstallations.organizationId, organizationId));
 }
 
 function installationPayload(row: TenantGithubInstallation) {
@@ -184,7 +190,15 @@ export class TenantInstallationDispatch implements Dispatchable {
         .limit(1);
       if (!rows[0]) return Response.json({ installation: null });
       const row = rows[0];
-      const live = await getInstallationInfo(env, row.installationId).catch(() => null);
+      let live: GithubAppInstallationInfo | null = null;
+      try {
+        live = await getInstallationInfo(env, row.installationId);
+      } catch (error) {
+        if (error instanceof GithubInstallationNotFoundError) {
+          await deleteInstallationRecord(db, organizationId);
+          return Response.json({ installation: null });
+        }
+      }
       return Response.json({
         installation: {
           ...installationPayload(row),
@@ -250,7 +264,16 @@ export class TenantRepositoriesDispatch implements Dispatchable {
     const db = createDb(env.DATABASE_URL);
     try {
       const installation = await requireInstallation(db, organizationId);
-      const repositories = await listInstallationRepositories(env, installation.installationId);
+      let repositories: Awaited<ReturnType<typeof listInstallationRepositories>>;
+      try {
+        repositories = await listInstallationRepositories(env, installation.installationId);
+      } catch (error) {
+        if (error instanceof GithubInstallationNotFoundError) {
+          await deleteInstallationRecord(db, organizationId);
+          return Response.json({ repositories: [] });
+        }
+        throw error;
+      }
       return Response.json({
         repositories: repositories.map((repo) => ({
           id: repo.id,
@@ -295,12 +318,18 @@ export class CreateTenantRepositoryDispatch implements Dispatchable {
     try {
       await requireTenantRole(db, parsed.data.userId, organizationId, TENANT_SETUP_ROLES);
       const installation = await requireInstallation(db, organizationId);
-      const repo = await createInstallationRepository(
-        env,
-        installation.installationId,
-        { type: installation.targetType === 'organization' ? 'Organization' : 'User', login: installation.targetLogin },
-        parsed.data
-      );
+      let repo: Awaited<ReturnType<typeof createInstallationRepository>>;
+      try {
+        repo = await createInstallationRepository(
+          env,
+          installation.installationId,
+          { type: installation.targetType === 'organization' ? 'Organization' : 'User', login: installation.targetLogin },
+          parsed.data
+        );
+      } catch (error) {
+        if (error instanceof GithubInstallationNotFoundError) await deleteInstallationRecord(db, organizationId);
+        throw error;
+      }
       return Response.json({
         repository: {
           id: repo.id,
@@ -334,8 +363,16 @@ export class InstallationTokenDispatch implements Dispatchable {
     const db = createDb(env.DATABASE_URL);
     try {
       const installation = await requireInstallation(db, organizationId);
-      const issued = await getInstallationToken(env, installation.installationId);
-      return Response.json(issued);
+      try {
+        const issued = await getInstallationToken(env, installation.installationId);
+        return Response.json(issued);
+      } catch (error) {
+        if (error instanceof GithubInstallationNotFoundError) {
+          await deleteInstallationRecord(db, organizationId);
+          throw new HttpError(409, { error: 'github_app_not_installed' });
+        }
+        throw error;
+      }
     } finally {
       waitUntil(db.$client.end());
     }
@@ -645,9 +682,15 @@ export class CreateBotPullRequestDispatch implements Dispatchable {
     const db = createDb(env.DATABASE_URL);
     try {
       const installation = await requireInstallation(db, organizationId);
-      const created = await createPullRequest(env, installation.installationId, repositoryFullName, pull);
-      if (enableAutoMerge) {
-        await enablePullRequestAutoMerge(env, installation.installationId, created.node_id);
+      let created: Awaited<ReturnType<typeof createPullRequest>>;
+      try {
+        created = await createPullRequest(env, installation.installationId, repositoryFullName, pull);
+        if (enableAutoMerge) {
+          await enablePullRequestAutoMerge(env, installation.installationId, created.node_id);
+        }
+      } catch (error) {
+        if (error instanceof GithubInstallationNotFoundError) await deleteInstallationRecord(db, organizationId);
+        throw error;
       }
       return Response.json({
         pullRequest: { number: created.number, url: created.html_url, autoMergeEnabled: enableAutoMerge ?? false },
