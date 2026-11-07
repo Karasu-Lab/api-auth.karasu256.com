@@ -31,6 +31,8 @@ declare global {
     GITHUB_APP_ID?: string;
     GITHUB_APP_SLUG?: string;
     GITHUB_APP_PRIVATE_KEY?: string;
+    GH_APP_CLIENT_ID?: string;
+    GH_APP_CLIENT_SECRET?: string;
     MICROSOFT_CLIENT_ID?: string;
     MICROSOFT_CLIENT_SECRET?: string;
     E2E_MOCK_OAUTH_URL?: string;
