@@ -7,6 +7,7 @@ import {
   tenantLinkedPackages,
   tenantNpmConfigurations,
   tenantSigningKeys,
+  users,
   type TenantGithubInstallation,
 } from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
@@ -477,6 +478,92 @@ export class UpdateLinkedPackagePointerDispatch implements Dispatchable {
         .returning();
       if (!updated[0]) throw new NotFoundError();
       return Response.json({ lastSyncedSha: updated[0].lastSyncedSha });
+    } finally {
+      waitUntil(db.$client.end());
+    }
+  }
+}
+
+const pushWebhookBodySchema = z.object({
+  installationId: z.number(),
+  repositoryFullName: z.string().min(1),
+  afterSha: z.string().min(7),
+});
+
+export class PushWebhookDispatch implements Dispatchable {
+  private context: DispatchContext;
+
+  constructor(context: DispatchContext) {
+    this.context = context;
+  }
+
+  matches(): boolean {
+    return this.context.pathname === '/api/internal/webhooks/push' && this.context.request.method === 'POST';
+  }
+
+  async handle(): Promise<Response> {
+    const { env } = this.context;
+    const parsed = pushWebhookBodySchema.safeParse(this.context.body);
+    if (!parsed.success) throw new BadRequestError();
+    const { installationId, repositoryFullName, afterSha } = parsed.data;
+    const db = createDb(env.DATABASE_URL);
+    try {
+      const installationRows = await db
+        .select()
+        .from(tenantGithubInstallations)
+        .where(eq(tenantGithubInstallations.installationId, installationId))
+        .limit(1);
+      const installation = installationRows[0];
+      if (!installation) return Response.json({ accepted: false, reason: 'installation_not_linked' });
+      const organizationId = installation.organizationId;
+      const packageRows = await db
+        .select()
+        .from(tenantLinkedPackages)
+        .where(
+          and(
+            eq(tenantLinkedPackages.organizationId, organizationId),
+            eq(tenantLinkedPackages.repositoryFullName, repositoryFullName)
+          )
+        )
+        .limit(1);
+      const linked = packageRows[0];
+      if (!linked) return Response.json({ accepted: false, reason: 'package_not_linked' });
+      if (!linked.webhookEnabled) return Response.json({ accepted: false, reason: 'package_disabled' });
+      if (linked.lastSyncedSha === afterSha) return Response.json({ accepted: false, reason: 'already_synced' });
+      const npmRows = await db
+        .select()
+        .from(tenantNpmConfigurations)
+        .where(eq(tenantNpmConfigurations.organizationId, organizationId))
+        .limit(1);
+      if (!npmRows[0]) return Response.json({ accepted: false, reason: 'npm_not_configured' });
+      const keyRows = await db
+        .select()
+        .from(tenantSigningKeys)
+        .where(and(eq(tenantSigningKeys.organizationId, organizationId), eq(tenantSigningKeys.enabled, true)))
+        .limit(1);
+      const key = keyRows[0];
+      let signingKeyOwner: { name: string | null; email: string | null } | null = null;
+      if (key?.createdByUserId) {
+        const userRows = await db
+          .select({ name: users.name, email: users.email })
+          .from(users)
+          .where(eq(users.id, key.createdByUserId))
+          .limit(1);
+        if (userRows[0]) signingKeyOwner = userRows[0];
+      }
+      return Response.json({
+        accepted: true,
+        organizationId,
+        installationId,
+        package: {
+          id: linked.id,
+          repositoryFullName: linked.repositoryFullName,
+          submodulePath: linked.npmSubmodulePath,
+          lastSyncedSha: linked.lastSyncedSha,
+        },
+        npmRepositoryFullName: npmRows[0].npmRepositoryFullName,
+        signingKeyOwner,
+      });
     } finally {
       waitUntil(db.$client.end());
     }
