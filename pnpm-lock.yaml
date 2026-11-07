@@ -30,8 +30,8 @@ importers:
         specifier: 0.1.0-6dfcf80
         version: 0.1.0-6dfcf80(945244277216bdb279ae99a5359b9d5d)
       '@karasu-lab/types':
-        specifier: 0.1.0-fd0395c
-        version: 0.1.0-fd0395c
+        specifier: 0.1.0-9459c85
+        version: 0.1.0-9459c85
       '@karasu-lab/utils':
         specifier: 0.1.0-be51f04
         version: 0.1.0-be51f04(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(@karasu-lab/api-permissions@0.1.0-4b04f47)(better-call@1.4.4(zod@4.6.7))(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(postgres@3.4.9))(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
@@ -1180,8 +1180,8 @@ packages:
     peerDependencies:
       drizzle-orm: ^0.44.7
 
-  '@karasu-lab/types@0.1.0-fd0395c':
-    resolution: {integrity: sha512-KMcJswe9HEtOxXo6SlbUFgvOln/01ih5gtWwPai6t+onklGf66VyUjIiQOIXl338axOChRmNc6x8GEp0EjwZgw==, tarball: https://npm.pkg.github.com/download/@karasu-lab/types/0.1.0-fd0395c/3fa2fdb9c61b89f8e61fb89856562834ad118bdd}
+  '@karasu-lab/types@0.1.0-9459c85':
+    resolution: {integrity: sha512-CnbAf2jyj+/hfV+eZK2hNfnmY61vWuApL5mNC0pVkQZzbjXbie7EVraxfQdqIxVdV4Z6joBJDN5mREi3V1+qGg==, tarball: https://npm.pkg.github.com/download/@karasu-lab/types/0.1.0-9459c85/843f33a8afaff20e2c87f972781353e1e4c190d2}
 
   '@karasu-lab/utils@0.1.0-be51f04':
     resolution: {integrity: sha512-I6U7RD31Se7i7e+45HRkdTwo+Jm8sc+eMNZh81Z9kW1U+P+JHQINT/hRtVeshTylmKBGi+LjMqV3e+2IXA1bpQ==, tarball: https://npm.pkg.github.com/download/@karasu-lab/utils/0.1.0-be51f04/3b0dd9ed7fa40b441492d2e8c919733a916d0ba8}
@@ -4210,7 +4210,7 @@ snapshots:
       - vue
       - yup
 
-  '@karasu-lab/types@0.1.0-fd0395c':
+  '@karasu-lab/types@0.1.0-9459c85':
     dependencies:
       zod: 4.6.7
 
