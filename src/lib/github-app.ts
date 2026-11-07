@@ -11,9 +11,15 @@ export class GithubAppNotConfiguredError extends HttpError {
   }
 }
 
-function missingEnvironmentVariable(name: string): Issue {
-  return new Issue('missing_environment_variable', [name], `Missing required environment variable: ${name}`);
-}
+const appCredentialsSchema = z.object({
+  GITHUB_APP_ID: z.string().min(1),
+  GITHUB_APP_PRIVATE_KEY: z.string().min(1),
+});
+
+const appClientCredentialsSchema = z.object({
+  GH_APP_CLIENT_ID: z.string().min(1),
+  GH_APP_CLIENT_SECRET: z.string().min(1),
+});
 
 const installationSchema = z.object({
   id: z.number(),
@@ -59,27 +65,15 @@ export type GithubPullRequest = z.infer<typeof pullRequestSchema>;
 const tokenCache = new Map<number, { token: string; expiresAt: number }>();
 
 function appCredentials(env: Env): { appId: string; privateKey: string } {
-  const appId = env.GITHUB_APP_ID;
-  const privateKey = env.GITHUB_APP_PRIVATE_KEY;
-  if (!appId || !privateKey) {
-    const issues: Issue[] = [];
-    if (!appId) issues.push(missingEnvironmentVariable('GITHUB_APP_ID'));
-    if (!privateKey) issues.push(missingEnvironmentVariable('GITHUB_APP_PRIVATE_KEY'));
-    throw new GithubAppNotConfiguredError(issues);
-  }
-  return { appId, privateKey: privateKey.replace(/\\n/g, '\n') };
+  const parsed = appCredentialsSchema.safeParse(env);
+  if (!parsed.success) throw new GithubAppNotConfiguredError(Issue.fromZodError(parsed.error));
+  return { appId: parsed.data.GITHUB_APP_ID, privateKey: parsed.data.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, '\n') };
 }
 
 export function appClientCredentials(env: Env): { clientId: string; clientSecret: string } {
-  const clientId = env.GH_APP_CLIENT_ID;
-  const clientSecret = env.GH_APP_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    const issues: Issue[] = [];
-    if (!clientId) issues.push(missingEnvironmentVariable('GH_APP_CLIENT_ID'));
-    if (!clientSecret) issues.push(missingEnvironmentVariable('GH_APP_CLIENT_SECRET'));
-    throw new GithubAppNotConfiguredError(issues);
-  }
-  return { clientId, clientSecret };
+  const parsed = appClientCredentialsSchema.safeParse(env);
+  if (!parsed.success) throw new GithubAppNotConfiguredError(Issue.fromZodError(parsed.error));
+  return { clientId: parsed.data.GH_APP_CLIENT_ID, clientSecret: parsed.data.GH_APP_CLIENT_SECRET };
 }
 
 const appSchema = z.object({
