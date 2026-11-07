@@ -11,6 +11,17 @@ export class GithubAppNotConfiguredError extends HttpError {
   }
 }
 
+export class GithubInstallationNotFoundError extends HttpError {
+  constructor() {
+    super(404, { error: 'installation_not_found' });
+    this.name = 'GithubInstallationNotFoundError';
+  }
+}
+
+function isGithubApiErrorWithStatus(error: unknown, status: number): boolean {
+  return error instanceof HttpError && error.body.error === 'github_api_error' && error.body.status === status;
+}
+
 const appCredentialsSchema = z.object({
   GH_APP_ID: z.string().min(1),
   GH_APP_PRIVATE_KEY: z.string().min(1),
@@ -149,7 +160,12 @@ async function githubJson<T>(token: string, path: string, schema: z.ZodType<T>, 
 
 export async function getInstallationInfo(env: Env, installationId: number): Promise<GithubAppInstallationInfo> {
   const jwt = await createAppJwt(env);
-  return githubJson(jwt, `/app/installations/${installationId}`, installationSchema);
+  try {
+    return await githubJson(jwt, `/app/installations/${installationId}`, installationSchema);
+  } catch (error) {
+    if (isGithubApiErrorWithStatus(error, 404)) throw new GithubInstallationNotFoundError();
+    throw error;
+  }
 }
 
 export async function deleteInstallation(env: Env, installationId: number): Promise<void> {
@@ -168,9 +184,15 @@ export async function getInstallationToken(env: Env, installationId: number): Pr
     return { token: cached.token, expiresAt: new Date(cached.expiresAt).toISOString() };
   }
   const jwt = await createAppJwt(env);
-  const issued = await githubJson(jwt, `/app/installations/${installationId}/access_tokens`, installationTokenSchema, {
-    method: 'POST',
-  });
+  let issued: z.infer<typeof installationTokenSchema>;
+  try {
+    issued = await githubJson(jwt, `/app/installations/${installationId}/access_tokens`, installationTokenSchema, {
+      method: 'POST',
+    });
+  } catch (error) {
+    if (isGithubApiErrorWithStatus(error, 404)) throw new GithubInstallationNotFoundError();
+    throw error;
+  }
   tokenCache.set(installationId, { token: issued.token, expiresAt: new Date(issued.expires_at).getTime() });
   return { token: issued.token, expiresAt: issued.expires_at };
 }
