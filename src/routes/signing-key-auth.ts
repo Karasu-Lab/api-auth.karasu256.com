@@ -30,14 +30,14 @@ export async function handleSigningKeyAuthorize(env: Env, request: Request): Pro
     if (!returnTo || !isTrustedReturnTo(env, returnTo)) {
       return Response.json({ error: 'Bad Request' }, { status: 400 });
     }
-    if (!env.GITHUB_CLIENT_ID) return Response.json({ error: 'github_not_configured' }, { status: 503 });
+    if (!env.GH_OATH_CLIENT_ID) return Response.json({ error: 'github_not_configured' }, { status: 503 });
     const state = await createLinkState(env.BETTER_AUTH_SECRET, {
       kind: STATE_KIND,
       userId: session.user.id,
       returnTo,
     });
     const destination = new URL(GITHUB_AUTHORIZE_URL);
-    destination.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
+    destination.searchParams.set('client_id', env.GH_OATH_CLIENT_ID);
     destination.searchParams.set('redirect_uri', callbackUrl(env));
     destination.searchParams.set('scope', SIGNING_KEY_SCOPE);
     destination.searchParams.set('state', state);
