@@ -14,7 +14,7 @@ import { assertNoDeviceSessionConflict } from './device-session-conflict';
 import { deleteFirebaseUser, updateFirebaseUser } from './firebase';
 import { ensureFirebaseLink, getLinkedFirebaseUid } from './firebase-link';
 import { githubAppInstallationPlugin } from './github-app-installation';
-import { getGithubOAuthProviders } from './github-providers';
+import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { syncUserToNeonAuth } from './neon-auth';
 import { SESSION_SOURCE_HEADER, recordSessionSource } from './session-source';
@@ -106,7 +106,7 @@ function createAuthOptions(env: Env, db: Db) {
       encryptOAuthTokens: true,
       accountLinking: {
         enabled: true,
-        trustedProviders: ['google', 'github', 'microsoft'],
+        trustedProviders: ['google', 'github', 'microsoft', GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID],
         allowDifferentEmails: true,
         updateUserInfoOnLink: true,
       },
