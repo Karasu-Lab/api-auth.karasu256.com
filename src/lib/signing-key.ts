@@ -162,13 +162,13 @@ export async function exchangeSigningKeyAuthorizationCode(
   code: string,
   redirectUri: string
 ): Promise<z.infer<typeof githubTokenResponseSchema> | null> {
-  if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) return null;
+  if (!env.GH_OATH_CLIENT_ID || !env.GH_OAUTH_CLIENT_SECRET) return null;
   const response = await fetch(GITHUB_TOKEN_URL, {
     method: 'POST',
     headers: { accept: 'application/json', 'content-type': 'application/json' },
     body: JSON.stringify({
-      client_id: env.GITHUB_CLIENT_ID,
-      client_secret: env.GITHUB_CLIENT_SECRET,
+      client_id: env.GH_OATH_CLIENT_ID,
+      client_secret: env.GH_OAUTH_CLIENT_SECRET,
       code,
       redirect_uri: redirectUri,
     }),
@@ -182,13 +182,13 @@ async function refreshSigningKeyTokens(
   env: Env,
   refreshToken: string
 ): Promise<z.infer<typeof githubTokenResponseSchema> | null> {
-  if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) return null;
+  if (!env.GH_OATH_CLIENT_ID || !env.GH_OAUTH_CLIENT_SECRET) return null;
   const response = await fetch(GITHUB_TOKEN_URL, {
     method: 'POST',
     headers: { accept: 'application/json', 'content-type': 'application/json' },
     body: JSON.stringify({
-      client_id: env.GITHUB_CLIENT_ID,
-      client_secret: env.GITHUB_CLIENT_SECRET,
+      client_id: env.GH_OATH_CLIENT_ID,
+      client_secret: env.GH_OAUTH_CLIENT_SECRET,
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
     }),

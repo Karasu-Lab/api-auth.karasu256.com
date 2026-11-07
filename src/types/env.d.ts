@@ -28,6 +28,8 @@ declare global {
     GOOGLE_CLIENT_SECRET?: string;
     GITHUB_CLIENT_ID?: string;
     GITHUB_CLIENT_SECRET?: string;
+    GH_OATH_CLIENT_ID?: string;
+    GH_OAUTH_CLIENT_SECRET?: string;
     GH_APP_ID?: string;
     GH_APP_PRIVATE_KEY?: string;
     GH_APP_CLIENT_ID?: string;
