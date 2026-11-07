@@ -28,7 +28,7 @@ These are synced to the worker on every deploy; previews resolve the same names 
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `GH_CLIENT_SECRET` | GitHub OAuth client secret, passed to the worker as `GITHUB_CLIENT_SECRET` |
 | `GH_APP_CLIENT_SECRET` | GitHub App client secret |
-| `GH_APP_PRIVATE_KEY` | GitHub App private key, passed to the worker as `GITHUB_APP_PRIVATE_KEY` |
+| `GH_APP_PRIVATE_KEY` | GitHub App private key |
 | `MICROSOFT_CLIENT_SECRET` | Microsoft OAuth client secret |
 
 ### Worker variables
@@ -44,7 +44,7 @@ Non-secret identifiers, synced to the worker alongside the secrets.
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GH_CLIENT_ID` | GitHub OAuth client ID, passed to the worker as `GITHUB_CLIENT_ID` (GitHub reserves the `GITHUB_` prefix, so the Actions entry uses the `GH_` name) |
 | `GH_APP_CLIENT_ID` | GitHub App client ID |
-| `GH_APP_ID` | GitHub App ID, passed to the worker as `GITHUB_APP_ID` (GitHub reserves the `GITHUB_` prefix, so the Actions entry uses the `GH_` name) |
+| `GH_APP_ID` | GitHub App ID |
 | `MICROSOFT_CLIENT_ID` | Microsoft OAuth client ID (an Entra app registration limited to personal Microsoft accounts, so the provider uses the `consumers` tenant) |
 
 If one of these entries is unset everywhere, the sync falls back to the default in the worker's `wrangler.jsonc` local environment, and skips the entry when it is defined in neither place.
