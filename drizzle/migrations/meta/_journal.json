@@ -71,6 +71,13 @@
       "when": 1794058791014,
       "tag": "0009_misty_black_bolt",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794074942916,
+      "tag": "0010_cynical_gateway",
+      "breakpoints": true
     }
   ]
 }
