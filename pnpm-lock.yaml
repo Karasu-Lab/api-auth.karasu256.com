@@ -27,8 +27,8 @@ importers:
         specifier: 1.7.12
         version: 1.7.12(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-auth@1.7.14(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))))(better-call@1.4.4(zod@4.6.7))
       '@karasu-lab/db':
-        specifier: 0.1.0-33ca07f
-        version: 0.1.0-33ca07f(945244277216bdb279ae99a5359b9d5d)
+        specifier: 0.1.0-000d4c7
+        version: 0.1.0-000d4c7(945244277216bdb279ae99a5359b9d5d)
       '@karasu-lab/types':
         specifier: 0.1.0-aca50f7
         version: 0.1.0-aca50f7
@@ -1175,8 +1175,8 @@ packages:
   '@karasu-lab/api-permissions@0.1.0-4b04f47':
     resolution: {integrity: sha512-waPf+NZB15QztOTOLcZdmy/QfXJ/YFJgZGlIveSZcNRGdmStfAxNnjuddZO9CH/iVd0+qkud+7b+W8+Cc3qeUQ==, tarball: https://npm.pkg.github.com/download/@karasu-lab/api-permissions/0.1.0-4b04f47/b0dcdfd39bdfdfb806b719eaedaeba1edfff5dca}
 
-  '@karasu-lab/db@0.1.0-33ca07f':
-    resolution: {integrity: sha512-89RnMtlYnmALYma9u7q1H9SIhSx3EhFhj+8J4ul10PJk0vUgocm21MjeqNvZ/THvzoDQ3NJz7Bk//7oWTiZwdw==, tarball: https://npm.pkg.github.com/download/@karasu-lab/db/0.1.0-33ca07f/48715b7a79302578a40497f30404fda5bc637268}
+  '@karasu-lab/db@0.1.0-000d4c7':
+    resolution: {integrity: sha512-hRGwwkgixlewgJJpaaCbc/4509Gftk0bOQc1P8D3NH+W3pyzsQO9cCapaR46knTlnhd8kYnmsI4uIr6iwxHkTQ==, tarball: https://npm.pkg.github.com/download/@karasu-lab/db/0.1.0-000d4c7/915623c9920bb2d329402cff01ced870ef25bfcd}
     peerDependencies:
       drizzle-orm: ^0.44.7
 
@@ -4150,7 +4150,7 @@ snapshots:
 
   '@karasu-lab/api-permissions@0.1.0-4b04f47': {}
 
-  '@karasu-lab/db@0.1.0-33ca07f(945244277216bdb279ae99a5359b9d5d)':
+  '@karasu-lab/db@0.1.0-000d4c7(945244277216bdb279ae99a5359b9d5d)':
     dependencies:
       '@neondatabase/auth': 0.7.0-beta(945244277216bdb279ae99a5359b9d5d)
       '@paralleldrive/cuid2': 3.3.0
