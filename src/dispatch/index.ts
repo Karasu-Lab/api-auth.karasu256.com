@@ -35,6 +35,7 @@ import {
   TenantOverviewDispatch,
   UninstallBotDispatch,
   TenantRepositoriesDispatch,
+  UnlinkPackageDispatch,
   UpdateLinkedPackagePointerDispatch,
 } from './tenants';
 import { CreateTestAccountDispatch, DeleteTestAccountDispatch } from './test-accounts';
@@ -78,6 +79,7 @@ export const dispatchables: DispatchableClass[] = [
   InstallationTokenDispatch,
   LinkPackageDispatch,
   SetLinkedPackageEnabledDispatch,
+  UnlinkPackageDispatch,
   UpdateLinkedPackagePointerDispatch,
   PushWebhookDispatch,
   InstallationWebhookDispatch,

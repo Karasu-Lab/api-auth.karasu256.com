@@ -434,6 +434,44 @@ export class SetLinkedPackageEnabledDispatch implements Dispatchable {
   }
 }
 
+const unlinkPackageBodySchema = z.object({ userId: z.string().min(1) });
+
+export class UnlinkPackageDispatch implements Dispatchable {
+  private context: DispatchContext;
+
+  constructor(context: DispatchContext) {
+    this.context = context;
+  }
+
+  matches(): boolean {
+    return packageSegment(this.context.pathname, '') !== null && this.context.request.method === 'DELETE';
+  }
+
+  async handle(): Promise<Response> {
+    const { env } = this.context;
+    const segment = packageSegment(this.context.pathname, '')!;
+    const parsed = unlinkPackageBodySchema.safeParse(this.context.body);
+    if (!parsed.success) throw new BadRequestError();
+    const db = createDb(env.DATABASE_URL);
+    try {
+      await requireTenantRole(db, parsed.data.userId, segment.organizationId, TENANT_SETUP_ROLES);
+      const deleted = await db
+        .delete(tenantLinkedPackages)
+        .where(
+          and(
+            eq(tenantLinkedPackages.organizationId, segment.organizationId),
+            eq(tenantLinkedPackages.id, segment.packageId)
+          )
+        )
+        .returning();
+      if (!deleted[0]) throw new NotFoundError();
+      return Response.json({ unlinked: true });
+    } finally {
+      waitUntil(db.$client.end());
+    }
+  }
+}
+
 const pointerBodySchema = z.object({ sha: z.string().min(7) });
 
 export class UpdateLinkedPackagePointerDispatch implements Dispatchable {
