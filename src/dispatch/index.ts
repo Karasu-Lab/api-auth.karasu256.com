@@ -1,5 +1,5 @@
 import type { DispatchableClass } from '../lib/dispatch';
-import { CreateApiKeyDispatch, DeleteApiKeyDispatch, IssueApiKeyDispatch, ListApiKeysDispatch, ListPermissionsDispatch, VerifyApiKeyDispatch } from './api-keys';
+import { CreateApiKeyDispatch, DeleteApiKeyDispatch, GetApiKeyDispatch, IssueApiKeyDispatch, ListApiKeysDispatch, ListPermissionsDispatch, UpdateApiKeyPermissionsDispatch, VerifyApiKeyDispatch } from './api-keys';
 import { AuthDispatch } from './auth';
 import { ClientRegistrationDispatch } from './client-registration';
 import { GithubRepositoriesDispatch, GithubUserDispatch } from './github';
@@ -22,6 +22,8 @@ export const dispatchables: DispatchableClass[] = [
   AuthDispatch,
   VerifyApiKeyDispatch,
   ListApiKeysDispatch,
+  GetApiKeyDispatch,
+  UpdateApiKeyPermissionsDispatch,
   CreateApiKeyDispatch,
   DeleteApiKeyDispatch,
   ListPermissionsDispatch,
