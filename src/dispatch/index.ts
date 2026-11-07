@@ -6,6 +6,7 @@ import { GithubRepositoriesDispatch, GithubUserDispatch } from './github';
 import { McpIconUploadUrlDispatch, McpSessionTokenDispatch } from './mcp';
 import {
   CompleteOAuthClientIconDispatch,
+  GetOAuthClientInfoDispatch,
   ListOAuthClientInfoDispatch,
   PrepareOAuthClientIconDispatch,
   UpsertOAuthClientInfoDispatch,
@@ -25,6 +26,7 @@ export const dispatchables: DispatchableClass[] = [
   DeleteApiKeyDispatch,
   ListPermissionsDispatch,
   ListOAuthClientInfoDispatch,
+  GetOAuthClientInfoDispatch,
   CompleteOAuthClientIconDispatch,
   PrepareOAuthClientIconDispatch,
   UpsertOAuthClientInfoDispatch,

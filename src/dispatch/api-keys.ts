@@ -4,7 +4,6 @@ import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '@karasu-lab/types/server';
 import {
   UnknownPermissionError,
-  getGrantedPermissions,
   grantPermissions,
   listActivePermissions,
   type ApiKeyCreated,
@@ -92,10 +91,6 @@ export class ListApiKeysDispatch implements Dispatchable {
       if (!session) throw new UnauthorizedError();
 
       const { apiKeys } = await auth.api.listApiKeys({ headers: request.headers });
-      const granted = await getGrantedPermissions(
-        env,
-        apiKeys.map((key) => key.id)
-      );
       const summaries: ApiKeySummary[] = apiKeys
         .map((key) => ({
           id: key.id,
@@ -103,7 +98,6 @@ export class ListApiKeysDispatch implements Dispatchable {
           start: key.start ?? null,
           createdAt: new Date(key.createdAt).toISOString(),
           lastRequest: key.lastRequest ? new Date(key.lastRequest).toISOString() : null,
-          permissions: granted.get(key.id) ?? [],
         }))
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       return Response.json(summaries);
