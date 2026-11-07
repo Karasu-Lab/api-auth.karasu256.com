@@ -57,6 +57,13 @@
       "when": 1794047008658,
       "tag": "0007_loud_black_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794048199784,
+      "tag": "0008_superb_firelord",
+      "breakpoints": true
     }
   ]
 }

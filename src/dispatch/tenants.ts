@@ -5,7 +5,6 @@ import {
   organizations,
   tenantGithubInstallations,
   tenantLinkedPackages,
-  tenantNpmConfigurations,
   userSigningKeys,
   users,
   type TenantGithubInstallation,
@@ -126,23 +125,14 @@ export class TenantOverviewDispatch implements Dispatchable {
       const role = await requireTenantRole(db, userId, organizationId, ['owner', 'admin', 'member']);
       const orgRows = await db.select().from(organizations).where(eq(organizations.id, organizationId)).limit(1);
       if (!orgRows[0]) throw new NotFoundError();
-      const [installationRows, npmRows, packageRows, keyRows] = await Promise.all([
+      const [installationRows, packageRows, keyRows] = await Promise.all([
         db.select().from(tenantGithubInstallations).where(eq(tenantGithubInstallations.organizationId, organizationId)).limit(1),
-        db.select().from(tenantNpmConfigurations).where(eq(tenantNpmConfigurations.organizationId, organizationId)).limit(1),
         db.select().from(tenantLinkedPackages).where(eq(tenantLinkedPackages.organizationId, organizationId)),
         db.select().from(userSigningKeys).where(eq(userSigningKeys.userId, userId)),
       ]);
       return Response.json({
         organization: { id: orgRows[0].id, name: orgRows[0].name, slug: orgRows[0].slug, role },
         installation: installationRows[0] ? installationPayload(installationRows[0]) : null,
-        npmConfiguration: npmRows[0]
-          ? {
-              npmRepositoryId: npmRows[0].npmRepositoryId,
-              npmRepositoryFullName: npmRows[0].npmRepositoryFullName,
-              workflowTemplateRepositoryId: npmRows[0].workflowTemplateRepositoryId,
-              workflowTemplateRepositoryFullName: npmRows[0].workflowTemplateRepositoryFullName,
-            }
-          : null,
         linkedPackages: packageRows.map((row) => ({
           id: row.id,
           repositoryId: row.repositoryId,
@@ -284,45 +274,6 @@ export class CreateTenantRepositoryDispatch implements Dispatchable {
           defaultBranch: repo.default_branch,
         },
       });
-    } finally {
-      waitUntil(db.$client.end());
-    }
-  }
-}
-
-const npmConfigurationBodySchema = z.object({
-  userId: z.string().min(1),
-  npmRepositoryId: z.number(),
-  npmRepositoryFullName: z.string().min(1),
-  workflowTemplateRepositoryId: z.number(),
-  workflowTemplateRepositoryFullName: z.string().min(1),
-});
-
-export class RecordNpmConfigurationDispatch implements Dispatchable {
-  private context: DispatchContext;
-
-  constructor(context: DispatchContext) {
-    this.context = context;
-  }
-
-  matches(): boolean {
-    return tenantSegment(this.context.pathname, '/npm-configuration') !== null && this.context.request.method === 'POST';
-  }
-
-  async handle(): Promise<Response> {
-    const { env } = this.context;
-    const organizationId = tenantSegment(this.context.pathname, '/npm-configuration')!;
-    const parsed = npmConfigurationBodySchema.safeParse(this.context.body);
-    if (!parsed.success) throw new BadRequestError();
-    const { userId, ...values } = parsed.data;
-    const db = createDb(env.DATABASE_URL);
-    try {
-      await requireTenantRole(db, userId, organizationId, TENANT_SETUP_ROLES);
-      await db
-        .insert(tenantNpmConfigurations)
-        .values({ organizationId, ...values })
-        .onConflictDoUpdate({ target: tenantNpmConfigurations.organizationId, set: values });
-      return Response.json({ recorded: true });
     } finally {
       waitUntil(db.$client.end());
     }
@@ -530,12 +481,6 @@ export class PushWebhookDispatch implements Dispatchable {
       if (!linked) return Response.json({ accepted: false, reason: 'package_not_linked' });
       if (!linked.webhookEnabled) return Response.json({ accepted: false, reason: 'package_disabled' });
       if (linked.lastSyncedSha === afterSha) return Response.json({ accepted: false, reason: 'already_synced' });
-      const npmRows = await db
-        .select()
-        .from(tenantNpmConfigurations)
-        .where(eq(tenantNpmConfigurations.organizationId, organizationId))
-        .limit(1);
-      if (!npmRows[0]) return Response.json({ accepted: false, reason: 'npm_not_configured' });
       const signingUserId = installation.installedByUserId;
       if (!signingUserId) return Response.json({ accepted: false, reason: 'signing_user_unknown' });
       const keyRows = await db
@@ -564,7 +509,6 @@ export class PushWebhookDispatch implements Dispatchable {
           submodulePath: linked.npmSubmodulePath,
           lastSyncedSha: linked.lastSyncedSha,
         },
-        npmRepositoryFullName: npmRows[0].npmRepositoryFullName,
         signingKeyOwner,
       });
     } finally {
