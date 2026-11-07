@@ -59,6 +59,11 @@ function appCredentials(env: Env): { appId: string; privateKey: string } {
   return { appId: env.GITHUB_APP_ID, privateKey: env.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, '\n') };
 }
 
+export function appClientCredentials(env: Env): { clientId: string; clientSecret: string } {
+  if (!env.GH_APP_CLIENT_ID || !env.GH_APP_CLIENT_SECRET) throw new GithubAppNotConfiguredError();
+  return { clientId: env.GH_APP_CLIENT_ID, clientSecret: env.GH_APP_CLIENT_SECRET };
+}
+
 export function githubAppSlug(env: Env): string {
   if (!env.GITHUB_APP_SLUG) throw new GithubAppNotConfiguredError();
   return env.GITHUB_APP_SLUG;
