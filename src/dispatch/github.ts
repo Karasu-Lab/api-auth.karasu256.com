@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { githubRepositorySchema, githubUserSchema, type GitHubRepository, type GitHubUser } from '@karasu-lab/types/shared';
 import { BadRequestError, HttpError, NotFoundError } from '@karasu-lab/types/server';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
+import { getAppPublicLink } from '../lib/github-app';
 import { getProviderAccessToken } from '../lib/provider-profile';
 import { withAuth } from '../lib/request-auth';
 
@@ -102,5 +103,22 @@ export class GithubRepositoriesDispatch implements Dispatchable {
       })
     );
     return Response.json(repositories);
+  }
+}
+
+export class GithubAppInstallUrlDispatch implements Dispatchable {
+  private context: DispatchContext;
+
+  constructor(context: DispatchContext) {
+    this.context = context;
+  }
+
+  matches(): boolean {
+    return this.context.request.method === 'GET' && this.context.pathname === '/api/internal/github-app/install-url';
+  }
+
+  async handle(): Promise<Response> {
+    const publicLink = await getAppPublicLink(this.context.env);
+    return Response.json({ installUrl: `${publicLink}/installations/new` });
   }
 }
