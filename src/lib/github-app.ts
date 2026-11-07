@@ -144,25 +144,8 @@ export async function getAppPublicLink(env: Env): Promise<string> {
   return info.html_url;
 }
 
-const appHookConfigSchema = z.object({
-  url: z.string(),
-});
-
-export async function reregisterAppWebhook(env: Env, input: { url: string; secret: string }): Promise<{ url: string }> {
-  const jwt = await createAppJwt(env);
-  const config = await githubJson(jwt, '/app/hook/config', appHookConfigSchema, {
-    method: 'PATCH',
-    body: JSON.stringify({ url: input.url, content_type: 'json', insecure_ssl: '0', secret: input.secret }),
-  });
-  const path = '/app/hook';
-  const response = await githubFetch(jwt, path, {
-    method: 'PATCH',
-    body: JSON.stringify({ active: true }),
-  });
-  if (!response.ok) {
-    throw new HttpError(502, { error: 'github_api_error', status: response.status, path });
-  }
-  return { url: config.url };
+export async function getAppJwt(env: Env): Promise<string> {
+  return createAppJwt(env);
 }
 
 export async function listAppInstallations(env: Env): Promise<GithubAppInstallationInfo[]> {
