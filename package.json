@@ -31,7 +31,7 @@
     "@better-auth/oauth-provider": "^1.7.12",
     "@better-auth/passkey": "1.7.12",
     "@better-auth/sso": "1.7.12",
-    "@karasu-lab/db": "0.1.0-9d94d49",
+    "@karasu-lab/db": "0.1.0-33ca07f",
     "@karasu-lab/types": "0.1.0-aca50f7",
     "@karasu-lab/utils": "0.1.0-be51f04",
     "better-auth": "^1.7.12",

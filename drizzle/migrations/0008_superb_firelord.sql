@@ -1,0 +1,1 @@
+DROP TABLE "tenant_npm_configuration" CASCADE;
