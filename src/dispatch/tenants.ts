@@ -24,6 +24,8 @@ import {
   getInstallationInfo,
   getInstallationToken,
   listInstallationRepositories,
+  mergePullRequest,
+  AutoMergeNotGatedError,
   GithubInstallationNotFoundError,
   type GithubAppInstallationInfo,
 } from '../lib/github-app';
@@ -690,7 +692,12 @@ export class CreateBotPullRequestDispatch implements Dispatchable {
         }
         created = await createPullRequest(env, installation.installationId, repositoryFullName, pull);
         if (enableAutoMerge) {
-          await enablePullRequestAutoMerge(env, installation.installationId, created.node_id);
+          try {
+            await enablePullRequestAutoMerge(env, installation.installationId, created.node_id);
+          } catch (error) {
+            if (!(error instanceof AutoMergeNotGatedError)) throw error;
+            await mergePullRequest(env, installation.installationId, repositoryFullName, created.number);
+          }
         }
       } catch (error) {
         if (error instanceof GithubInstallationNotFoundError) await deleteInstallationRecord(db, organizationId);
