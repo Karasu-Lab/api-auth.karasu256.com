@@ -2,7 +2,7 @@ import type { DispatchableClass } from '../lib/dispatch';
 import { CreateApiKeyDispatch, DeleteApiKeyDispatch, GetApiKeyDispatch, IssueApiKeyDispatch, ListApiKeysDispatch, ListPermissionsDispatch, UpdateApiKeyPermissionsDispatch, VerifyApiKeyDispatch } from './api-keys';
 import { AuthDispatch } from './auth';
 import { ClientRegistrationDispatch } from './client-registration';
-import { GithubAppInstallUrlDispatch, GithubRepositoriesDispatch, GithubUserDispatch } from './github';
+import { GithubAppInstallUrlDispatch, GithubAppWebhookDispatch, GithubRepositoriesDispatch, GithubUserDispatch } from './github';
 import { McpIconUploadUrlDispatch, McpSessionTokenDispatch } from './mcp';
 import {
   CompleteOAuthClientIconDispatch,
@@ -62,6 +62,7 @@ export const dispatchables: DispatchableClass[] = [
   GithubUserDispatch,
   GithubRepositoriesDispatch,
   GithubAppInstallUrlDispatch,
+  GithubAppWebhookDispatch,
   CreateSigningKeyDispatch,
   SigningKeyStatusDispatch,
   SigningKeyMaterialDispatch,

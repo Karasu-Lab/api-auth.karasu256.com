@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { githubRepositorySchema, githubUserSchema, type GitHubRepository, type GitHubUser } from '@karasu-lab/types/shared';
 import { BadRequestError, HttpError, NotFoundError } from '@karasu-lab/types/server';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
-import { getAppPublicLink } from '../lib/github-app';
+import { getAppPublicLink, reregisterAppWebhook } from '../lib/github-app';
 import { getProviderAccessToken } from '../lib/provider-profile';
 import { withAuth } from '../lib/request-auth';
 
@@ -120,5 +120,29 @@ export class GithubAppInstallUrlDispatch implements Dispatchable {
   async handle(): Promise<Response> {
     const publicLink = await getAppPublicLink(this.context.env);
     return Response.json({ installUrl: `${publicLink}/installations/new` });
+  }
+}
+
+const githubAppWebhookRequestSchema = z.object({
+  url: z.string().min(1),
+  secret: z.string().min(1),
+});
+
+export class GithubAppWebhookDispatch implements Dispatchable {
+  private context: DispatchContext;
+
+  constructor(context: DispatchContext) {
+    this.context = context;
+  }
+
+  matches(): boolean {
+    return this.context.request.method === 'POST' && this.context.pathname === '/api/internal/github-app/webhook';
+  }
+
+  async handle(): Promise<Response> {
+    const body = githubAppWebhookRequestSchema.safeParse(await this.context.request.json().catch(() => null));
+    if (!body.success) throw new BadRequestError();
+    const result = await reregisterAppWebhook(this.context.env, body.data);
+    return Response.json(result);
   }
 }
