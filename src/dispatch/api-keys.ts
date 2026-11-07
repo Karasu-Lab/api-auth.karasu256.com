@@ -2,8 +2,10 @@ import { z } from 'zod';
 import type { Auth } from '../lib/auth';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '@karasu-lab/types/server';
+import { encodePermissionBitmask, type ApiKeyDetail } from '@karasu-lab/types/shared';
 import {
   UnknownPermissionError,
+  getGrantedPermissions,
   grantPermissions,
   listActivePermissions,
   type ApiKeyCreated,
@@ -101,6 +103,90 @@ export class ListApiKeysDispatch implements Dispatchable {
         }))
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       return Response.json(summaries);
+    });
+  }
+}
+
+const updatePermissionsBodySchema = z.object({
+  permissions: z.array(z.string().min(1)).default([]),
+});
+
+export class GetApiKeyDispatch implements Dispatchable {
+  private context: DispatchContext;
+  private keyId: string | null = null;
+
+  constructor(context: DispatchContext) {
+    this.context = context;
+  }
+
+  matches(): boolean {
+    if (!this.context.pathname.startsWith('/api/api-keys/') || this.context.request.method !== 'GET') return false;
+    this.keyId = decodeURIComponent(this.context.pathname.slice('/api/api-keys/'.length));
+    return true;
+  }
+
+  async handle(): Promise<Response> {
+    const { env, request } = this.context;
+    const keyId = this.keyId as string;
+    return withAuth(env, async (auth) => {
+      const session = await auth.api.getSession({ headers: request.headers });
+      if (!session) throw new UnauthorizedError();
+
+      const { apiKeys } = await auth.api.listApiKeys({ headers: request.headers });
+      const key = apiKeys.find((candidate) => candidate.id === keyId);
+      if (!key) throw new NotFoundError();
+
+      const [catalog, granted] = await Promise.all([listActivePermissions(env), getGrantedPermissions(env, [keyId])]);
+      const body: ApiKeyDetail = {
+        id: key.id,
+        name: key.name ?? null,
+        start: key.start ?? null,
+        createdAt: new Date(key.createdAt).toISOString(),
+        lastRequest: key.lastRequest ? new Date(key.lastRequest).toISOString() : null,
+        permissions_bitmask: encodePermissionBitmask(
+          catalog.map((permission) => permission.publicId),
+          (granted[keyId] ?? []).map((permission) => permission.publicId),
+        ),
+      };
+      return Response.json(body);
+    });
+  }
+}
+
+export class UpdateApiKeyPermissionsDispatch implements Dispatchable {
+  private context: DispatchContext;
+  private keyId: string | null = null;
+
+  constructor(context: DispatchContext) {
+    this.context = context;
+  }
+
+  matches(): boolean {
+    if (!this.context.pathname.startsWith('/api/api-keys/') || !this.context.pathname.endsWith('/permissions') || this.context.request.method !== 'PUT') return false;
+    this.keyId = decodeURIComponent(this.context.pathname.slice('/api/api-keys/'.length, -'/permissions'.length));
+    return true;
+  }
+
+  async handle(): Promise<Response> {
+    const { env, request } = this.context;
+    const keyId = this.keyId as string;
+    const parsed = updatePermissionsBodySchema.safeParse(this.context.body);
+    if (!parsed.success) throw new BadRequestError();
+
+    return withAuth(env, async (auth) => {
+      const session = await auth.api.getSession({ headers: request.headers });
+      if (!session) throw new UnauthorizedError();
+
+      const { apiKeys } = await auth.api.listApiKeys({ headers: request.headers });
+      if (!apiKeys.some((candidate) => candidate.id === keyId)) throw new NotFoundError();
+
+      try {
+        const permissions = await grantPermissions(env, keyId, parsed.data.permissions);
+        return Response.json(permissions);
+      } catch (err) {
+        if (err instanceof UnknownPermissionError) throw new BadRequestError();
+        throw err;
+      }
     });
   }
 }

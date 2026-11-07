@@ -4,6 +4,7 @@ import { waitUntil } from 'cloudflare:workers';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import {
+  encodePermissionBitmask,
   imageContentTypeSchema,
   intentTokenBodySchema,
   sha256Schema,
@@ -155,6 +156,27 @@ export class ListOAuthClientInfoDispatch implements Dispatchable {
   }
 }
 
+async function computeScopeBitmask(env: Env, configuredScopes: string[]): Promise<string | undefined> {
+  try {
+    const [registryScopes, supportedScopes] = await Promise.all([
+      fetch(`${env.API_URL}/permissions/scopes`, { cache: 'no-store' }).then(async (res) => {
+        if (!res.ok) throw new Error(`api.karasu256.com responded ${res.status}`);
+        return (await res.json()) as string[];
+      }),
+      withAuth(env, async (auth) => {
+        const res = await auth.handler(new Request(`${env.BETTER_AUTH_URL}/api/auth/.well-known/openid-configuration`));
+        if (!res.ok) throw new Error(`discovery responded ${res.status}`);
+        const discovery = (await res.json()) as { scopes_supported?: string[] };
+        return discovery.scopes_supported ?? [];
+      }),
+    ]);
+    const universe = [...registryScopes, ...supportedScopes.filter((scope) => !registryScopes.includes(scope))];
+    return encodePermissionBitmask(universe, configuredScopes);
+  } catch {
+    return undefined;
+  }
+}
+
 export class GetOAuthClientInfoDispatch implements Dispatchable {
   private context: DispatchContext;
   private clientId: string | null = null;
@@ -178,7 +200,7 @@ export class GetOAuthClientInfoDispatch implements Dispatchable {
     const db = createDb(env.DATABASE_URL);
     try {
       const [client] = await db
-        .select({ clientId: schema.oauthClients.clientId })
+        .select({ clientId: schema.oauthClients.clientId, scopes: schema.oauthClients.scopes })
         .from(schema.oauthClients)
         .where(and(eq(schema.oauthClients.clientId, clientId), eq(schema.oauthClients.userId, session.user.id)))
         .limit(1);
@@ -199,6 +221,7 @@ export class GetOAuthClientInfoDispatch implements Dispatchable {
         description: row.description,
         resource: row.resource,
         public: row.public,
+        scope_bitmask: await computeScopeBitmask(env, client.scopes ?? []),
       };
       return Response.json(body);
     } finally {

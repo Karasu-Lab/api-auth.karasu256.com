@@ -17,6 +17,18 @@ export async function listActivePermissions(env: Env): Promise<PermissionSummary
   return readJson(await fetch(`${env.API_URL}/permissions`, { cache: 'no-store' }));
 }
 
+export async function getGrantedPermissions(env: Env, apiKeyIds: string[]): Promise<Record<string, PermissionSummary[]>> {
+  if (apiKeyIds.length === 0) return {};
+  return readJson(
+    await fetch(`${env.API_URL}/internal/permissions/granted`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...internalHeaders(env) },
+      body: JSON.stringify({ apiKeyIds }),
+      cache: 'no-store',
+    }),
+  );
+}
+
 export async function grantPermissions(env: Env, apiKeyId: string, publicIds: string[]): Promise<PermissionSummary[]> {
   const res = await fetch(`${env.API_URL}/internal/api-keys/${encodeURIComponent(apiKeyId)}/permissions`, {
     method: 'PUT',
