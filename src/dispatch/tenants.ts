@@ -13,6 +13,7 @@ import { waitUntil } from 'cloudflare:workers';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { BadRequestError, HttpError, NotFoundError } from '@karasu-lab/types/server';
+import { githubInstallationWebhookActionSchema } from '@karasu-lab/types/shared';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import {
   createInstallationRepository,
@@ -511,6 +512,68 @@ export class PushWebhookDispatch implements Dispatchable {
         },
         signingKeyOwner,
       });
+    } finally {
+      waitUntil(db.$client.end());
+    }
+  }
+}
+
+const installationWebhookBodySchema = z.object({
+  installationId: z.number(),
+  action: githubInstallationWebhookActionSchema,
+});
+
+export class InstallationWebhookDispatch implements Dispatchable {
+  private context: DispatchContext;
+
+  constructor(context: DispatchContext) {
+    this.context = context;
+  }
+
+  matches(): boolean {
+    return this.context.pathname === '/api/internal/webhooks/installation' && this.context.request.method === 'POST';
+  }
+
+  async handle(): Promise<Response> {
+    const { env } = this.context;
+    const parsed = installationWebhookBodySchema.safeParse(this.context.body);
+    if (!parsed.success) throw new BadRequestError();
+    const { installationId, action } = parsed.data;
+    const db = createDb(env.DATABASE_URL);
+    try {
+      const rows = await db
+        .select()
+        .from(tenantGithubInstallations)
+        .where(eq(tenantGithubInstallations.installationId, installationId))
+        .limit(1);
+      const row = rows[0];
+      if (!row) return Response.json({ accepted: false, reason: 'installation_not_linked' });
+      const organizationId = row.organizationId;
+      if (action === 'deleted') {
+        await db
+          .delete(tenantGithubInstallations)
+          .where(eq(tenantGithubInstallations.organizationId, organizationId));
+        return Response.json({ accepted: true, organizationId, action });
+      }
+      if (action === 'suspend' || action === 'unsuspend') {
+        await db
+          .update(tenantGithubInstallations)
+          .set({ suspended: action === 'suspend' })
+          .where(eq(tenantGithubInstallations.organizationId, organizationId));
+        return Response.json({ accepted: true, organizationId, action });
+      }
+      const live = await getInstallationInfo(env, installationId).catch(() => null);
+      if (!live) return Response.json({ accepted: false, reason: 'installation_lookup_failed' });
+      await db
+        .update(tenantGithubInstallations)
+        .set({
+          targetType: live.account.type === 'Organization' ? 'organization' : 'user',
+          targetId: live.account.id,
+          targetLogin: live.account.login,
+          suspended: live.suspended_at != null,
+        })
+        .where(eq(tenantGithubInstallations.organizationId, organizationId));
+      return Response.json({ accepted: true, organizationId, action });
     } finally {
       waitUntil(db.$client.end());
     }
