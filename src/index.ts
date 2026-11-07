@@ -24,7 +24,11 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
     if (error instanceof SecretRotationNotAllowedError)
       return Response.json({ error: 'invalid_client', error_description: error.message }, { status: 400 });
     if (error instanceof UploadVerificationError) return Response.json({ error: error.message }, { status: 502 });
-    if (error instanceof HttpError) return Response.json(error.body, { status: error.status, headers: error.headers });
+    if (error instanceof HttpError)
+      return Response.json(error.issues.length > 0 ? { ...error.body, issues: error.issues } : error.body, {
+        status: error.status,
+        headers: error.headers,
+      });
     if (error instanceof ParseError) return Response.json({ error: 'Bad Request' }, { status: 400 });
     return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   })

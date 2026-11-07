@@ -1,17 +1,18 @@
 import { SignJWT, importPKCS8 } from 'jose';
 import { z } from 'zod';
-import { HttpError } from '@karasu-lab/types/server';
+import { HttpError, Issue } from '@karasu-lab/types/server';
 
 const GITHUB_API_URL = 'https://api.github.com';
 
 export class GithubAppNotConfiguredError extends HttpError {
-  readonly missing: string[];
-
-  constructor(missing: string[]) {
-    super(503, { error: 'github_app_not_configured', missing });
+  constructor(issues: Issue[]) {
+    super(503, { error: 'github_app_not_configured' }, undefined, issues);
     this.name = 'GithubAppNotConfiguredError';
-    this.missing = missing;
   }
+}
+
+function missingEnvironmentVariable(name: string): Issue {
+  return new Issue('missing_environment_variable', [name], `Missing required environment variable: ${name}`);
 }
 
 const installationSchema = z.object({
@@ -61,10 +62,10 @@ function appCredentials(env: Env): { appId: string; privateKey: string } {
   const appId = env.GITHUB_APP_ID;
   const privateKey = env.GITHUB_APP_PRIVATE_KEY;
   if (!appId || !privateKey) {
-    const missing: string[] = [];
-    if (!appId) missing.push('GITHUB_APP_ID');
-    if (!privateKey) missing.push('GITHUB_APP_PRIVATE_KEY');
-    throw new GithubAppNotConfiguredError(missing);
+    const issues: Issue[] = [];
+    if (!appId) issues.push(missingEnvironmentVariable('GITHUB_APP_ID'));
+    if (!privateKey) issues.push(missingEnvironmentVariable('GITHUB_APP_PRIVATE_KEY'));
+    throw new GithubAppNotConfiguredError(issues);
   }
   return { appId, privateKey: privateKey.replace(/\\n/g, '\n') };
 }
@@ -73,10 +74,10 @@ export function appClientCredentials(env: Env): { clientId: string; clientSecret
   const clientId = env.GH_APP_CLIENT_ID;
   const clientSecret = env.GH_APP_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
-    const missing: string[] = [];
-    if (!clientId) missing.push('GH_APP_CLIENT_ID');
-    if (!clientSecret) missing.push('GH_APP_CLIENT_SECRET');
-    throw new GithubAppNotConfiguredError(missing);
+    const issues: Issue[] = [];
+    if (!clientId) issues.push(missingEnvironmentVariable('GH_APP_CLIENT_ID'));
+    if (!clientSecret) issues.push(missingEnvironmentVariable('GH_APP_CLIENT_SECRET'));
+    throw new GithubAppNotConfiguredError(issues);
   }
   return { clientId, clientSecret };
 }
