@@ -18,6 +18,7 @@ import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import {
   createInstallationRepository,
   createPullRequest,
+  deleteInstallation,
   enablePullRequestAutoMerge,
   getInstallationInfo,
   getInstallationToken,
@@ -191,6 +192,41 @@ export class TenantInstallationDispatch implements Dispatchable {
           targetLogin: live ? live.account.login : row.targetLogin,
         },
       });
+    } finally {
+      waitUntil(db.$client.end());
+    }
+  }
+}
+
+const uninstallBotBodySchema = z.object({
+  userId: z.string().min(1),
+});
+
+export class UninstallBotDispatch implements Dispatchable {
+  private context: DispatchContext;
+
+  constructor(context: DispatchContext) {
+    this.context = context;
+  }
+
+  matches(): boolean {
+    return tenantSegment(this.context.pathname, '/github-installation') !== null && this.context.request.method === 'DELETE';
+  }
+
+  async handle(): Promise<Response> {
+    const { env } = this.context;
+    const organizationId = tenantSegment(this.context.pathname, '/github-installation')!;
+    const parsed = uninstallBotBodySchema.safeParse(this.context.body);
+    if (!parsed.success) throw new BadRequestError();
+    const db = createDb(env.DATABASE_URL);
+    try {
+      await requireTenantRole(db, parsed.data.userId, organizationId, TENANT_SETUP_ROLES);
+      const installation = await requireInstallation(db, organizationId);
+      await deleteInstallation(env, installation.installationId);
+      await db
+        .delete(tenantGithubInstallations)
+        .where(eq(tenantGithubInstallations.organizationId, organizationId));
+      return Response.json({ uninstalled: true });
     } finally {
       waitUntil(db.$client.end());
     }

@@ -152,6 +152,16 @@ export async function getInstallationInfo(env: Env, installationId: number): Pro
   return githubJson(jwt, `/app/installations/${installationId}`, installationSchema);
 }
 
+export async function deleteInstallation(env: Env, installationId: number): Promise<void> {
+  const jwt = await createAppJwt(env);
+  const path = `/app/installations/${installationId}`;
+  const response = await githubFetch(jwt, path, { method: 'DELETE' });
+  if (!response.ok && response.status !== 404) {
+    throw new HttpError(502, { error: 'github_api_error', status: response.status, path });
+  }
+  tokenCache.delete(installationId);
+}
+
 export async function getInstallationToken(env: Env, installationId: number): Promise<{ token: string; expiresAt: string }> {
   const cached = tokenCache.get(installationId);
   if (cached && cached.expiresAt > Date.now() + 60_000) {
