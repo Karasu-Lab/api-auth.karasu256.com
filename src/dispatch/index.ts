@@ -23,8 +23,6 @@ import {
 } from './signing-keys';
 import { SigningKeyMaterialDispatch } from './signing-key-material';
 import {
-  CreateBotPullRequestDispatch,
-  CreateTenantRepositoryDispatch,
   InstallationTokenDispatch,
   InstallationWebhookDispatch,
   LinkPackageDispatch,
@@ -34,7 +32,6 @@ import {
   TenantInstallationDispatch,
   TenantOverviewDispatch,
   UninstallBotDispatch,
-  TenantRepositoriesDispatch,
   UpdateLinkedPackagePointerDispatch,
 } from './tenants';
 import { CreateTestAccountDispatch, DeleteTestAccountDispatch } from './test-accounts';
@@ -74,15 +71,12 @@ export const dispatchables: DispatchableClass[] = [
   TenantOverviewDispatch,
   TenantInstallationDispatch,
   UninstallBotDispatch,
-  TenantRepositoriesDispatch,
-  CreateTenantRepositoryDispatch,
   InstallationTokenDispatch,
   LinkPackageDispatch,
   SetLinkedPackageEnabledDispatch,
   UpdateLinkedPackagePointerDispatch,
   PushWebhookDispatch,
   InstallationWebhookDispatch,
-  CreateBotPullRequestDispatch,
   SignInLookupDispatch,
   CreateTestAccountDispatch,
   DeleteTestAccountDispatch,

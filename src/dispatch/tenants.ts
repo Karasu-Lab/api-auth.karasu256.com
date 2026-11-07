@@ -16,16 +16,9 @@ import { BadRequestError, HttpError, NotFoundError } from '@karasu-lab/types/ser
 import { githubInstallationWebhookActionSchema } from '@karasu-lab/types/shared';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import {
-  createInstallationRepository,
-  createPullRequest,
   deleteInstallation,
-  enablePullRequestAutoMerge,
-  enableRepositoryAutoMerge,
   getInstallationInfo,
   getInstallationToken,
-  listInstallationRepositories,
-  mergePullRequest,
-  AutoMergeNotGatedError,
   GithubInstallationNotFoundError,
   type GithubAppInstallationInfo,
 } from '../lib/github-app';
@@ -244,105 +237,6 @@ export class UninstallBotDispatch implements Dispatchable {
         .delete(tenantGithubInstallations)
         .where(eq(tenantGithubInstallations.organizationId, organizationId));
       return Response.json({ uninstalled: true });
-    } finally {
-      waitUntil(db.$client.end());
-    }
-  }
-}
-
-export class TenantRepositoriesDispatch implements Dispatchable {
-  private context: DispatchContext;
-
-  constructor(context: DispatchContext) {
-    this.context = context;
-  }
-
-  matches(): boolean {
-    return tenantSegment(this.context.pathname, '/github-repositories') !== null && this.context.request.method === 'GET';
-  }
-
-  async handle(): Promise<Response> {
-    const { env } = this.context;
-    const organizationId = tenantSegment(this.context.pathname, '/github-repositories')!;
-    const db = createDb(env.DATABASE_URL);
-    try {
-      const installation = await requireInstallation(db, organizationId);
-      let repositories: Awaited<ReturnType<typeof listInstallationRepositories>>;
-      try {
-        repositories = await listInstallationRepositories(env, installation.installationId);
-      } catch (error) {
-        if (error instanceof GithubInstallationNotFoundError) {
-          await deleteInstallationRecord(db, organizationId);
-          return Response.json({ repositories: [] });
-        }
-        throw error;
-      }
-      return Response.json({
-        repositories: repositories.map((repo) => ({
-          id: repo.id,
-          fullName: repo.full_name,
-          name: repo.name,
-          private: repo.private,
-          htmlUrl: repo.html_url,
-          defaultBranch: repo.default_branch,
-        })),
-      });
-    } finally {
-      waitUntil(db.$client.end());
-    }
-  }
-}
-
-const createRepositoryBodySchema = z.object({
-  userId: z.string().min(1),
-  name: z.string().trim().min(1).max(100),
-  description: z.string().max(350).optional(),
-  private: z.boolean().optional(),
-  isTemplate: z.boolean().optional(),
-});
-
-export class CreateTenantRepositoryDispatch implements Dispatchable {
-  private context: DispatchContext;
-
-  constructor(context: DispatchContext) {
-    this.context = context;
-  }
-
-  matches(): boolean {
-    return tenantSegment(this.context.pathname, '/github-repositories') !== null && this.context.request.method === 'POST';
-  }
-
-  async handle(): Promise<Response> {
-    const { env } = this.context;
-    const organizationId = tenantSegment(this.context.pathname, '/github-repositories')!;
-    const parsed = createRepositoryBodySchema.safeParse(this.context.body);
-    if (!parsed.success) throw new BadRequestError();
-    const db = createDb(env.DATABASE_URL);
-    try {
-      await requireTenantRole(db, parsed.data.userId, organizationId, TENANT_SETUP_ROLES);
-      const installation = await requireInstallation(db, organizationId);
-      let repo: Awaited<ReturnType<typeof createInstallationRepository>>;
-      try {
-        repo = await createInstallationRepository(
-          env,
-          installation.installationId,
-          { type: installation.targetType === 'organization' ? 'Organization' : 'User', login: installation.targetLogin },
-          parsed.data
-        );
-      } catch (error) {
-        if (error instanceof GithubInstallationNotFoundError) await deleteInstallationRecord(db, organizationId);
-        throw error;
-      }
-      return Response.json({
-        repository: {
-          id: repo.id,
-          fullName: repo.full_name,
-          name: repo.name,
-          private: repo.private,
-          htmlUrl: repo.html_url,
-          defaultBranch: repo.default_branch,
-        },
-      });
     } finally {
       waitUntil(db.$client.end());
     }
@@ -656,58 +550,3 @@ export class InstallationWebhookDispatch implements Dispatchable {
   }
 }
 
-const createPullRequestBodySchema = z.object({
-  organizationId: z.string().min(1),
-  repositoryFullName: z.string().min(1),
-  title: z.string().min(1),
-  head: z.string().min(1),
-  base: z.string().min(1),
-  body: z.string().optional(),
-  enableAutoMerge: z.boolean().optional(),
-});
-
-export class CreateBotPullRequestDispatch implements Dispatchable {
-  private context: DispatchContext;
-
-  constructor(context: DispatchContext) {
-    this.context = context;
-  }
-
-  matches(): boolean {
-    return this.context.pathname === '/api/internal/github/pulls' && this.context.request.method === 'POST';
-  }
-
-  async handle(): Promise<Response> {
-    const { env } = this.context;
-    const parsed = createPullRequestBodySchema.safeParse(this.context.body);
-    if (!parsed.success) throw new BadRequestError();
-    const { organizationId, repositoryFullName, enableAutoMerge, ...pull } = parsed.data;
-    const db = createDb(env.DATABASE_URL);
-    try {
-      const installation = await requireInstallation(db, organizationId);
-      let created: Awaited<ReturnType<typeof createPullRequest>>;
-      try {
-        if (enableAutoMerge) {
-          await enableRepositoryAutoMerge(env, installation.installationId, repositoryFullName);
-        }
-        created = await createPullRequest(env, installation.installationId, repositoryFullName, pull);
-        if (enableAutoMerge) {
-          try {
-            await enablePullRequestAutoMerge(env, installation.installationId, created.node_id);
-          } catch (error) {
-            if (!(error instanceof AutoMergeNotGatedError)) throw error;
-            await mergePullRequest(env, installation.installationId, repositoryFullName, created.number);
-          }
-        }
-      } catch (error) {
-        if (error instanceof GithubInstallationNotFoundError) await deleteInstallationRecord(db, organizationId);
-        throw error;
-      }
-      return Response.json({
-        pullRequest: { number: created.number, url: created.html_url, autoMergeEnabled: enableAutoMerge ?? false },
-      });
-    } finally {
-      waitUntil(db.$client.end());
-    }
-  }
-}
