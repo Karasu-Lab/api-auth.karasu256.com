@@ -45,7 +45,6 @@ Non-secret identifiers, synced to the worker alongside the secrets.
 | `GH_CLIENT_ID` | GitHub OAuth client ID, passed to the worker as `GITHUB_CLIENT_ID` (GitHub reserves the `GITHUB_` prefix, so the Actions entry uses the `GH_` name) |
 | `GH_APP_CLIENT_ID` | GitHub App client ID |
 | `GH_APP_ID` | GitHub App ID, passed to the worker as `GITHUB_APP_ID` (GitHub reserves the `GITHUB_` prefix, so the Actions entry uses the `GH_` name) |
-| `GH_APP_SLUG` | GitHub App slug, passed to the worker as `GITHUB_APP_SLUG` (GitHub reserves the `GITHUB_` prefix, so the Actions entry uses the `GH_` name) |
 | `MICROSOFT_CLIENT_ID` | Microsoft OAuth client ID (an Entra app registration limited to personal Microsoft accounts, so the provider uses the `consumers` tenant) |
 
 If one of these entries is unset everywhere, the sync falls back to the default in the worker's `wrangler.jsonc` local environment, and skips the entry when it is defined in neither place.

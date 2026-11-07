@@ -3,7 +3,7 @@ import { members, tenantGithubInstallations } from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { and, eq } from 'drizzle-orm';
 import { getAuthConfig } from '../config';
-import { getInstallationInfo, githubAppSlug } from '../lib/github-app';
+import { getAppPublicLink, getInstallationInfo, GithubAppNotConfiguredError } from '../lib/github-app';
 import { createLinkState, verifyLinkState } from '../lib/link-state';
 import { withAuth } from '../lib/request-auth';
 
@@ -40,11 +40,14 @@ export async function handleGithubAppInstall(env: Env, request: Request): Promis
     } finally {
       waitUntil(db.$client.end());
     }
-    let slug: string;
+    let publicLink: string;
     try {
-      slug = githubAppSlug(env);
-    } catch {
-      return Response.json({ error: 'github_app_not_configured' }, { status: 503 });
+      publicLink = await getAppPublicLink(env);
+    } catch (caught) {
+      if (caught instanceof GithubAppNotConfiguredError) {
+        return Response.json({ error: 'github_app_not_configured' }, { status: 503 });
+      }
+      throw caught;
     }
     const state = await createLinkState(env.BETTER_AUTH_SECRET, {
       kind: STATE_KIND,
@@ -52,7 +55,7 @@ export async function handleGithubAppInstall(env: Env, request: Request): Promis
       organizationId,
       returnTo,
     });
-    const destination = `https://github.com/apps/${slug}/installations/new?state=${encodeURIComponent(state)}`;
+    const destination = `${publicLink}/installations/new?state=${encodeURIComponent(state)}`;
     return new Response(null, {
       status: 302,
       headers: {
