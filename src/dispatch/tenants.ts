@@ -5,8 +5,6 @@ import {
   organizations,
   tenantGithubInstallations,
   tenantLinkedPackages,
-  userSigningKeys,
-  users,
   type TenantGithubInstallation,
 } from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
@@ -129,10 +127,9 @@ export class TenantOverviewDispatch implements Dispatchable {
       const role = await requireTenantRole(db, userId, organizationId, ['owner', 'admin', 'member']);
       const orgRows = await db.select().from(organizations).where(eq(organizations.id, organizationId)).limit(1);
       if (!orgRows[0]) throw new NotFoundError();
-      const [installationRows, packageRows, keyRows] = await Promise.all([
+      const [installationRows, packageRows] = await Promise.all([
         db.select().from(tenantGithubInstallations).where(eq(tenantGithubInstallations.organizationId, organizationId)).limit(1),
         db.select().from(tenantLinkedPackages).where(eq(tenantLinkedPackages.organizationId, organizationId)),
-        db.select().from(userSigningKeys).where(eq(userSigningKeys.userId, userId)),
       ]);
       return Response.json({
         organization: { id: orgRows[0].id, name: orgRows[0].name, slug: orgRows[0].slug, role },
@@ -145,16 +142,6 @@ export class TenantOverviewDispatch implements Dispatchable {
           versionNaming: row.versionNaming,
           enabled: row.webhookEnabled,
           lastSyncedSha: row.lastSyncedSha,
-        })),
-        signingKeys: keyRows.map((row) => ({
-          id: row.id,
-          publicKeyId: row.githubKeyId !== null ? String(row.githubKeyId) : row.id,
-          name: row.name,
-          enabled: row.enabled,
-          registeredOnGitHub: row.enabled && row.githubKeyId !== null,
-          publicKey: row.publicKey,
-          createdAt: row.createdAt.toISOString(),
-          updatedAt: row.updatedAt.toISOString(),
         })),
       });
     } finally {
@@ -487,35 +474,16 @@ export class PushWebhookDispatch implements Dispatchable {
       if (!linked) return Response.json({ accepted: false, reason: 'package_not_linked' });
       if (!linked.webhookEnabled) return Response.json({ accepted: false, reason: 'package_disabled' });
       if (linked.lastSyncedSha === afterSha) return Response.json({ accepted: false, reason: 'already_synced' });
-      const signingUserId = installation.installedByUserId;
-      if (!signingUserId) return Response.json({ accepted: false, reason: 'signing_user_unknown' });
-      const keyRows = await db
-        .select()
-        .from(userSigningKeys)
-        .where(and(eq(userSigningKeys.userId, signingUserId), eq(userSigningKeys.enabled, true)))
-        .limit(1);
-      if (!keyRows[0]) return Response.json({ accepted: false, reason: 'signing_key_not_available' });
-      const userRows = await db
-        .select({ name: users.name, email: users.email })
-        .from(users)
-        .where(eq(users.id, signingUserId))
-        .limit(1);
-      const signingKeyOwner = userRows[0] ?? null;
-      if (!signingKeyOwner?.name || !signingKeyOwner?.email) {
-        return Response.json({ accepted: false, reason: 'signing_key_owner_incomplete' });
-      }
       return Response.json({
         accepted: true,
         organizationId,
         installationId,
-        signingUserId,
         package: {
           id: linked.id,
           repositoryFullName: linked.repositoryFullName,
           submodulePath: linked.npmSubmodulePath,
           lastSyncedSha: linked.lastSyncedSha,
         },
-        signingKeyOwner,
       });
     } finally {
       waitUntil(db.$client.end());
