@@ -15,14 +15,6 @@ import { ListAuthSessionsDispatch, ListSessionDevicesSourceDispatch, RevokeAuthS
 import { SetPasswordDispatch } from './set-password';
 import { SignInLookupDispatch } from './sign-in-lookup';
 import {
-  CreateSigningKeyDispatch,
-  RenameSigningKeyDispatch,
-  RotateSigningKeyDispatch,
-  SetSigningKeyEnabledDispatch,
-  SigningKeyStatusDispatch,
-} from './signing-keys';
-import { SigningKeyMaterialDispatch } from './signing-key-material';
-import {
   InstallationTokenDispatch,
   InstallationWebhookDispatch,
   LinkPackageDispatch,
@@ -63,12 +55,6 @@ export const dispatchables: DispatchableClass[] = [
   GithubRepositoriesDispatch,
   GithubAppInstallUrlDispatch,
   GithubAppTokenDispatch,
-  CreateSigningKeyDispatch,
-  SigningKeyStatusDispatch,
-  SigningKeyMaterialDispatch,
-  RotateSigningKeyDispatch,
-  RenameSigningKeyDispatch,
-  SetSigningKeyEnabledDispatch,
   ListUserTenantsDispatch,
   TenantOverviewDispatch,
   TenantInstallationDispatch,
