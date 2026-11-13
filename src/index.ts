@@ -12,7 +12,7 @@ import { rejectInvalidSignature } from './lib/signature-gate';
 import { assertSecretRotationAllowed } from './dispatch/oauth-client-info';
 import { SecretRotationNotAllowedError } from './lib/secret-rotation-error';
 import { UploadVerificationError } from './lib/upload-verification-error';
-import { handleProviderDetails, handleProviderList } from './routes/providers';
+import { handleProviderDetails, handleProviderList, handleProviderStream } from './routes/providers';
 import { handleAuthorizedAppDetails, handleAuthorizedAppList } from './routes/authorized-apps';
 import { handleXboxCallback, handleXboxLink } from './routes/xbox';
 
@@ -43,7 +43,8 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
     return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   })
   .get('/api/users/me/providers', ({ request }) => handleProviderList(env, request))
-  .get('/api/users/me/authorized-apps', ({ request }) => handleAuthorizedAppList(env, request))
+  .get('/api/users/me/providers/stream', ({ request }) => handleProviderStream(env, request))
+  .get('/api/users/me/authorized-apps',({ request }) => handleAuthorizedAppList(env, request))
   .get('/api/users/me/authorized-apps/:id', ({ request, params }) => handleAuthorizedAppDetails(env, request, params.id))
   .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
   .get('/api/xbox/link', ({ request }) => handleXboxLink(env, request))

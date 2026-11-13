@@ -29,9 +29,12 @@ importers:
       '@karasu-lab/db':
         specifier: 0.1.0-2e01f94
         version: 0.1.0-2e01f94(945244277216bdb279ae99a5359b9d5d)
+      '@karasu-lab/sdk':
+        specifier: 0.1.0-b98320f
+        version: 0.1.0-b98320f(27889ff4a12662bfe2a63261ed7d3cf1)
       '@karasu-lab/types':
-        specifier: 0.1.0-1768cec
-        version: 0.1.0-1768cec
+        specifier: 0.1.0-21d8ed9
+        version: 0.1.0-21d8ed9
       '@karasu-lab/utils':
         specifier: 0.1.0-11f53a9
         version: 0.1.0-11f53a9(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(@karasu-lab/api-permissions@0.1.0-70bd6e4)(better-call@1.4.4(zod@4.6.7))(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(postgres@3.4.9))(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
@@ -1180,8 +1183,19 @@ packages:
     peerDependencies:
       drizzle-orm: ^0.44.7
 
-  '@karasu-lab/types@0.1.0-1768cec':
-    resolution: {integrity: sha512-D9LtprTzUwd8vPSzvV/3pE/4PxBJYA8QQ4UpBeVjy02jJxVmTCStwEsPLK/k9L9KgDAgyI7OG0c4o1DfRYQ1BA==, tarball: https://npm.pkg.github.com/download/@karasu-lab/types/0.1.0-1768cec/243c8a8acea3efdb23f0c4e0f65b0e5c5a3e92ef}
+  '@karasu-lab/sdk@0.1.0-b98320f':
+    resolution: {integrity: sha512-/NAOaZqQsvnPytnXGG4uVR3PPolzY0/nGRJSP2ubAN3tjs3DAZ4lk/8M8oTkpOHVWmFohv4Mtv2olObjkrZ3FA==, tarball: https://npm.pkg.github.com/download/@karasu-lab/sdk/0.1.0-b98320f/d4fcffea29ce40ec5fc0f88481dcf316cdcd0f0c}
+    peerDependencies:
+      '@better-auth/oauth-provider': ^1.7.12
+      '@better-auth/passkey': 1.7.12
+      '@better-auth/sso': 1.7.12
+      better-auth: ^1.7.12
+
+  '@karasu-lab/sse@0.1.0-c5de6bd':
+    resolution: {integrity: sha512-fO3SdfMLI9Hnq0tKSIffm1JKH781FUtYPISpO6y0kzpeAM08xBQYRIkSjpzBVeA14LHLmwK6DiN6uus0CDzCHw==, tarball: https://npm.pkg.github.com/download/@karasu-lab/sse/0.1.0-c5de6bd/c2babb5a55fd18925b611fcffa3a14f3d7cb1acb}
+
+  '@karasu-lab/types@0.1.0-21d8ed9':
+    resolution: {integrity: sha512-3p01hQu3Q4Rod6E99NNebJr9NNtrDiR7XBhn+DFJFgz8PuaJQiNUOSaICtE9zDJ/Bj0A8O9g77cgwhdSa3VlPQ==, tarball: https://npm.pkg.github.com/download/@karasu-lab/types/0.1.0-21d8ed9/bf76d0498e42e64c81ce57fca761148077deba9d}
 
   '@karasu-lab/utils@0.1.0-11f53a9':
     resolution: {integrity: sha512-Zrg4KncbazRJodTDBzfD84zpsF3ATBpzDcaOWr+5URRaFyoXDh6DMUQfN9WdCbpHipr9eBUW5Vwm3f/ZwV94zA==, tarball: https://npm.pkg.github.com/download/@karasu-lab/utils/0.1.0-11f53a9/a3ec8be64b36db78ee53148b02115a13c266cffd}
@@ -4210,7 +4224,46 @@ snapshots:
       - vue
       - yup
 
-  '@karasu-lab/types@0.1.0-1768cec':
+  '@karasu-lab/sdk@0.1.0-b98320f(27889ff4a12662bfe2a63261ed7d3cf1)':
+    dependencies:
+      '@better-auth/oauth-provider': 1.7.14(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-auth@1.7.14(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))))(better-call@1.4.4(zod@4.6.7))
+      '@better-auth/passkey': 1.7.12(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-auth@1.7.14(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))))(better-call@1.4.4(zod@4.6.7))(nanostores@1.5.5)
+      '@better-auth/sso': 1.7.12(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-auth@1.7.14(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))))(better-call@1.4.4(zod@4.6.7))
+      '@karasu-lab/sse': 0.1.0-c5de6bd
+      '@karasu-lab/utils': 0.1.0-11f53a9(@better-auth/core@1.7.14(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(better-call@1.4.4(zod@4.6.7))(jose@6.2.14)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.2)(@karasu-lab/api-permissions@0.1.0-70bd6e4)(better-call@1.4.4(zod@4.6.7))(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(postgres@3.4.9))(nanostores@1.5.5)(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      better-auth: 1.7.14(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      jose: 6.2.14
+      zod: 4.6.7
+    transitivePeerDependencies:
+      - '@better-auth/core'
+      - '@better-auth/utils'
+      - '@better-fetch/fetch'
+      - '@karasu-lab/api-permissions'
+      - '@lynx-js/react'
+      - '@opentelemetry/api'
+      - '@prisma/client'
+      - '@sveltejs/kit'
+      - '@tanstack/react-start'
+      - '@tanstack/solid-start'
+      - better-call
+      - drizzle-kit
+      - drizzle-orm
+      - mongodb
+      - mysql2
+      - nanostores
+      - next
+      - pg
+      - prisma
+      - react
+      - react-dom
+      - solid-js
+      - svelte
+      - vitest
+      - vue
+
+  '@karasu-lab/sse@0.1.0-c5de6bd': {}
+
+  '@karasu-lab/types@0.1.0-21d8ed9':
     dependencies:
       zod: 4.6.7
 
