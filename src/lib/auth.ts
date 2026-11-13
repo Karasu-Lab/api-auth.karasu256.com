@@ -117,6 +117,11 @@ function createAuthOptions(env: Env, db: Db) {
         await sendPasswordResetEmail({ apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM_EMAIL, to: user.email, resetUrl: url });
       },
     },
+    session: {
+      cookieCache: {
+        enabled: true,
+      },
+    },
     advanced: {
       crossSubDomainCookies: {
         enabled: Boolean(env.BASE_DOMAIN),
