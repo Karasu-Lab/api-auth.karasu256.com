@@ -5,7 +5,7 @@ import { sso } from '@better-auth/sso';
 import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-provider';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { jwt } from 'better-auth/plugins/jwt';
-import { genericOAuth, multiSession, organization, testUtils } from 'better-auth/plugins';
+import { customSession, genericOAuth, multiSession, organization, testUtils } from 'better-auth/plugins';
 import type { Db } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
 import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
@@ -17,9 +17,9 @@ import { githubAppInstallationPlugin } from './github-app-installation';
 import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { syncUserToNeonAuth } from './neon-auth';
-import { SESSION_SOURCE_HEADER, recordSessionSource } from './session-source';
+import { SessionSourceStore } from './session-source';
 
-function createPlugins(env: Env) {
+function createPlugins(env: Env, db: Db) {
   const { webauthn } = getAuthConfig(env);
   const mockOAuthUrl = getMockOAuthUrl(env);
   const oauthProviders = mockOAuthUrl ? getMockOAuthProviders(mockOAuthUrl) : getGithubOAuthProviders(env);
@@ -65,6 +65,11 @@ function createPlugins(env: Env) {
     }),
     ...(oauthProviders.length > 0 ? [genericOAuth({ config: oauthProviders })] : []),
     githubAppInstallationPlugin(env),
+    customSession(async ({ user, session }) => ({
+      user,
+      session,
+      source: await new SessionSourceStore(db).get(session.id),
+    })),
   ];
 }
 
@@ -186,10 +191,9 @@ function createAuthOptions(env: Env, db: Db) {
             );
           },
           after: async (session, context) => {
-            await recordSessionSource(db, session, {
+            await new SessionSourceStore(db).record(session, {
               path: context?.path ?? null,
-              userAgent: context?.headers?.get('user-agent') ?? null,
-              explicit: context?.headers?.get(SESSION_SOURCE_HEADER) ?? null,
+              params: context?.params ?? null,
             });
             await ensureFirebaseLink(env, db, session.userId);
           },
@@ -239,11 +243,11 @@ function createAuthOptions(env: Env, db: Db) {
 }
 
 export function createAuth(env: Env, db: Db) {
-  return betterAuth({ ...createAuthOptions(env, db), plugins: createPlugins(env) });
+  return betterAuth({ ...createAuthOptions(env, db), plugins: createPlugins(env, db) });
 }
 
 export function createTestAuth(env: Env, db: Db) {
-  return betterAuth({ ...createAuthOptions(env, db), plugins: [...createPlugins(env), testUtils()] });
+  return betterAuth({ ...createAuthOptions(env, db), plugins: [...createPlugins(env, db), testUtils()] });
 }
 
 export type Auth = ReturnType<typeof createAuth>;
