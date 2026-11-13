@@ -72,76 +72,75 @@ async function persistRefreshedTokens(ctx: AuthContext, accountId: string, refre
   });
 }
 
+type SharedRefreshes = Map<string, Promise<OAuth2Tokens | null>>;
+
 async function syncProviderProfile(
   ctx: AuthContext,
   accountId: string,
   stored: OAuth2Tokens,
   sync: ProviderProfileSync,
-  reloadStored?: () => Promise<OAuth2Tokens | null>
+  sharedRefreshes: SharedRefreshes
 ): Promise<ProviderProfile | null> {
-  const refresh = async (base: OAuth2Tokens): Promise<OAuth2Tokens | null> => {
-    if (!base.refreshToken) return null;
-    const refreshed = await sync.refreshTokens(base.refreshToken).catch(() => null);
-    if (!refreshed?.accessToken) return null;
-    await persistRefreshedTokens(ctx, accountId, refreshed);
-    return {
-      accessToken: refreshed.accessToken,
-      refreshToken: refreshed.refreshToken ?? base.refreshToken,
-      idToken: refreshed.idToken ?? base.idToken,
-      accessTokenExpiresAt: refreshed.accessTokenExpiresAt,
-    };
-  };
-  const attempt = async (
-    tokens: OAuth2Tokens
-  ): Promise<{ profile: ProviderProfile | null; error: unknown }> => {
-    try {
-      return { profile: await sync.fetchProfile(tokens), error: null };
-    } catch (error) {
-      return { profile: null, error };
-    }
-  };
-
   let tokens = stored;
-  let refreshed = false;
-  const startedLive = hasLiveAccessToken(stored);
-  if (!startedLive) {
-    const fresh = await refresh(stored);
-    if (fresh) {
-      tokens = fresh;
-      refreshed = true;
+  if (!hasLiveAccessToken(stored) && stored.refreshToken) {
+    const refreshToken = stored.refreshToken;
+    let pending = sharedRefreshes.get(accountId);
+    if (!pending) {
+      pending = (async () => {
+        const refreshed = await sync.refreshTokens(refreshToken).catch(() => null);
+        if (!refreshed?.accessToken) return null;
+        await persistRefreshedTokens(ctx, accountId, refreshed);
+        return {
+          accessToken: refreshed.accessToken,
+          refreshToken: refreshed.refreshToken ?? refreshToken,
+          idToken: refreshed.idToken ?? stored.idToken,
+          accessTokenExpiresAt: refreshed.accessTokenExpiresAt,
+        };
+      })();
+      sharedRefreshes.set(accountId, pending);
     }
+    tokens = (await pending) ?? stored;
   }
+  return sync.fetchProfile(tokens);
+}
 
-  let result = await attempt(tokens);
+const PROFILE_CACHE_ORIGIN = 'https://provider-profile.cache.invalid';
+const PROFILE_CACHE_TTL_SECONDS = 300;
 
-  if (!result.profile && !refreshed && startedLive) {
-    const fresh = await refresh(tokens);
-    if (fresh) {
-      result = await attempt(fresh);
-      refreshed = true;
-    }
-  }
+function profileCacheRequest(accountId: string, providerId: string): Request {
+  return new Request(`${PROFILE_CACHE_ORIGIN}/${encodeURIComponent(accountId)}/${encodeURIComponent(providerId)}`);
+}
 
-  if (!result.profile && !refreshed && reloadStored) {
-    let reloaded: OAuth2Tokens | null = null;
-    for (let i = 0; i < 3; i++) {
-      reloaded = await reloadStored().catch(() => null);
-      if (reloaded && (reloaded.accessToken !== stored.accessToken || reloaded.refreshToken !== stored.refreshToken)) break;
-      reloaded = null;
-      if (i < 2) await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-    if (reloaded) {
-      let retryTokens = reloaded;
-      if (!hasLiveAccessToken(reloaded)) {
-        retryTokens = (await refresh(reloaded)) ?? reloaded;
-      }
-      const retry = await attempt(retryTokens);
-      if (retry.profile || !result.error) result = retry;
-    }
-  }
+async function readCachedProfile(accountId: string, providerId: string): Promise<ProviderProfile | null> {
+  if (typeof caches === 'undefined') return null;
+  const hit = await caches.default.match(profileCacheRequest(accountId, providerId)).catch(() => null);
+  return hit ? ((await hit.json().catch(() => null)) as ProviderProfile | null) : null;
+}
 
-  if (result.error) throw result.error;
-  return result.profile;
+async function writeCachedProfile(accountId: string, providerId: string, profile: ProviderProfile): Promise<void> {
+  if (typeof caches === 'undefined') return;
+  await caches.default
+    .put(
+      profileCacheRequest(accountId, providerId),
+      Response.json(profile, { headers: { 'cache-control': `private, max-age=${PROFILE_CACHE_TTL_SECONDS}` } })
+    )
+    .catch(() => undefined);
+}
+
+function hasProfileData(profile: ProviderProfile): boolean {
+  return Boolean(profile.name || profile.email || profile.avatarUrl);
+}
+
+async function withProfileCache(
+  accountId: string,
+  providerId: string,
+  resolve: () => Promise<ProviderProfile | null>
+): Promise<ProviderProfile | null> {
+  const cached = await readCachedProfile(accountId, providerId);
+  if (cached) return cached;
+  const profile = await resolve();
+  if (profile && hasProfileData(profile)) await writeCachedProfile(accountId, providerId, profile);
+  return profile;
 }
 
 function socialProfileSync(provider: SocialProvider): ProviderProfileSync {
@@ -217,16 +216,11 @@ function minecraftProfileSync(options?: ProviderProfileOptions): ProviderProfile
   };
 }
 
-async function reloadStoredAccount(ctx: AuthContext, uid: string, accountId: string): Promise<OAuth2Tokens | null> {
-  const again = (await ctx.internalAdapter.findAccounts(uid)).find((entry) => entry.id === accountId);
-  return again ? decryptStoredTokens(ctx, again) : null;
-}
-
 async function resolveSocialProfile(
   ctx: AuthContext,
-  uid: string,
   account: StoredAccount & { providerId: string },
-  providerId: string
+  providerId: string,
+  sharedRefreshes: SharedRefreshes
 ): Promise<ProviderProfile | null> {
   const provider = ctx.socialProviders.find((entry) => entry.id === providerId);
   if (!provider) return null;
@@ -235,25 +229,25 @@ async function resolveSocialProfile(
   if (!stored) return null;
 
   const createSync = SOCIAL_PROFILE_SYNC_FACTORIES[providerId] ?? socialProfileSync;
-  return syncProviderProfile(ctx, account.id, stored, createSync(provider), () => reloadStoredAccount(ctx, uid, account.id));
+  return syncProviderProfile(ctx, account.id, stored, createSync(provider), sharedRefreshes);
 }
 
 async function resolveProfileFromAccounts(
   ctx: AuthContext,
   accounts: (StoredAccount & { providerId: string })[],
-  uid: string,
   providerId: string,
+  sharedRefreshes: SharedRefreshes,
   options?: ProviderProfileOptions
 ): Promise<ProviderProfile | null> {
-  if ((DERIVED_PROVIDER_IDS as readonly string[]).includes(providerId)) {
-    const account = accounts.find((entry) => entry.providerId === XBOX_PROVIDER_ID);
-    if (!account) return null;
-    return resolveDerivedProfile(ctx, uid, account, providerId, options);
-  }
-
-  const account = accounts.find((entry) => entry.providerId === providerId);
+  const isDerived = (DERIVED_PROVIDER_IDS as readonly string[]).includes(providerId);
+  const account = accounts.find((entry) => entry.providerId === (isDerived ? XBOX_PROVIDER_ID : providerId));
   if (!account) return null;
-  return resolveSocialProfile(ctx, uid, account, providerId);
+
+  return withProfileCache(account.id, providerId, () =>
+    isDerived
+      ? resolveDerivedProfile(ctx, account, providerId, sharedRefreshes, options)
+      : resolveSocialProfile(ctx, account, providerId, sharedRefreshes)
+  );
 }
 
 export async function getProviderProfile(
@@ -264,29 +258,30 @@ export async function getProviderProfile(
 ): Promise<ProviderProfile | null> {
   const ctx = (await auth.$context) as unknown as AuthContext;
   const accounts = await ctx.internalAdapter.findAccounts(uid);
-  return resolveProfileFromAccounts(ctx, accounts, uid, providerId, options);
+  return resolveProfileFromAccounts(ctx, accounts, providerId, new Map(), options);
 }
 
 const PROVIDER_PROFILE_IDS = ['google', 'github', 'microsoft', 'xbox', 'minecraft'];
 
-export async function getProviderProfiles(
+export async function streamProviderProfiles(
   auth: Auth,
   uid: string,
+  onProfile: (providerId: string, profile: ProviderProfile | null) => void,
   options?: ProviderProfileOptions
-): Promise<Record<string, ProviderProfile | null>> {
+): Promise<void> {
   const ctx = (await auth.$context) as unknown as AuthContext;
   const accounts = await ctx.internalAdapter.findAccounts(uid);
-  const entries = await Promise.all(
+  const sharedRefreshes: SharedRefreshes = new Map();
+  await Promise.all(
     PROVIDER_PROFILE_IDS.map(async (providerId) => {
-      if (providerId === 'minecraft' && options?.minecraftAuthEnabled === false) return [providerId, null] as const;
+      if (providerId === 'minecraft' && !options?.minecraftAuthEnabled) return onProfile(providerId, null);
       try {
-        return [providerId, await resolveProfileFromAccounts(ctx, accounts, uid, providerId, options)] as const;
+        onProfile(providerId, await resolveProfileFromAccounts(ctx, accounts, providerId, sharedRefreshes, options));
       } catch {
-        return [providerId, null] as const;
+        onProfile(providerId, null);
       }
     })
   );
-  return Object.fromEntries(entries);
 }
 
 export async function getProviderAccessToken(auth: Auth, uid: string, providerId: string): Promise<string | null> {
@@ -324,9 +319,9 @@ async function getMicrosoftPhotoDataUrl(accessToken: string): Promise<string | n
 
 async function resolveDerivedProfile(
   ctx: AuthContext,
-  uid: string,
   account: StoredAccount & { providerId: string },
   providerId: string,
+  sharedRefreshes: SharedRefreshes,
   options?: ProviderProfileOptions
 ): Promise<ProviderProfile | null> {
   if (providerId === 'minecraft' && options?.minecraftAuthEnabled === false) {
@@ -339,7 +334,7 @@ async function resolveDerivedProfile(
   const sync = providerId === 'xbox' ? xboxProfileSync(options) : minecraftProfileSync(options);
 
   try {
-    const profile = await syncProviderProfile(ctx, account.id, stored, sync, () => reloadStoredAccount(ctx, uid, account.id));
+    const profile = await syncProviderProfile(ctx, account.id, stored, sync, sharedRefreshes);
     if (profile) return profile;
   } catch (error) {
     console.error(`Failed to resolve the ${providerId} profile:`, error);
