@@ -33,7 +33,7 @@
     "@better-auth/sso": "1.7.12",
     "@karasu-lab/db": "0.1.0-2e01f94",
     "@karasu-lab/sdk": "0.1.0-b98320f",
-    "@karasu-lab/types": "0.1.0-21d8ed9",
+    "@karasu-lab/types": "0.1.0-1768cec",
     "@karasu-lab/utils": "0.1.0-11f53a9",
     "better-auth": "^1.7.12",
     "drizzle-orm": "^0.44.0",
