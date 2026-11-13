@@ -16,6 +16,7 @@ declare global {
     AUTH_SECRET: string;
     INTERNAL_API_SECRET: string;
     DATABASE_URL: string;
+    HYPERDRIVE: Hyperdrive;
     GOOGLE_CLOUD_PROJECT_ID: string;
     FIREBASE_ADMIN_CLIENT_EMAIL: string;
     FIREBASE_ADMIN_PRIVATE_KEY: string;
