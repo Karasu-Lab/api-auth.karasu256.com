@@ -1,5 +1,9 @@
 import { z } from 'zod';
+import * as schema from '@karasu-lab/db/schema';
 import { RedisRepository } from './redis-repository';
+import { userIdsOf, type FindRows } from './rows';
+
+const clientRowSchema = z.object({ clientId: z.string() });
 
 export const authorizedAppSchema = z.object({
   clientId: z.string(),
@@ -32,5 +36,16 @@ export class AuthorizedAppDeleteRepository extends RedisRepository {
 
   async delete(userId: string): Promise<void> {
     await this.redis.del(`${this.prefix}${userId}`);
+  }
+
+  async invalidate(table: unknown, rows: unknown[], find: FindRows): Promise<void> {
+    if (table === schema.oauthConsents) {
+      await Promise.all(userIdsOf(rows).map((userId) => this.delete(userId)));
+    } else if (table === schema.oauthClients) {
+      const consents = await Promise.all(
+        rows.map((row) => find(schema.oauthConsents, [{ field: 'clientId', value: clientRowSchema.parse(row).clientId }]))
+      );
+      await Promise.all(userIdsOf(consents.flat()).map((userId) => this.delete(userId)));
+    }
   }
 }

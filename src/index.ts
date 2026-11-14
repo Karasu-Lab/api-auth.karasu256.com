@@ -14,6 +14,7 @@ import { SecretRotationNotAllowedError } from './lib/secret-rotation-error';
 import { UploadVerificationError } from './lib/upload-verification-error';
 import { handleProviderDetails, handleProviderList, handleProviderStream } from './routes/providers';
 import { handleAuthorizedAppDetails, handleAuthorizedAppList } from './routes/authorized-apps';
+import { handleSecuritySettings } from './routes/security';
 import { handleXboxCallback, handleXboxLink } from './routes/xbox';
 
 const env = resolveEnv(cfEnv as Env);
@@ -46,6 +47,7 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
   .get('/api/users/me/providers', ({ request }) => handleProviderList(env, request))
   .get('/api/users/me/providers/stream', ({ request }) => handleProviderStream(env, request))
   .get('/api/users/me/authorized-apps',({ request }) => handleAuthorizedAppList(env, request))
+  .get('/api/users/me/security', ({ request }) => handleSecuritySettings(env, request))
   .get('/api/users/me/authorized-apps/:id', ({ request, params }) => handleAuthorizedAppDetails(env, request, params.id))
   .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
   .get('/api/xbox/link', ({ request }) => handleXboxLink(env, request))
