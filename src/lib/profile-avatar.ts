@@ -10,7 +10,7 @@ export function cdnProfileAvatarUrl(env: Env, userId: string, image: string | nu
   } catch {
     version = null;
   }
-  const base = `${env.CDN_URL}/u/profiles/${userId}/avatar.png`;
+  const base = `${env.CDN_URL}/u/profiles/${userId}/avatars/default/avatar.png`;
   return version ? `${base}?v=${version}` : base;
 }
 

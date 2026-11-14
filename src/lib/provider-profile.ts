@@ -12,6 +12,7 @@ import {
   XBOX_RELYING_PARTY,
 } from './xbox-live';
 import { XBOX_PROVIDER_ID } from './xbox-link';
+import { storeProviderAvatar } from './avatar-api';
 import {
   AccountLinkCreateRepository,
   AccountLinkGetRepository,
@@ -239,7 +240,9 @@ async function resolveSocialProfile(
 }
 
 async function resolveProfileFromAccounts(
+  env: Env,
   ctx: AuthContext,
+  uid: string,
   accounts: (StoredAccount & { providerId: string })[],
   providerId: string,
   sharedRefreshes: SharedRefreshes,
@@ -248,11 +251,13 @@ async function resolveProfileFromAccounts(
   const account = accounts.find((entry) => entry.providerId === accountProviderId(providerId));
   if (!account) return null;
 
-  return withProfileCache(account.id, providerId, () =>
-    isDerivedProvider(providerId)
-      ? resolveDerivedProfile(ctx, account, providerId, sharedRefreshes, options)
-      : resolveSocialProfile(ctx, account, providerId, sharedRefreshes)
-  );
+  return withProfileCache(account.id, providerId, async () => {
+    const profile = isDerivedProvider(providerId)
+      ? await resolveDerivedProfile(ctx, account, providerId, sharedRefreshes, options)
+      : await resolveSocialProfile(ctx, account, providerId, sharedRefreshes);
+    if (!profile?.avatarUrl) return profile;
+    return { ...profile, avatarUrl: await storeProviderAvatar(env, uid, providerId, profile.avatarUrl) };
+  });
 }
 
 function isDerivedProvider(providerId: string): boolean {
@@ -293,7 +298,7 @@ export async function getProviderProfile(
   const link = links.find((entry) => entry.providerId === providerId);
   if (link && !link.linked) return null;
   const accounts = await ctx.internalAdapter.findAccounts(uid);
-  const profile = await resolveProfileFromAccounts(ctx, accounts, providerId, new Map(), options);
+  const profile = await resolveProfileFromAccounts(env, ctx, uid, accounts, providerId, new Map(), options);
   if (link) await recordAccountLinkUrls(env, uid, links, new Map([[providerId, profile]]));
   return profile;
 }
@@ -314,7 +319,7 @@ export async function streamProviderProfiles(
     links.map(async ({ providerId, linked }) => {
       if (!linked || (providerId === 'minecraft' && !options?.minecraftAuthEnabled)) return onProfile(providerId, null);
       try {
-        const profile = await resolveProfileFromAccounts(ctx, accounts, providerId, sharedRefreshes, options);
+        const profile = await resolveProfileFromAccounts(env, ctx, uid, accounts, providerId, sharedRefreshes, options);
         profiles.set(providerId, profile);
         onProfile(providerId, profile);
       } catch {
