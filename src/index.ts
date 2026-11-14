@@ -19,6 +19,7 @@ import { handleXboxCallback, handleXboxLink } from './routes/xbox';
 const env = resolveEnv(cfEnv as Env);
 
 const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typebox' })
+  .parser('none', () => ({}))
   .onError(({ error, request }) => {
     if (error instanceof SecretRotationNotAllowedError)
       return Response.json({ error: 'invalid_client', error_description: error.message }, { status: 400 });
