@@ -8,7 +8,6 @@ import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { jwt } from 'better-auth/plugins/jwt';
 import { customSession, genericOAuth, multiSession, organization, testUtils } from 'better-auth/plugins';
 import type { Db } from '@karasu-lab/db/create-db';
-import type Redis from 'ioredis';
 import * as schema from '@karasu-lab/db/schema';
 import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
 import { getAuthConfig } from '../config';
@@ -18,7 +17,7 @@ import { getLinkedFirebaseUid } from './firebase-link';
 import { githubAppInstallationPlugin } from './github-app-installation';
 import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
-import { redisSecondaryStorage } from './redis-storage';
+import { redisSecondaryStorage, type RedisClient } from './redis-storage';
 import { SessionSourceStore } from './session-source';
 import { tenantTypePlugin } from './tenant-type';
 
@@ -77,7 +76,7 @@ function createPlugins(env: Env, db: Db) {
   ];
 }
 
-function createAuthOptions(env: Env, db: Db, redis: Redis | null) {
+function createAuthOptions(env: Env, db: Db, redis: RedisClient | null) {
   const { trustedOrigins } = getAuthConfig(env);
   const mockOAuthUrl = getMockOAuthUrl(env);
 
@@ -234,11 +233,11 @@ function createAuthOptions(env: Env, db: Db, redis: Redis | null) {
   } satisfies BetterAuthOptions;
 }
 
-export function createAuth(env: Env, db: Db, redis: Redis | null) {
+export function createAuth(env: Env, db: Db, redis: RedisClient | null) {
   return betterAuth({ ...createAuthOptions(env, db, redis), plugins: createPlugins(env, db) });
 }
 
-export function createTestAuth(env: Env, db: Db, redis: Redis | null) {
+export function createTestAuth(env: Env, db: Db, redis: RedisClient | null) {
   return betterAuth({ ...createAuthOptions(env, db, redis), plugins: [...createPlugins(env, db), testUtils()] });
 }
 
