@@ -1,6 +1,6 @@
 import { createDb } from '@karasu-lab/db/create-db';
 import { accounts, members, tenantGithubInstallations } from '@karasu-lab/db/schema';
-import { log } from '@karasu-lab/utils/server';
+import { log } from '@karasu-lab/utils/server/log';
 import { createAuthMiddleware, getOAuthState } from 'better-auth/api';
 import { waitUntil } from 'cloudflare:workers';
 import { and, eq } from 'drizzle-orm';
