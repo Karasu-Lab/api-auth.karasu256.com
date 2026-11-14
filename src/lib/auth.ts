@@ -19,6 +19,7 @@ import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { oauthClientRedisAdapter } from './oauth-client-adapter';
 import { ActiveSessionDeleteRepository } from './redis/active-session-repositories';
 import { JwksCreateRepository, JwksGetRepository } from './redis/jwks-repositories';
+import { SessionExpiryCreateRepository, SessionExpiryRevokeRepository } from './redis/session-expiry-repositories';
 import { redisSecondaryStorage } from './redis-storage';
 import { SessionSourceStore } from './session-source';
 import { tenantTypePlugin } from './tenant-type';
@@ -213,6 +214,17 @@ function createAuthOptions(env: Env, db: Db) {
               params: context?.params ?? null,
             });
             await new ActiveSessionDeleteRepository(env).delete(session.userId);
+            await new SessionExpiryCreateRepository(env).create(session.id, session.expiresAt);
+          },
+        },
+        update: {
+          after: async (session) => {
+            if (session.id && session.expiresAt) await new SessionExpiryCreateRepository(env).create(session.id, session.expiresAt);
+          },
+        },
+        delete: {
+          after: async (session) => {
+            await new SessionExpiryRevokeRepository(env).revoke(session.id);
           },
         },
       },
