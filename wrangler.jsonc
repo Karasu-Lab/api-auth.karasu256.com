@@ -11,6 +11,7 @@
     },
   },
   "routes": [{ "pattern": "api-auth.karasu256.com", "custom_domain": true }],
+  "triggers": { "crons": ["* * * * *"] },
   "vars": {
     "APP_ENV": "production",
     "CDN_URL": "https://cdn.karasu256.com",

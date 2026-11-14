@@ -10,13 +10,12 @@ import type { Db } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
 import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
 import { getAuthConfig } from '../config';
+import { enqueueBatchWork } from './batch-works';
 import { assertNoDeviceSessionConflict } from './device-session-conflict';
-import { deleteFirebaseUser, updateFirebaseUser } from './firebase';
-import { ensureFirebaseLink, getLinkedFirebaseUid } from './firebase-link';
+import { getLinkedFirebaseUid } from './firebase-link';
 import { githubAppInstallationPlugin } from './github-app-installation';
 import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
-import { syncUserToNeonAuth } from './neon-auth';
 import { SessionSourceStore } from './session-source';
 import { tenantTypePlugin } from './tenant-type';
 
@@ -142,16 +141,8 @@ function createAuthOptions(env: Env, db: Db) {
             return { data: { ...user, image: null } };
           },
           after: async (user) => {
-            try {
-              await db.insert(schema.firebaseUsers).values({ userId: user.id }).onConflictDoNothing();
-            } catch (error) {
-              console.error(`Failed to record firebase_user row for user ${user.id}`, error);
-            }
-            try {
-              await syncUserToNeonAuth(env, user);
-            } catch (error) {
-              console.error(`Failed to sync user ${user.id} to Neon Auth`, error);
-            }
+            await enqueueBatchWork(env, db, 'firebase.link-user', { userId: user.id });
+            await enqueueBatchWork(env, db, 'neon-auth.sync-user', { id: user.id, email: user.email ?? null, name: user.name ?? null });
           },
         },
         update: {
@@ -165,17 +156,8 @@ function createAuthOptions(env: Env, db: Db) {
             return { data: { ...rest, name: undefined, image: undefined } };
           },
           after: async (user) => {
-            const update: { displayName?: string; photoURL?: string } = {};
-            if (user.name) update.displayName = user.name as string;
-            if (user.image) update.photoURL = user.image as string;
-            if (Object.keys(update).length === 0) return;
-            const firebaseUid = await getLinkedFirebaseUid(db, user.id).catch(() => null);
-            if (!firebaseUid) return;
-            try {
-              await updateFirebaseUser(env, firebaseUid, update);
-            } catch (error) {
-              console.error(`Failed to update Firebase user for user ${user.id}`, error);
-            }
+            if (!user.name && !user.image) return;
+            await enqueueBatchWork(env, db, 'firebase.link-user', { userId: user.id });
           },
         },
       },
@@ -197,7 +179,6 @@ function createAuthOptions(env: Env, db: Db) {
               path: context?.path ?? null,
               params: context?.params ?? null,
             });
-            await ensureFirebaseLink(env, db, session.userId);
           },
         },
       },
@@ -208,11 +189,7 @@ function createAuthOptions(env: Env, db: Db) {
         beforeDelete: async (user) => {
           const firebaseUid = await getLinkedFirebaseUid(db, user.id).catch(() => null);
           if (!firebaseUid) return;
-          try {
-            await deleteFirebaseUser(env, firebaseUid);
-          } catch (error) {
-            console.error(`Failed to delete Firebase user for user ${user.id}`, error);
-          }
+          await enqueueBatchWork(env, db, 'firebase.delete-user', { firebaseUid });
         },
       },
     },
