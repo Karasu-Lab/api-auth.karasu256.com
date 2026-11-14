@@ -36,7 +36,7 @@ jobs:
             - STORAGE_ENDPOINT
             - STORAGE_ACCESS_KEY_ID
             - STORAGE_SECRET_ACCESS_KEY
-        run: echo "names=$(sed 's/^- //' <<< "$SECRET_NAMES" | xargs)" >> "$GITHUB_OUTPUT"
+        run: sed 's/^- //' <<< "$SECRET_NAMES" | xargs | sed 's/^/names=/' >> "$GITHUB_OUTPUT"
 
   deploy:
     if: github.ref_name == 'main'
