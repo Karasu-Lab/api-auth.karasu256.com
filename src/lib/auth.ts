@@ -55,6 +55,8 @@ function createPlugins(env: Env, db: Db) {
       allowDynamicClientRegistration: true,
       allowUnauthenticatedClientRegistration: true,
       accessTokenExpiresIn: 15 * 60,
+      customAccessTokenClaims: ({ user }) =>
+        user ? { email: user.email, name: user.name, picture: user.image ?? null } : {},
       refreshTokenReuseInterval: 30,
     }),
     passkey({
