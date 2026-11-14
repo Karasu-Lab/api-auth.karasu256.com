@@ -132,6 +132,12 @@ function createAuthOptions(env: Env, db: Db, redis: RedisClient | null) {
         enabled: true,
       },
     },
+    verification: {
+      storeInDatabase: true,
+    },
+    rateLimit: {
+      storage: 'memory',
+    },
     advanced: {
       crossSubDomainCookies: {
         enabled: Boolean(env.BASE_DOMAIN),
