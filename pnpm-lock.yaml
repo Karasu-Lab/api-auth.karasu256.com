@@ -50,6 +50,9 @@ importers:
       jose:
         specifier: ^6.2.5
         version: 6.2.14
+      redis-on-workers:
+        specifier: ^0.5.0
+        version: 0.5.0
       zod:
         specifier: ^4.5.4
         version: 4.6.7
@@ -83,6 +86,10 @@ importers:
         version: 2.9.1
 
 packages:
+
+  '@arrowood.dev/socket@0.2.0':
+    resolution: {integrity: sha512-0CvH2GLl+5EYSln/lnNMU9m99ihj3Y6TABdK/30wWYIHtHMvvk7XZoVyVG0yshqa9OgDZHVBg3SgtPoD0vFqnA==}
+    engines: {node: '>=18'}
 
   '@authenio/xml-encryption@6.0.2':
     resolution: {integrity: sha512-/jv5qO935fH4Ma+fxh5rJLRYZvUM57fd/I74IiSoR8cFm+sgjszXFEEn1PkqZhhBD4MVkH2YT+/UDY+pnW0S0Q==}
@@ -3048,6 +3055,10 @@ packages:
     resolution: {integrity: sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==}
     engines: {node: '>=0.10.0'}
 
+  redis-on-workers@0.5.0:
+    resolution: {integrity: sha512-UqZMvMiY3XWEC8lPyyqj3RG4Onr1Aq2QfZ1r4rfrsrY6sTWX0w7bd4sbtzsUl5jgVUklKJw7z+OKTQ9UadH7Zg==}
+    engines: {node: '>=18'}
+
   reflect-metadata@0.2.2:
     resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
 
@@ -3466,6 +3477,9 @@ packages:
     resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
 snapshots:
+
+  '@arrowood.dev/socket@0.2.0':
+    optional: true
 
   '@authenio/xml-encryption@6.0.2':
     dependencies:
@@ -6022,6 +6036,10 @@ snapshots:
       tslib: 2.9.1
 
   react@19.3.1: {}
+
+  redis-on-workers@0.5.0:
+    optionalDependencies:
+      '@arrowood.dev/socket': 0.2.0
 
   reflect-metadata@0.2.2: {}
 
