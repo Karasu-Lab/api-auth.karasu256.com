@@ -4,7 +4,6 @@ import { passkey } from '@better-auth/passkey';
 import { apiKey } from '@better-auth/api-key';
 import { sso } from '@better-auth/sso';
 import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-provider';
-import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { jwt } from 'better-auth/plugins/jwt';
 import { customSession, genericOAuth, multiSession, organization, testUtils } from 'better-auth/plugins';
 import type { Db } from '@karasu-lab/db/create-db';
@@ -17,7 +16,7 @@ import { getLinkedFirebaseUid } from './firebase-link';
 import { githubAppInstallationPlugin } from './github-app-installation';
 import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
-import type { Redis } from '@upstash/redis/cloudflare';
+import { oauthClientRedisAdapter } from './oauth-client-adapter';
 import { redisSecondaryStorage } from './redis-storage';
 import { SessionSourceStore } from './session-source';
 import { tenantTypePlugin } from './tenant-type';
@@ -77,13 +76,13 @@ function createPlugins(env: Env, db: Db) {
   ];
 }
 
-function createAuthOptions(env: Env, db: Db, redis: Redis | null) {
+function createAuthOptions(env: Env, db: Db) {
   const { trustedOrigins } = getAuthConfig(env);
   const mockOAuthUrl = getMockOAuthUrl(env);
 
   return {
-    ...(redis ? { secondaryStorage: redisSecondaryStorage(redis) } : {}),
-    database: drizzleAdapter(db, {
+    secondaryStorage: redisSecondaryStorage(env),
+    database: oauthClientRedisAdapter(env, db, {
       provider: 'pg',
       schema: {
         user: schema.users,
@@ -240,12 +239,12 @@ function createAuthOptions(env: Env, db: Db, redis: Redis | null) {
   } satisfies BetterAuthOptions;
 }
 
-export function createAuth(env: Env, db: Db, redis: Redis | null) {
-  return betterAuth({ ...createAuthOptions(env, db, redis), plugins: createPlugins(env, db) });
+export function createAuth(env: Env, db: Db) {
+  return betterAuth({ ...createAuthOptions(env, db), plugins: createPlugins(env, db) });
 }
 
-export function createTestAuth(env: Env, db: Db, redis: Redis | null) {
-  return betterAuth({ ...createAuthOptions(env, db, redis), plugins: [...createPlugins(env, db), testUtils()] });
+export function createTestAuth(env: Env, db: Db) {
+  return betterAuth({ ...createAuthOptions(env, db), plugins: [...createPlugins(env, db), testUtils()] });
 }
 
 export type Auth = ReturnType<typeof createAuth>;
