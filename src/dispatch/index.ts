@@ -15,6 +15,7 @@ import { ListAuthSessionsDispatch, ListSessionDevicesSourceDispatch, RevokeAuthS
 import { SetPasswordDispatch } from './set-password';
 import { SignInLookupDispatch } from './sign-in-lookup';
 import {
+  AssignTenantTypeDispatch,
   InstallationTokenDispatch,
   InstallationWebhookDispatch,
   LinkPackageDispatch,
@@ -57,6 +58,7 @@ export const dispatchables: DispatchableClass[] = [
   GithubAppTokenDispatch,
   ListUserTenantsDispatch,
   TenantOverviewDispatch,
+  AssignTenantTypeDispatch,
   TenantInstallationDispatch,
   UninstallBotDispatch,
   InstallationTokenDispatch,

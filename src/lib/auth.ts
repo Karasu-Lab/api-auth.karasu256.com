@@ -18,6 +18,7 @@ import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_I
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { syncUserToNeonAuth } from './neon-auth';
 import { SessionSourceStore } from './session-source';
+import { tenantTypePlugin } from './tenant-type';
 
 function createPlugins(env: Env, db: Db) {
   const { webauthn } = getAuthConfig(env);
@@ -65,6 +66,7 @@ function createPlugins(env: Env, db: Db) {
     }),
     ...(oauthProviders.length > 0 ? [genericOAuth({ config: oauthProviders })] : []),
     githubAppInstallationPlugin(env),
+    tenantTypePlugin(env),
     customSession(async ({ user, session }) => ({
       user,
       session,
