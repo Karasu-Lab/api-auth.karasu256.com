@@ -4,7 +4,6 @@ import { SseServerStream } from '@karasu-lab/sdk/sse';
 import { ProviderStreamEvent, type ProviderStreamEvents } from '@karasu-lab/types/shared';
 import { createAuth } from '../lib/auth';
 import { getProviderProfile, streamProviderProfiles, type ProviderProfile } from '../lib/provider-profile';
-import { createRedis } from '../lib/redis-storage';
 import { withAuth } from '../lib/request-auth';
 
 function profileOptions(env: Env, minecraftAuthEnabled?: boolean) {
@@ -53,7 +52,7 @@ export async function handleProviderStream(env: Env, request: Request): Promise<
   const release = () => waitUntil(db.$client.end());
 
   try {
-    const auth = createAuth(env, db, createRedis(env));
+    const auth = createAuth(env, db);
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) {
       release();

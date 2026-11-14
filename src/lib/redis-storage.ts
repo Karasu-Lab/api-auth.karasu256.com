@@ -1,33 +1,35 @@
 import type { SecondaryStorage } from 'better-auth';
-import { Redis } from '@upstash/redis/cloudflare';
+import { SessionCreateRepository, SessionDeleteRepository, SessionGetRepository, SessionUpdateRepository } from './redis/session-repositories';
 
-export function createRedis(env: Env): Redis | null {
-  if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) return null;
-  return new Redis({
-    url: env.UPSTASH_REDIS_REST_URL,
-    token: env.UPSTASH_REDIS_REST_TOKEN,
-    automaticDeserialization: false,
-  });
-}
-
-export function redisSecondaryStorage(redis: Redis): SecondaryStorage {
+export function redisSecondaryStorage(env: Env): SecondaryStorage {
+  const getRepository = new SessionGetRepository(env);
+  const createRepository = new SessionCreateRepository(env);
+  const updateRepository = new SessionUpdateRepository(env);
+  const deleteRepository = new SessionDeleteRepository(env);
   const isVerification = (key: string) => key.startsWith('verification:');
+  const set = async (key: string, value: string, ttl?: number) => {
+    if (!(await createRepository.create(key, value, ttl))) await updateRepository.update(key, value, ttl);
+  };
   return {
-    get: async (key) => (isVerification(key) ? null : await redis.get<string>(key)),
-    getAndDelete: async (key) => (isVerification(key) ? null : await redis.getdel<string>(key)),
+    get: async (key) => (isVerification(key) ? null : await getRepository.get(key)),
+    getAndDelete: async (key) => {
+      if (isVerification(key)) return null;
+      const value = await getRepository.get(key);
+      if (value !== null) await deleteRepository.delete(key);
+      return value;
+    },
     increment: async (key, ttl) => {
-      const value = await redis.incr(key);
-      await redis.expire(key, ttl);
+      const value = Number((await getRepository.get(key)) ?? 0) + 1;
+      await set(key, String(value), ttl);
       return value;
     },
     set: async (key, value, ttl) => {
       if (isVerification(key)) return;
-      if (ttl) await redis.set(key, value, { ex: ttl });
-      else await redis.set(key, value);
+      await set(key, value, ttl);
     },
     delete: async (key) => {
       if (isVerification(key)) return;
-      await redis.del(key);
+      await deleteRepository.delete(key);
     },
   };
 }
