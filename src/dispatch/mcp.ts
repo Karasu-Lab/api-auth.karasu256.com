@@ -3,12 +3,14 @@ import { z } from 'zod';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import { BadRequestError, UnauthorizedError } from '@karasu-lab/types/server';
 import { withAuth } from '../lib/request-auth';
+import { isSessionExpired } from '../lib/session-expiry';
 import { presignUploadUrl } from '../lib/storage';
 
 const sessionTokenBodySchema = z.object({ accessToken: z.string().min(1) });
 const iconUploadUrlBodySchema = z.object({ userId: z.string().min(1), contentType: z.string().min(1) });
 const accessTokenClaimsSchema = z.object({
   sub: z.string().min(1),
+  sid: z.string().optional(),
   email: z.string().nullish(),
   name: z.string().nullish(),
   picture: z.string().nullish(),
@@ -38,6 +40,7 @@ export class McpSessionTokenDispatch implements Dispatchable {
         audience: env.MCP_URL,
       });
       const claims = accessTokenClaimsSchema.parse(payload);
+      if (claims.sid && (await isSessionExpired(env, claims.sid))) throw new UnauthorizedError();
       const signed = await auth.api.signJWT({
         body: {
           payload: {
