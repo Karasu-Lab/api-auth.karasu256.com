@@ -3,6 +3,7 @@ import type { Db } from '@karasu-lab/db/create-db';
 import { AccountLinkDeleteRepository } from './redis/account-link-repositories';
 import { ActiveSessionDeleteRepository } from './redis/active-session-repositories';
 import { AuthorizedAppDeleteRepository } from './redis/authorized-app-repositories';
+import { JwksDeleteRepository } from './redis/jwks-repositories';
 import {
   OAuthClientCreateRepository,
   OAuthClientDeleteRepository,
@@ -28,6 +29,7 @@ export function oauthClientRedisAdapter(
     new ActiveSessionDeleteRepository(env),
     new AccountLinkDeleteRepository(env),
     new SecuritySettingDeleteRepository(env),
+    new JwksDeleteRepository(env),
   ];
 
   return (options) => {

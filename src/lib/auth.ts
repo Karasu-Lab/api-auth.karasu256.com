@@ -18,6 +18,7 @@ import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_I
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { oauthClientRedisAdapter } from './oauth-client-adapter';
 import { ActiveSessionDeleteRepository } from './redis/active-session-repositories';
+import { JwksCreateRepository, JwksGetRepository } from './redis/jwks-repositories';
 import { redisSecondaryStorage } from './redis-storage';
 import { SessionSourceStore } from './session-source';
 import { tenantTypePlugin } from './tenant-type';
@@ -28,7 +29,13 @@ function createPlugins(env: Env, db: Db) {
   const oauthProviders = mockOAuthUrl ? getMockOAuthProviders(mockOAuthUrl) : getGithubOAuthProviders(env);
 
   return [
-    jwt(),
+    jwt({
+      adapter: {
+        getJwks: async (ctx) =>
+          (await new JwksGetRepository(env).get()) ??
+          (await new JwksCreateRepository(env).create(await ctx.context.adapter.findMany({ model: 'jwks' }))),
+      },
+    }),
     oauthProvider({
       loginPage: `${env.AUTH_UI_URL}/sign-in`,
       consentPage: `${env.AUTH_UI_URL}/oauth/consent`,
