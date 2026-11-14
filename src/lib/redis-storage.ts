@@ -1,30 +1,33 @@
 import type { SecondaryStorage } from 'better-auth';
-import Redis from 'ioredis';
+import { createRedis as createRedisClient } from 'redis-on-workers';
 
-export function createRedis(env: Env): Redis | null {
+export type RedisClient = ReturnType<typeof createRedisClient>;
+
+export function createRedis(env: Env): RedisClient | null {
   if (!env.REDIS_URL) return null;
-  return new Redis(env.REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 1 });
+  return createRedisClient(env.REDIS_URL);
 }
 
-export async function closeRedis(redis: Redis | null): Promise<void> {
+export async function closeRedis(redis: RedisClient | null): Promise<void> {
   if (!redis) return;
-  await redis.quit().catch(() => redis.disconnect());
+  await redis.close();
 }
 
-export function redisSecondaryStorage(redis: Redis): SecondaryStorage {
+export function redisSecondaryStorage(redis: RedisClient): SecondaryStorage {
   return {
-    get: (key) => redis.get(key),
-    getAndDelete: (key) => redis.getdel(key),
+    get: async (key) => (await redis.send('GET', key)) as string | null,
+    getAndDelete: async (key) => (await redis.send('GETDEL', key)) as string | null,
     increment: async (key, ttl) => {
-      const [[, value]] = (await redis.multi().incr(key).expire(key, ttl).exec()) as [[Error | null, number]];
+      const value = (await redis.send('INCR', key)) as number;
+      await redis.send('EXPIRE', key, String(ttl));
       return value;
     },
     set: async (key, value, ttl) => {
-      if (ttl) await redis.set(key, value, 'EX', ttl);
-      else await redis.set(key, value);
+      if (ttl) await redis.send('SET', key, value, 'EX', String(ttl));
+      else await redis.send('SET', key, value);
     },
     delete: async (key) => {
-      await redis.del(key);
+      await redis.send('DEL', key);
     },
   };
 }
