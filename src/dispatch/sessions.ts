@@ -4,6 +4,7 @@ import { waitUntil } from 'cloudflare:workers';
 import { and, desc, eq, gt } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
+import { withAuth } from '../lib/request-auth';
 import { BadRequestError, NotFoundError } from '@karasu-lab/types/server';
 import type { AuthSession, SessionDeviceSource } from '@karasu-lab/types/shared';
 
@@ -119,13 +120,15 @@ export class RevokeAuthSessionDispatch implements Dispatchable {
 
   async handle(): Promise<Response> {
     const filter = revokeFilter(this.context);
-    const deleted = await withDb(this.context.env, (db) =>
+    const [session] = await withDb(this.context.env, (db) =>
       db
-        .delete(schema.sessions)
+        .select({ token: schema.sessions.token })
+        .from(schema.sessions)
         .where(and(eq(schema.sessions.id, filter.sessionId), eq(schema.sessions.userId, filter.userId)))
-        .returning({ id: schema.sessions.id })
+        .limit(1)
     );
-    if (deleted.length === 0) throw new NotFoundError();
+    if (!session) throw new NotFoundError();
+    await withAuth(this.context.env, async (auth) => (await auth.$context).internalAdapter.deleteSession(session.token));
     return new Response(null, { status: 204 });
   }
 }
