@@ -5,13 +5,18 @@ import {
   organizations,
   tenantGithubInstallations,
   tenantLinkedPackages,
+  tenantTypes,
   type TenantGithubInstallation,
 } from '@karasu-lab/db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { BadRequestError, HttpError, NotFoundError } from '@karasu-lab/types/server';
-import { githubInstallationWebhookActionSchema } from '@karasu-lab/types/shared';
+import {
+  assignTenantTypeRequestSchema,
+  assignTenantTypeResponseSchema,
+  githubInstallationWebhookActionSchema,
+} from '@karasu-lab/types/shared';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import {
   deleteInstallation,
@@ -428,7 +433,39 @@ export class UpdateLinkedPackagePointerDispatch implements Dispatchable {
   }
 }
 
-const pushWebhookBodySchema = z.object({
+export class AssignTenantTypeDispatch implements Dispatchable {
+  private context: DispatchContext;
+
+  constructor(context: DispatchContext) {
+    this.context = context;
+  }
+
+  matches(): boolean {
+    return tenantSegment(this.context.pathname, '/type') !== null && this.context.request.method === 'POST';
+  }
+
+  async handle(): Promise<Response> {
+    const { env } = this.context;
+    const organizationId = tenantSegment(this.context.pathname, '/type')!;
+    const parsed = assignTenantTypeRequestSchema.safeParse(this.context.body);
+    if (!parsed.success) throw new BadRequestError();
+    const db = createDb(env.DATABASE_URL);
+    try {
+      await requireTenantRole(db, parsed.data.userId, organizationId, ['owner', 'admin', 'member']);
+      await db
+        .insert(tenantTypes)
+        .values({ tenantId: organizationId, type: parsed.data.type })
+        .onConflictDoNothing();
+      const rows = await db.select().from(tenantTypes).where(eq(tenantTypes.tenantId, organizationId)).limit(1);
+      const row = rows[0]!;
+      return Response.json(assignTenantTypeResponseSchema.parse({ tenantId: row.tenantId, type: row.type }));
+    } finally {
+      waitUntil(db.$client.end());
+    }
+  }
+}
+
+const pushWebhookBodySchema =z.object({
   installationId: z.number(),
   repositoryFullName: z.string().min(1),
   afterSha: z.string().min(7),
