@@ -5,7 +5,7 @@ import { and, desc, eq, gt } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import { BadRequestError, NotFoundError } from '@karasu-lab/types/server';
-import { sessionSourceSchema, type AuthSession, type SessionDeviceSource } from '@karasu-lab/types/shared';
+import type { AuthSession, SessionDeviceSource } from '@karasu-lab/types/shared';
 
 const LIST_SESSIONS_PATH = /^\/api\/internal\/users\/([^/]+)\/sessions$/;
 const LIST_SOURCES_PATH = /^\/api\/internal\/users\/([^/]+)\/session-sources$/;
@@ -97,11 +97,11 @@ export class ListSessionDevicesSourceDispatch implements Dispatchable {
     const rows = await withDb(this.context.env, (db) =>
       db.select().from(schema.sessionDevicesSource).where(and(...conditions))
     );
-    const sources: SessionDeviceSource[] = [];
-    for (const row of rows) {
-      const source = sessionSourceSchema.safeParse(row.source);
-      if (source.success) sources.push({ sessionId: row.sessionId, userId: row.userId, source: source.data });
-    }
+    const sources: SessionDeviceSource[] = rows.map((row) => ({
+      sessionId: row.sessionId,
+      userId: row.userId,
+      source: row.source,
+    }));
     return Response.json(sources);
   }
 }

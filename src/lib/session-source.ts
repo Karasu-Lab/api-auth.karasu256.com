@@ -1,6 +1,6 @@
 import type { Db } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
-import { sessionSourceBuildSchema, type SessionSource } from '@karasu-lab/types/shared';
+import type { SessionSource } from '@karasu-lab/types/shared';
 import { eq } from 'drizzle-orm';
 
 export interface SessionSourceSignals {
@@ -28,7 +28,7 @@ export class SessionSourceStore {
   }
 
   async record(session: { id: string; userId: string }, signals: SessionSourceSignals): Promise<void> {
-    const source = sessionSourceBuildSchema.parse({ providerId: this.resolveProviderId(signals), sessionId: session.id });
+    const source = `${this.resolveProviderId(signals)}-${session.id}`;
     this.remember(session.id, source);
     try {
       await this.db
@@ -50,7 +50,7 @@ export class SessionSourceStore {
       .limit(1);
     const source = row?.source.endsWith(`-${sessionId}`)
       ? row.source
-      : sessionSourceBuildSchema.parse({ providerId: SessionSourceStore.unknownProviderId, sessionId });
+      : `${SessionSourceStore.unknownProviderId}-${sessionId}`;
     this.remember(sessionId, source);
     return source;
   }
