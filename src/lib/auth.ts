@@ -72,7 +72,7 @@ function createPlugins(env: Env, db: Db) {
     customSession(async ({ user, session }) => ({
       user,
       session,
-      source: await new SessionSourceStore(db).get(session.id),
+      source: await new SessionSourceStore(env, db).get(session),
     })),
   ];
 }
@@ -199,7 +199,7 @@ function createAuthOptions(env: Env, db: Db) {
             );
           },
           after: async (session, context) => {
-            await new SessionSourceStore(db).record(session, {
+            await new SessionSourceStore(env, db).record(session, {
               path: context?.path ?? null,
               params: context?.params ?? null,
             });
