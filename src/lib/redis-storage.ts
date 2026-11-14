@@ -1,36 +1,33 @@
 import type { SecondaryStorage } from 'better-auth';
-import { createRedis as createRedisClient } from 'redis-on-workers';
+import { Redis } from '@upstash/redis/cloudflare';
 
-export type RedisClient = ReturnType<typeof createRedisClient>;
-
-export function createRedis(env: Env): RedisClient | null {
-  if (!env.REDIS_URL) return null;
-  return createRedisClient(env.REDIS_URL);
+export function createRedis(env: Env): Redis | null {
+  if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) return null;
+  return new Redis({
+    url: env.UPSTASH_REDIS_REST_URL,
+    token: env.UPSTASH_REDIS_REST_TOKEN,
+    automaticDeserialization: false,
+  });
 }
 
-export async function closeRedis(redis: RedisClient | null): Promise<void> {
-  if (!redis) return;
-  await redis.close();
-}
-
-export function redisSecondaryStorage(redis: RedisClient): SecondaryStorage {
+export function redisSecondaryStorage(redis: Redis): SecondaryStorage {
   const isVerification = (key: string) => key.startsWith('verification:');
   return {
-    get: async (key) => (isVerification(key) ? null : ((await redis.send('GET', key)) as string | null)),
-    getAndDelete: async (key) => (isVerification(key) ? null : ((await redis.send('GETDEL', key)) as string | null)),
+    get: async (key) => (isVerification(key) ? null : await redis.get<string>(key)),
+    getAndDelete: async (key) => (isVerification(key) ? null : await redis.getdel<string>(key)),
     increment: async (key, ttl) => {
-      const value = (await redis.send('INCR', key)) as number;
-      await redis.send('EXPIRE', key, String(ttl));
+      const value = await redis.incr(key);
+      await redis.expire(key, ttl);
       return value;
     },
     set: async (key, value, ttl) => {
       if (isVerification(key)) return;
-      if (ttl) await redis.send('SET', key, value, 'EX', String(ttl));
-      else await redis.send('SET', key, value);
+      if (ttl) await redis.set(key, value, { ex: ttl });
+      else await redis.set(key, value);
     },
     delete: async (key) => {
       if (isVerification(key)) return;
-      await redis.send('DEL', key);
+      await redis.del(key);
     },
   };
 }

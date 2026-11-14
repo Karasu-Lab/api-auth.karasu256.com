@@ -17,7 +17,8 @@ declare global {
     INTERNAL_API_SECRET: string;
     DATABASE_URL: string;
     HYPERDRIVE: Hyperdrive;
-    REDIS_URL?: string;
+    UPSTASH_REDIS_REST_URL?: string;
+    UPSTASH_REDIS_REST_TOKEN?: string;
     GOOGLE_CLOUD_PROJECT_ID: string;
     FIREBASE_ADMIN_CLIENT_EMAIL: string;
     FIREBASE_ADMIN_PRIVATE_KEY: string;

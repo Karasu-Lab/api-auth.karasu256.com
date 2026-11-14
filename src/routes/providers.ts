@@ -4,7 +4,7 @@ import { SseServerStream } from '@karasu-lab/sdk/sse';
 import { ProviderStreamEvent, type ProviderStreamEvents } from '@karasu-lab/types/shared';
 import { createAuth } from '../lib/auth';
 import { getProviderProfile, streamProviderProfiles, type ProviderProfile } from '../lib/provider-profile';
-import { closeRedis, createRedis } from '../lib/redis-storage';
+import { createRedis } from '../lib/redis-storage';
 import { withAuth } from '../lib/request-auth';
 
 function profileOptions(env: Env, minecraftAuthEnabled?: boolean) {
@@ -50,14 +50,10 @@ export async function handleProviderList(env: Env, request: Request): Promise<Re
 
 export async function handleProviderStream(env: Env, request: Request): Promise<Response> {
   const db = createDb(env.DATABASE_URL);
-  const redis = createRedis(env);
-  const release = () => {
-    waitUntil(db.$client.end());
-    waitUntil(closeRedis(redis));
-  };
+  const release = () => waitUntil(db.$client.end());
 
   try {
-    const auth = createAuth(env, db, redis);
+    const auth = createAuth(env, db, createRedis(env));
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) {
       release();

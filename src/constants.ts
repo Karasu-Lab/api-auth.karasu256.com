@@ -10,7 +10,8 @@ const domainEnvSchema = z.object({
   FEATURE_FLAGS_API_URL: z.url(),
   FEATURE_FLAGS_ORIGIN: z.url(),
   BASE_DOMAIN: z.string().optional(),
-  REDIS_URL: z.string().optional(),
+  UPSTASH_REDIS_REST_URL: z.url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 });
 
 export function resolveEnv(raw: Env): Env {
