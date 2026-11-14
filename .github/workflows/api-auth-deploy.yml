@@ -5,13 +5,42 @@ on:
     branches: ["**"]
   workflow_dispatch:
 
-# Deployment itself lives in Karasu-Lab/WorkersDeploy: it deploys this
-# app standalone from this repository, detects the ElysiaJS project,
-# builds it with Vite, and deploys it to Cloudflare Workers.
-
 jobs:
+  secret-names:
+    runs-on: ubuntu-latest
+    outputs:
+      names: ${{ steps.build.outputs.names }}
+    steps:
+      - name: Build the secret names
+        id: build
+        env:
+          SECRET_NAMES: |
+            - BETTER_AUTH_SECRET
+            - AUTH_SECRET
+            - INTERNAL_API_SECRET
+            - DATABASE_URL
+            - REDIS_URL
+            - GOOGLE_CLOUD_PROJECT_ID
+            - FIREBASE_ADMIN_CLIENT_EMAIL
+            - FIREBASE_ADMIN_PRIVATE_KEY
+            - RESEND_API_KEY
+            - RESEND_FROM_EMAIL
+            - NEON_AUTH_BASE_URL
+            - GOOGLE_CLIENT_SECRET
+            - GITHUB_CLIENT_SECRET
+            - GH_APP_CLIENT_SECRET
+            - GH_APP_PRIVATE_KEY
+            - GH_OAUTH_CLIENT_SECRET
+            - CLOUDFLARE_TURNSTILE_SECRET
+            - MICROSOFT_CLIENT_SECRET
+            - STORAGE_ENDPOINT
+            - STORAGE_ACCESS_KEY_ID
+            - STORAGE_SECRET_ACCESS_KEY
+        run: echo "names=$(sed 's/^- //' <<< "$SECRET_NAMES" | xargs)" >> "$GITHUB_OUTPUT"
+
   deploy:
     if: github.ref_name == 'main'
+    needs: secret-names
     environment: production
     runs-on: ubuntu-latest
     permissions:
@@ -29,12 +58,13 @@ jobs:
         with:
           mode: production
           worker-name: api-auth-karasu256-com
-          secret-names: BETTER_AUTH_SECRET AUTH_SECRET INTERNAL_API_SECRET DATABASE_URL GOOGLE_CLOUD_PROJECT_ID FIREBASE_ADMIN_CLIENT_EMAIL FIREBASE_ADMIN_PRIVATE_KEY RESEND_API_KEY RESEND_FROM_EMAIL NEON_AUTH_BASE_URL GOOGLE_CLIENT_SECRET GITHUB_CLIENT_SECRET GH_APP_CLIENT_SECRET GH_APP_PRIVATE_KEY GH_OAUTH_CLIENT_SECRET CLOUDFLARE_TURNSTILE_SECRET MICROSOFT_CLIENT_SECRET STORAGE_ENDPOINT STORAGE_ACCESS_KEY_ID STORAGE_SECRET_ACCESS_KEY REDIS_URL
+          secret-names: ${{ needs.secret-names.outputs.names }}
           vars-json: ${{ toJSON(vars) }}
           secrets-json: ${{ toJSON(secrets) }}
 
   preview:
     if: github.ref_name != 'main'
+    needs: secret-names
     environment: preview
     runs-on: ubuntu-latest
     permissions:
@@ -52,6 +82,6 @@ jobs:
         with:
           mode: preview
           worker-name: api-auth-karasu256-com
-          secret-names: BETTER_AUTH_SECRET AUTH_SECRET INTERNAL_API_SECRET DATABASE_URL GOOGLE_CLOUD_PROJECT_ID FIREBASE_ADMIN_CLIENT_EMAIL FIREBASE_ADMIN_PRIVATE_KEY RESEND_API_KEY RESEND_FROM_EMAIL NEON_AUTH_BASE_URL GOOGLE_CLIENT_SECRET GITHUB_CLIENT_SECRET GH_APP_CLIENT_SECRET GH_APP_PRIVATE_KEY GH_OAUTH_CLIENT_SECRET CLOUDFLARE_TURNSTILE_SECRET MICROSOFT_CLIENT_SECRET STORAGE_ENDPOINT STORAGE_ACCESS_KEY_ID STORAGE_SECRET_ACCESS_KEY REDIS_URL
+          secret-names: ${{ needs.secret-names.outputs.names }}
           vars-json: ${{ toJSON(vars) }}
           secrets-json: ${{ toJSON(secrets) }}
