@@ -1,3 +1,4 @@
+import { waitUntil } from 'cloudflare:workers';
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { passkey } from '@better-auth/passkey';
 import { apiKey } from '@better-auth/api-key';
@@ -10,7 +11,7 @@ import type { Db } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
 import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
 import { getAuthConfig } from '../config';
-import { enqueueBatchWork } from './batch-works';
+import { enqueueBatchWork, runBatchWorks } from './batch-works';
 import { assertNoDeviceSessionConflict } from './device-session-conflict';
 import { getLinkedFirebaseUid } from './firebase-link';
 import { githubAppInstallationPlugin } from './github-app-installation';
@@ -133,6 +134,9 @@ function createAuthOptions(env: Env, db: Db) {
         enabled: Boolean(env.BASE_DOMAIN),
         domain: env.BASE_DOMAIN,
       },
+      backgroundTasks: {
+        handler: waitUntil,
+      },
     },
     databaseHooks: {
       user: {
@@ -140,9 +144,10 @@ function createAuthOptions(env: Env, db: Db) {
           before: async (user) => {
             return { data: { ...user, image: null } };
           },
-          after: async (user) => {
+          after: async (user, context) => {
             await enqueueBatchWork(env, db, 'firebase.link-user', { userId: user.id });
             await enqueueBatchWork(env, db, 'neon-auth.sync-user', { id: user.id, email: user.email ?? null, name: user.name ?? null });
+            context?.context.runInBackground(runBatchWorks(env));
           },
         },
         update: {
@@ -155,9 +160,18 @@ function createAuthOptions(env: Env, db: Db) {
             if (Object.keys(rest).length === 0) return false;
             return { data: { ...rest, name: undefined, image: undefined } };
           },
-          after: async (user) => {
+          after: async (user, context) => {
             if (!user.name && !user.image) return;
             await enqueueBatchWork(env, db, 'firebase.link-user', { userId: user.id });
+            context?.context.runInBackground(runBatchWorks(env));
+          },
+        },
+        delete: {
+          before: async (user, context) => {
+            const firebaseUid = await getLinkedFirebaseUid(db, user.id).catch(() => null);
+            if (!firebaseUid) return;
+            await enqueueBatchWork(env, db, 'firebase.delete-user', { firebaseUid });
+            context?.context.runInBackground(runBatchWorks(env));
           },
         },
       },
@@ -186,11 +200,6 @@ function createAuthOptions(env: Env, db: Db) {
     user: {
       deleteUser: {
         enabled: true,
-        beforeDelete: async (user) => {
-          const firebaseUid = await getLinkedFirebaseUid(db, user.id).catch(() => null);
-          if (!firebaseUid) return;
-          await enqueueBatchWork(env, db, 'firebase.delete-user', { firebaseUid });
-        },
       },
     },
     onAPIError: {
