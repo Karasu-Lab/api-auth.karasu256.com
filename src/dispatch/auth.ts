@@ -1,6 +1,7 @@
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import { withCdnProfileAvatarUrls } from '../lib/profile-avatar';
 import { withAuth } from '../lib/request-auth';
+import { assertTokenSessionActive } from '../lib/session-expiry';
 import { rejectUnverifiedTurnstile } from '../lib/turnstile';
 
 export class AuthDispatch implements Dispatchable {
@@ -19,6 +20,7 @@ export class AuthDispatch implements Dispatchable {
     const rejectedTurnstile = await rejectUnverifiedTurnstile(env, request);
     if (rejectedTurnstile) return rejectedTurnstile;
     const response = await withAuth(env, (auth) => auth.handler(request));
+    if (pathname === '/api/auth/oauth2/token') await assertTokenSessionActive(env, response);
     return withCdnProfileAvatarUrls(env, pathname, response);
   }
 }
