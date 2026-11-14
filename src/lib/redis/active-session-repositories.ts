@@ -1,5 +1,7 @@
 import { z } from 'zod';
+import * as schema from '@karasu-lab/db/schema';
 import { RedisRepository } from './redis-repository';
+import { userIdsOf } from './rows';
 
 export const activeSessionSchema = z.object({
   id: z.string(),
@@ -31,5 +33,9 @@ export class ActiveSessionDeleteRepository extends RedisRepository {
 
   async delete(userId: string): Promise<void> {
     await this.redis.del(`${this.prefix}${userId}`);
+  }
+
+  async invalidate(table: unknown, rows: unknown[]): Promise<void> {
+    if (table === schema.sessions) await Promise.all(userIdsOf(rows).map((userId) => this.delete(userId)));
   }
 }
