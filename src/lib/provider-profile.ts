@@ -12,6 +12,12 @@ import {
   XBOX_RELYING_PARTY,
 } from './xbox-live';
 import { XBOX_PROVIDER_ID } from './xbox-link';
+import {
+  AccountLinkCreateRepository,
+  AccountLinkGetRepository,
+  AccountLinkUpdateRepository,
+  type AccountLink,
+} from './redis/account-link-repositories';
 import type { ProviderProfile } from '@karasu-lab/types/shared';
 
 export type { ProviderProfile };
@@ -239,49 +245,84 @@ async function resolveProfileFromAccounts(
   sharedRefreshes: SharedRefreshes,
   options?: ProviderProfileOptions
 ): Promise<ProviderProfile | null> {
-  const isDerived = (DERIVED_PROVIDER_IDS as readonly string[]).includes(providerId);
-  const account = accounts.find((entry) => entry.providerId === (isDerived ? XBOX_PROVIDER_ID : providerId));
+  const account = accounts.find((entry) => entry.providerId === accountProviderId(providerId));
   if (!account) return null;
 
   return withProfileCache(account.id, providerId, () =>
-    isDerived
+    isDerivedProvider(providerId)
       ? resolveDerivedProfile(ctx, account, providerId, sharedRefreshes, options)
       : resolveSocialProfile(ctx, account, providerId, sharedRefreshes)
   );
 }
 
+function isDerivedProvider(providerId: string): boolean {
+  return (DERIVED_PROVIDER_IDS as readonly string[]).includes(providerId);
+}
+
+function accountProviderId(providerId: string): string {
+  return isDerivedProvider(providerId) ? XBOX_PROVIDER_ID : providerId;
+}
+
+async function loadAccountLinks(env: Env, ctx: AuthContext, uid: string): Promise<AccountLink[]> {
+  const cached = await new AccountLinkGetRepository(env).get(uid);
+  if (cached) return cached;
+  const accounts = await ctx.internalAdapter.findAccounts(uid);
+  const providerIds = [...ctx.socialProviders.map((provider) => provider.id), ...DERIVED_PROVIDER_IDS];
+  const links = providerIds.map((providerId) => {
+    const account = accounts.find((entry) => entry.providerId === accountProviderId(providerId));
+    return { providerId, id: account?.id ?? null, url: null, linked: Boolean(account) };
+  });
+  await new AccountLinkCreateRepository(env).create(uid, links);
+  return links;
+}
+
+async function recordAccountLinkUrls(env: Env, uid: string, links: AccountLink[], profiles: Map<string, ProviderProfile | null>) {
+  const updated = links.map((link) => (profiles.has(link.providerId) ? { ...link, url: profiles.get(link.providerId)?.avatarUrl ?? null } : link));
+  if (updated.some((link, index) => link.url !== links[index].url)) await new AccountLinkUpdateRepository(env).update(uid, updated);
+}
+
 export async function getProviderProfile(
+  env: Env,
   auth: Auth,
   uid: string,
   providerId: string,
   options?: ProviderProfileOptions
 ): Promise<ProviderProfile | null> {
   const ctx = (await auth.$context) as unknown as AuthContext;
+  const links = await loadAccountLinks(env, ctx, uid);
+  const link = links.find((entry) => entry.providerId === providerId);
+  if (link && !link.linked) return null;
   const accounts = await ctx.internalAdapter.findAccounts(uid);
-  return resolveProfileFromAccounts(ctx, accounts, providerId, new Map(), options);
+  const profile = await resolveProfileFromAccounts(ctx, accounts, providerId, new Map(), options);
+  if (link) await recordAccountLinkUrls(env, uid, links, new Map([[providerId, profile]]));
+  return profile;
 }
 
-const PROVIDER_PROFILE_IDS = ['google', 'github', 'microsoft', 'xbox', 'minecraft'];
-
 export async function streamProviderProfiles(
+  env: Env,
   auth: Auth,
   uid: string,
   onProfile: (providerId: string, profile: ProviderProfile | null) => void,
   options?: ProviderProfileOptions
 ): Promise<void> {
   const ctx = (await auth.$context) as unknown as AuthContext;
-  const accounts = await ctx.internalAdapter.findAccounts(uid);
+  const links = await loadAccountLinks(env, ctx, uid);
+  const accounts = links.some((link) => link.linked) ? await ctx.internalAdapter.findAccounts(uid) : [];
   const sharedRefreshes: SharedRefreshes = new Map();
+  const profiles = new Map<string, ProviderProfile | null>();
   await Promise.all(
-    PROVIDER_PROFILE_IDS.map(async (providerId) => {
-      if (providerId === 'minecraft' && !options?.minecraftAuthEnabled) return onProfile(providerId, null);
+    links.map(async ({ providerId, linked }) => {
+      if (!linked || (providerId === 'minecraft' && !options?.minecraftAuthEnabled)) return onProfile(providerId, null);
       try {
-        onProfile(providerId, await resolveProfileFromAccounts(ctx, accounts, providerId, sharedRefreshes, options));
+        const profile = await resolveProfileFromAccounts(ctx, accounts, providerId, sharedRefreshes, options);
+        profiles.set(providerId, profile);
+        onProfile(providerId, profile);
       } catch {
         onProfile(providerId, null);
       }
     })
   );
+  await recordAccountLinkUrls(env, uid, links, profiles);
 }
 
 export async function getProviderAccessToken(auth: Auth, uid: string, providerId: string): Promise<string | null> {

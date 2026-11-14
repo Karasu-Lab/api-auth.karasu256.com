@@ -17,6 +17,7 @@ import { githubAppInstallationPlugin } from './github-app-installation';
 import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { oauthClientRedisAdapter } from './oauth-client-adapter';
+import { ActiveSessionDeleteRepository } from './redis/active-session-repositories';
 import { redisSecondaryStorage } from './redis-storage';
 import { SessionSourceStore } from './session-source';
 import { tenantTypePlugin } from './tenant-type';
@@ -202,6 +203,7 @@ function createAuthOptions(env: Env, db: Db) {
               path: context?.path ?? null,
               params: context?.params ?? null,
             });
+            await new ActiveSessionDeleteRepository(env).delete(session.userId);
           },
         },
       },
