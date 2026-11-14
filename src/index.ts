@@ -55,7 +55,7 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
       await assertSecretRotationAllowed(env, request);
       return withAuth(env, (auth) => auth.handler(request));
     },
-    { type: 'none' }
+    { parse: 'none' }
   )
   .all(
     '/*',
@@ -69,7 +69,7 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
       }
       throw new NotFoundError();
     },
-    { type: 'none' }
+    { parse: 'none' }
   );
 
 function normalizePath(request: Request): Request {
@@ -87,5 +87,4 @@ export default {
     if (preflight) return preflight;
     const rejected = await rejectInvalidSignature(env, request);
     return withCors(env, request, rejected ?? (await app.fetch(request)));
-  },
-};
+  },};

@@ -15,6 +15,7 @@ const CONFIGS: Record<Env['APP_ENV'], AuthConfig> = {
       expectedOrigins: ['https://local-accounts.karasu256.com', 'https://local-auth.karasu256.com', 'https://local-sso.karasu256.com', ...ANDROID_ORIGINS],
     },
     turnstileHostnames: ['local-auth.karasu256.com', 'local-sso.karasu256.com'],
+    batchWorks: { maxConcurrency: 2 },
     trustedOrigins: [
       'http://localhost:3000',
       'http://localhost:3001',
@@ -38,6 +39,7 @@ const CONFIGS: Record<Env['APP_ENV'], AuthConfig> = {
       expectedOrigins: ['https://dev.accounts.karasu256.com', 'https://dev-auth.karasu256.com', 'https://dev-sso.karasu256.com', 'https://dev.karasu256.com', ...ANDROID_ORIGINS],
     },
     turnstileHostnames: ['dev-auth.karasu256.com', 'dev-sso.karasu256.com'],
+    batchWorks: { maxConcurrency: 2 },
     trustedOrigins: [
       'https://dev.accounts.karasu256.com',
       'https://dev-auth.karasu256.com',
@@ -55,6 +57,7 @@ const CONFIGS: Record<Env['APP_ENV'], AuthConfig> = {
       expectedOrigins: ['https://accounts.karasu256.com', 'https://auth.karasu256.com', 'https://sso.karasu256.com', 'https://karasu256.com', ...ANDROID_ORIGINS],
     },
     turnstileHostnames: ['auth.karasu256.com', 'sso.karasu256.com'],
+    batchWorks: { maxConcurrency: 5 },
     trustedOrigins: [
       'https://accounts.karasu256.com',
       'https://auth.karasu256.com',

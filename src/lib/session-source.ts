@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 
 export interface SessionSourceSignals {
   path: string | null;
-  params: Record<string, string> | null;
+  params: Record<string, string | undefined> | null;
 }
 
 export class SessionSourceStore {
