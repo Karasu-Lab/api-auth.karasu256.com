@@ -58,6 +58,7 @@ function domainEnvSchema(defaults: DomainDefaults) {
     FEATURE_FLAGS_API_URL: z.url().default(defaults.FEATURE_FLAGS_API_URL),
     FEATURE_FLAGS_ORIGIN: z.url().default(defaults.FEATURE_FLAGS_ORIGIN),
     BASE_DOMAIN: defaults.BASE_DOMAIN ? z.string().default(defaults.BASE_DOMAIN) : z.string().optional(),
+    REDIS_URL: z.url().optional(),
   });
 }
 
