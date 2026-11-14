@@ -14,19 +14,22 @@ export async function closeRedis(redis: RedisClient | null): Promise<void> {
 }
 
 export function redisSecondaryStorage(redis: RedisClient): SecondaryStorage {
+  const isVerification = (key: string) => key.startsWith('verification:');
   return {
-    get: async (key) => (await redis.send('GET', key)) as string | null,
-    getAndDelete: async (key) => (await redis.send('GETDEL', key)) as string | null,
+    get: async (key) => (isVerification(key) ? null : ((await redis.send('GET', key)) as string | null)),
+    getAndDelete: async (key) => (isVerification(key) ? null : ((await redis.send('GETDEL', key)) as string | null)),
     increment: async (key, ttl) => {
       const value = (await redis.send('INCR', key)) as number;
       await redis.send('EXPIRE', key, String(ttl));
       return value;
     },
     set: async (key, value, ttl) => {
+      if (isVerification(key)) return;
       if (ttl) await redis.send('SET', key, value, 'EX', String(ttl));
       else await redis.send('SET', key, value);
     },
     delete: async (key) => {
+      if (isVerification(key)) return;
       await redis.send('DEL', key);
     },
   };
