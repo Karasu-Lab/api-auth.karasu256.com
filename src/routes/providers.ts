@@ -23,7 +23,7 @@ export async function handleProviderDetails(env: Env, request: Request, provider
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const profile = await getProviderProfile(auth, session.user.id, providerId, profileOptions(env));
+    const profile = await getProviderProfile(env, auth, session.user.id, providerId, profileOptions(env));
     if (!profile) return Response.json({ error: 'Not Found' }, { status: 404 });
     return Response.json(profile);
   });
@@ -36,6 +36,7 @@ export async function handleProviderList(env: Env, request: Request): Promise<Re
 
     const profiles: Record<string, ProviderProfile | null> = {};
     await streamProviderProfiles(
+      env,
       auth,
       session.user.id,
       (providerId, profile) => {
@@ -62,6 +63,7 @@ export async function handleProviderStream(env: Env, request: Request): Promise<
     return SseServerStream.respond<ProviderStreamEvents>(
       (stream) =>
         streamProviderProfiles(
+          env,
           auth,
           session.user.id,
           (providerId, profile) => stream.send(ProviderStreamEvent.Profile, { providerId, profile }),

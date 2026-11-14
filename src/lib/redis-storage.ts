@@ -1,5 +1,31 @@
 import type { SecondaryStorage } from 'better-auth';
+import { z } from 'zod';
 import { SessionCreateRepository, SessionDeleteRepository, SessionGetRepository, SessionUpdateRepository } from './redis/session-repositories';
+
+const sessionValueSchema = z.union([
+  z.object({
+    session: z.object({
+      id: z.string(),
+      token: z.string(),
+      userId: z.string(),
+      expiresAt: z.string(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+      activeOrganizationId: z.string().nullish(),
+      activeTeamId: z.string().nullish(),
+    }),
+    user: z.object({
+      id: z.string(),
+      name: z.string(),
+      email: z.string(),
+      emailVerified: z.boolean(),
+      image: z.string().nullish(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+    }),
+  }),
+  z.array(z.object({ token: z.string(), expiresAt: z.number() })),
+]);
 
 export function redisSecondaryStorage(env: Env): SecondaryStorage {
   const getRepository = new SessionGetRepository(env);
@@ -25,7 +51,7 @@ export function redisSecondaryStorage(env: Env): SecondaryStorage {
     },
     set: async (key, value, ttl) => {
       if (isVerification(key)) return;
-      await set(key, value, ttl);
+      await set(key, JSON.stringify(sessionValueSchema.parse(JSON.parse(value))), ttl);
     },
     delete: async (key) => {
       if (isVerification(key)) return;
