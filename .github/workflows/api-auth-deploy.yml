@@ -19,7 +19,8 @@ jobs:
             - AUTH_SECRET
             - INTERNAL_API_SECRET
             - DATABASE_URL
-            - REDIS_URL
+            - UPSTASH_REDIS_REST_URL
+            - UPSTASH_REDIS_REST_TOKEN
             - GOOGLE_CLOUD_PROJECT_ID
             - FIREBASE_ADMIN_CLIENT_EMAIL
             - FIREBASE_ADMIN_PRIVATE_KEY

@@ -17,7 +17,8 @@ import { getLinkedFirebaseUid } from './firebase-link';
 import { githubAppInstallationPlugin } from './github-app-installation';
 import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
-import { redisSecondaryStorage, type RedisClient } from './redis-storage';
+import type { Redis } from '@upstash/redis/cloudflare';
+import { redisSecondaryStorage } from './redis-storage';
 import { SessionSourceStore } from './session-source';
 import { tenantTypePlugin } from './tenant-type';
 
@@ -76,7 +77,7 @@ function createPlugins(env: Env, db: Db) {
   ];
 }
 
-function createAuthOptions(env: Env, db: Db, redis: RedisClient | null) {
+function createAuthOptions(env: Env, db: Db, redis: Redis | null) {
   const { trustedOrigins } = getAuthConfig(env);
   const mockOAuthUrl = getMockOAuthUrl(env);
 
@@ -239,11 +240,11 @@ function createAuthOptions(env: Env, db: Db, redis: RedisClient | null) {
   } satisfies BetterAuthOptions;
 }
 
-export function createAuth(env: Env, db: Db, redis: RedisClient | null) {
+export function createAuth(env: Env, db: Db, redis: Redis | null) {
   return betterAuth({ ...createAuthOptions(env, db, redis), plugins: createPlugins(env, db) });
 }
 
-export function createTestAuth(env: Env, db: Db, redis: RedisClient | null) {
+export function createTestAuth(env: Env, db: Db, redis: Redis | null) {
   return betterAuth({ ...createAuthOptions(env, db, redis), plugins: [...createPlugins(env, db), testUtils()] });
 }
 
