@@ -4,7 +4,7 @@ import { passkey } from '@better-auth/passkey';
 import { apiKey } from '@better-auth/api-key';
 import { sso } from '@better-auth/sso';
 import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-provider';
-import { jwt } from 'better-auth/plugins/jwt';
+import { jwt, type JwtOptions } from 'better-auth/plugins/jwt';
 import { customSession, genericOAuth, multiSession, organization, testUtils } from 'better-auth/plugins';
 import type { Db } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
@@ -20,6 +20,7 @@ import { oauthClientRedisAdapter } from './oauth-client-adapter';
 import { ActiveSessionDeleteRepository } from './redis/active-session-repositories';
 import { JwksCreateRepository, JwksGetRepository } from './redis/jwks-repositories';
 import { redisSecondaryStorage } from './redis-storage';
+import { sessionJwtHeaderPlugin } from './session-jwt';
 import { SessionSourceStore } from './session-source';
 import { tenantTypePlugin } from './tenant-type';
 
@@ -28,14 +29,17 @@ function createPlugins(env: Env, db: Db) {
   const mockOAuthUrl = getMockOAuthUrl(env);
   const oauthProviders = mockOAuthUrl ? getMockOAuthProviders(mockOAuthUrl) : getGithubOAuthProviders(env);
 
+  const jwtOptions = {
+    adapter: {
+      getJwks: async (ctx) =>
+        (await new JwksGetRepository(env).get()) ??
+        (await new JwksCreateRepository(env).create(await ctx.context.adapter.findMany({ model: 'jwks' }))),
+    },
+  } satisfies JwtOptions;
+
   return [
-    jwt({
-      adapter: {
-        getJwks: async (ctx) =>
-          (await new JwksGetRepository(env).get()) ??
-          (await new JwksCreateRepository(env).create(await ctx.context.adapter.findMany({ model: 'jwks' }))),
-      },
-    }),
+    jwt({ ...jwtOptions, disableSettingJwtHeader: true }),
+    sessionJwtHeaderPlugin(env, jwtOptions),
     oauthProvider({
       loginPage: `${env.AUTH_UI_URL}/sign-in`,
       consentPage: `${env.AUTH_UI_URL}/oauth/consent`,
