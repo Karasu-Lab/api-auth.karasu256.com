@@ -11,7 +11,7 @@ import type { Db } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
 import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
 import { getAuthConfig } from '../config';
-import { enqueueBatchWork, runBatchWorks } from './batch-works';
+import { FirebaseDeleteUserWork, FirebaseLinkUserWork, NeonAuthSyncUserWork, runBatchWorks } from './batch-works';
 import { assertNoDeviceSessionConflict } from './device-session-conflict';
 import { getLinkedFirebaseUid } from './firebase-link';
 import { githubAppInstallationPlugin } from './github-app-installation';
@@ -155,8 +155,8 @@ function createAuthOptions(env: Env, db: Db, redis: Redis | null) {
             return { data: { ...user, image: null } };
           },
           after: async (user, context) => {
-            await enqueueBatchWork(env, db, 'firebase.link-user', { userId: user.id });
-            await enqueueBatchWork(env, db, 'neon-auth.sync-user', { id: user.id, email: user.email ?? null, name: user.name ?? null });
+            await new FirebaseLinkUserWork(env, db).enqueue({ userId: user.id });
+            await new NeonAuthSyncUserWork(env, db).enqueue({ id: user.id, email: user.email ?? null, name: user.name ?? null });
             context?.context.runInBackground(runBatchWorks(env));
           },
         },
@@ -172,7 +172,7 @@ function createAuthOptions(env: Env, db: Db, redis: Redis | null) {
           },
           after: async (user, context) => {
             if (!user.name && !user.image) return;
-            await enqueueBatchWork(env, db, 'firebase.link-user', { userId: user.id });
+            await new FirebaseLinkUserWork(env, db).enqueue({ userId: user.id });
             context?.context.runInBackground(runBatchWorks(env));
           },
         },
@@ -180,7 +180,7 @@ function createAuthOptions(env: Env, db: Db, redis: Redis | null) {
           before: async (user, context) => {
             const firebaseUid = await getLinkedFirebaseUid(db, user.id).catch(() => null);
             if (!firebaseUid) return;
-            await enqueueBatchWork(env, db, 'firebase.delete-user', { firebaseUid });
+            await new FirebaseDeleteUserWork(env, db).enqueue({ firebaseUid });
             context?.context.runInBackground(runBatchWorks(env));
           },
         },
