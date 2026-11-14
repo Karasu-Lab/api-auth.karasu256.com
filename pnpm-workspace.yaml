@@ -12,6 +12,7 @@ allowBuilds:
   '@parcel/watcher': true
   cpu-features: true
   ssh2: true
+  redis-on-workers: false
 # First-party packages are published and pinned within the same day by
 # design, so they can never satisfy pnpm's default minimum release age
 # at deploy time. Exempt the org's own scope; the policy still applies
