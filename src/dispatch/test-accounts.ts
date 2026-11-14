@@ -3,6 +3,7 @@ import { waitUntil } from 'cloudflare:workers';
 import { z } from 'zod';
 import { createTestAuth } from '../lib/auth';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
+import { closeRedis, createRedis } from '../lib/redis-storage';
 import { BadRequestError, NotFoundError } from '@karasu-lab/types/server';
 
 const postBodySchema = z.object({ label: z.string().min(1) });
@@ -14,10 +15,12 @@ function isEnabled(env: Env): boolean {
 
 async function withTestAuth<T>(env: Env, fn: (auth: ReturnType<typeof createTestAuth>) => Promise<T>): Promise<T> {
   const db = createDb(env.DATABASE_URL);
+  const redis = createRedis(env);
   try {
-    return await fn(createTestAuth(env, db));
+    return await fn(createTestAuth(env, db, redis));
   } finally {
     waitUntil(db.$client.end());
+    waitUntil(closeRedis(redis));
   }
 }
 
