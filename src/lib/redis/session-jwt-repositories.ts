@@ -1,4 +1,4 @@
-import { SessionRedisRepository } from './redis-repository';
+import { secondsUntil, SessionRedisRepository } from './redis-repository';
 
 export class SessionJwtGetRepository extends SessionRedisRepository {
   protected readonly prefix = 'session-jwt';
@@ -10,9 +10,10 @@ export class SessionJwtGetRepository extends SessionRedisRepository {
 
 export class SessionJwtCreateRepository extends SessionRedisRepository {
   protected readonly prefix = 'session-jwt';
+  protected override readonly ttl = Math.min(10 * 60, secondsUntil(this.session.expiresAt));
 
-  async create(token: string, ttlSeconds: number): Promise<void> {
-    await this.redis.set(this.key, token, { ex: ttlSeconds });
+  async create(token: string): Promise<void> {
+    await this.store(this.key, token);
   }
 }
 

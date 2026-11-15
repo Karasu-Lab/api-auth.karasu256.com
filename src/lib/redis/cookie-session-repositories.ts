@@ -10,8 +10,9 @@ export class CookieSessionGetRepository extends RedisRepository {
 
 export class CookieSessionCreateRepository extends RedisRepository {
   protected readonly prefix = 'cookie-session';
+  protected override readonly ttl = 60;
 
-  async create(cookieHash: string, value: string, ttlSeconds: number): Promise<void> {
-    await this.redis.set(`${this.prefix}-${cookieHash}`, value, { ex: ttlSeconds });
+  async create(cookieHash: string, value: string): Promise<void> {
+    await this.store(`${this.prefix}-${cookieHash}`, value);
   }
 }

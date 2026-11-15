@@ -11,7 +11,7 @@ export interface RedisInvalidator {
   invalidate(table: unknown, rows: unknown[], find: FindRows): Promise<void>;
 }
 
-const sessionRowSchema = z.object({ id: z.string(), userId: z.string() });
+const sessionRowSchema = z.object({ id: z.string(), userId: z.string(), expiresAt: z.coerce.date() });
 
 export async function sessionsOfUsers(userIds: string[], find: FindRows): Promise<RedisSession[]> {
   const rows = await Promise.all(userIds.map((userId) => find(schema.sessions, [{ field: 'userId', value: userId }])));

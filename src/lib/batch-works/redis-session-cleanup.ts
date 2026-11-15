@@ -25,7 +25,7 @@ export class RedisSessionCleanupWork extends BatchWork<typeof contextSchema> {
       super.reschedule(session.expiresAt);
       return;
     }
-    const redisSession = { id: sessionId, userId };
+    const redisSession = { id: sessionId, userId, expiresAt: session?.expiresAt ?? new Date() };
     await Promise.all([
       new AuthorizedAppDeleteRepository(this.env, redisSession).delete(),
       new AccountLinkDeleteRepository(this.env, redisSession).delete(),

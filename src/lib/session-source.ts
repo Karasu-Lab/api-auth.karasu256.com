@@ -39,7 +39,7 @@ export class SessionSourceStore {
         .insert(schema.sessionDevicesSource)
         .values({ sessionId: session.id, userId: session.userId, source })
         .onConflictDoNothing();
-      await new SessionSourceCreateRepository(this.env, session).create(source, session.expiresAt);
+      await new SessionSourceCreateRepository(this.env, session).create(source);
     } catch (error) {
       console.error(`Failed to record the session source for session ${session.id}`, error);
     }
@@ -60,7 +60,7 @@ export class SessionSourceStore {
       ? row.source
       : `${SessionSourceStore.unknownProviderId}-${session.id}`;
     this.remember(session.id, source);
-    await new SessionSourceCreateRepository(this.env, session).create(source, session.expiresAt);
+    await new SessionSourceCreateRepository(this.env, session).create(source);
     return source;
   }
 

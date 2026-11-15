@@ -11,9 +11,8 @@ export class SessionSourceGetRepository extends SessionRedisRepository {
 export class SessionSourceCreateRepository extends SessionRedisRepository {
   protected readonly prefix = 'session-source';
 
-  async create(source: string, expiresAt: Date): Promise<void> {
-    const ttl = Math.floor((expiresAt.getTime() - Date.now()) / 1000);
-    if (ttl > 0) await this.redis.set(this.key, source, { ex: ttl });
+  async create(source: string): Promise<void> {
+    await this.store(this.key, source);
   }
 }
 

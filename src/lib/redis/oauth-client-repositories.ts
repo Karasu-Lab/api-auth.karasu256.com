@@ -34,7 +34,7 @@ export class OAuthClientCreateRepository extends RedisRepository {
     if (table !== schema.oauthClients) return;
     const { clientId, clientSecret } = clientSchema.parse(row);
     if (clientSecret) return;
-    await this.redis.set(`${this.prefix}-${clientId}`, JSON.stringify(row));
+    await this.store(`${this.prefix}-${clientId}`, row);
   }
 }
 
@@ -45,7 +45,7 @@ export class OAuthClientUpdateRepository extends RedisRepository {
     if (table !== schema.oauthClients) return;
     const { clientId, clientSecret } = clientSchema.parse(row);
     if (clientSecret) await this.redis.del(`${this.prefix}-${clientId}`);
-    else await this.redis.set(`${this.prefix}-${clientId}`, JSON.stringify(row), { xx: true });
+    else await this.store(`${this.prefix}-${clientId}`, row, 'xx');
   }
 }
 

@@ -24,7 +24,7 @@ export class ActiveSessionCreateRepository extends RedisRepository {
   protected readonly prefix = 'active-sessions';
 
   async create(userId: string, sessions: ActiveSession[]): Promise<void> {
-    await this.redis.set(`${this.prefix}-${userId}`, JSON.stringify(sessions));
+    await this.store(`${this.prefix}-${userId}`, sessions);
   }
 }
 

@@ -23,7 +23,7 @@ export class SecuritySettingCreateRepository extends SessionRedisRepository {
   protected readonly prefix = 'security-settings';
 
   async create(settings: SecuritySettings): Promise<void> {
-    await this.redis.set(this.key, JSON.stringify(settings));
+    await this.store(this.key, settings);
   }
 }
 

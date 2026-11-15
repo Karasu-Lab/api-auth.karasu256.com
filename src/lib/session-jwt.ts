@@ -8,7 +8,7 @@ export async function cachedSessionJwt(env: Env, session: RedisSession, sign: ()
   const cached = await new SessionJwtGetRepository(env, session).get();
   if (cached) return cached;
   const token = await sign();
-  await new SessionJwtCreateRepository(env, session).create(token, 10 * 60);
+  await new SessionJwtCreateRepository(env, session).create(token);
   return token;
 }
 
@@ -22,7 +22,7 @@ export function sessionJwtHeaderPlugin(env: Env, jwtOptions: JwtOptions) {
           handler: createAuthMiddleware(async (ctx) => {
             const session = ctx.context.session || ctx.context.newSession;
             if (!session?.session) return;
-            const token = await cachedSessionJwt(env, { id: session.session.id, userId: session.user.id }, () =>
+            const token = await cachedSessionJwt(env, { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt }, () =>
               getJwtToken(ctx, jwtOptions)
             );
             const exposed = new Set(
