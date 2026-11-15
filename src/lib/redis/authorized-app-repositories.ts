@@ -25,7 +25,7 @@ export class AuthorizedAppCreateRepository extends SessionRedisRepository {
   protected readonly prefix = 'authorized-apps';
 
   async create(apps: AuthorizedApp[]): Promise<void> {
-    await this.redis.set(this.key, JSON.stringify(apps));
+    await this.store(this.key, apps);
   }
 }
 

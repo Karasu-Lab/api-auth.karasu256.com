@@ -37,7 +37,7 @@ export class JwksCreateRepository extends RedisRepository {
 
   async create(keys: unknown[]): Promise<Jwks> {
     const parsed = jwksSchema.parse(keys);
-    await this.redis.set(`${this.prefix}-keys`, JSON.stringify(parsed));
+    await this.store(`${this.prefix}-keys`, parsed);
     return parsed;
   }
 }

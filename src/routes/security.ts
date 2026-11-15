@@ -41,6 +41,6 @@ export async function handleSecuritySettings(env: Env, request: Request): Promis
   return withAuth(env, async (auth) => {
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    return Response.json(await loadSecuritySettings(env, { id: session.session.id, userId: session.user.id }));
+    return Response.json(await loadSecuritySettings(env, { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt }));
   });
 }

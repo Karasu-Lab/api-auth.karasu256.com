@@ -39,7 +39,7 @@ export async function handleAuthorizedAppList(env: Env, request: Request): Promi
 
     const db = createDb(env.DATABASE_URL);
     try {
-      const apps = await loadAuthorizedApps(env, auth, db, { id: session.session.id, userId: session.user.id });
+      const apps = await loadAuthorizedApps(env, auth, db, { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt });
       const consents = await db
         .select({ id: schema.oauthConsents.id, clientId: schema.oauthConsents.clientId, createdAt: schema.oauthConsents.createdAt })
         .from(schema.oauthConsents)
@@ -79,7 +79,7 @@ export async function handleAuthorizedAppDetails(env: Env, request: Request, con
         .from(schema.oauthConsents)
         .where(and(eq(schema.oauthConsents.id, consentId), eq(schema.oauthConsents.userId, session.user.id)));
       if (!consent) return Response.json({ error: 'Not Found' }, { status: 404 });
-      const app = (await loadAuthorizedApps(env, auth, db, { id: session.session.id, userId: session.user.id })).find(
+      const app = (await loadAuthorizedApps(env, auth, db, { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt })).find(
         (entry) => entry.clientId === consent.clientId
       );
       return Response.json({

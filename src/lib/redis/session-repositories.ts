@@ -12,10 +12,8 @@ export class SessionCreateRepository extends RedisRepository {
   protected readonly prefix = 'session';
 
   async create(key: string, value: string, ttl?: number): Promise<boolean> {
-    const result = ttl
-      ? await this.redis.set(`${this.prefix}-${key}`, value, { ex: ttl, nx: true })
-      : await this.redis.set(`${this.prefix}-${key}`, value, { nx: true });
-    return result !== null;
+    if (!ttl) return this.store(`${this.prefix}-${key}`, value, 'nx');
+    return (await this.redis.set(`${this.prefix}-${key}`, value, { ex: ttl, nx: true })) !== null;
   }
 }
 
@@ -23,8 +21,8 @@ export class SessionUpdateRepository extends RedisRepository {
   protected readonly prefix = 'session';
 
   async update(key: string, value: string, ttl?: number): Promise<void> {
-    if (ttl) await this.redis.set(`${this.prefix}-${key}`, value, { ex: ttl, xx: true });
-    else await this.redis.set(`${this.prefix}-${key}`, value, { xx: true });
+    if (!ttl) await this.store(`${this.prefix}-${key}`, value, 'xx');
+    else await this.redis.set(`${this.prefix}-${key}`, value, { ex: ttl, xx: true });
   }
 }
 

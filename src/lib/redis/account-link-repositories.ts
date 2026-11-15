@@ -25,7 +25,7 @@ export class AccountLinkCreateRepository extends SessionRedisRepository {
   protected readonly prefix = 'account-links';
 
   async create(links: AccountLink[]): Promise<void> {
-    await this.redis.set(this.key, JSON.stringify(links));
+    await this.store(this.key, links);
   }
 }
 
@@ -33,7 +33,7 @@ export class AccountLinkUpdateRepository extends SessionRedisRepository {
   protected readonly prefix = 'account-links';
 
   async update(links: AccountLink[]): Promise<void> {
-    await this.redis.set(this.key, JSON.stringify(links), { xx: true });
+    await this.store(this.key, links, 'xx');
   }
 }
 

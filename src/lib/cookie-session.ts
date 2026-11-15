@@ -50,6 +50,6 @@ export class CookieSessionStore {
       jwt: response.headers.get('set-auth-jwt'),
       exposeHeaders: response.headers.get('access-control-expose-headers'),
     });
-    await new CookieSessionCreateRepository(this.env).create(this.cookieHash, value, 60);
+    await new CookieSessionCreateRepository(this.env).create(this.cookieHash, value);
   }
 }
