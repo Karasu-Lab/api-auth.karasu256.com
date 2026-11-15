@@ -1,9 +1,7 @@
 import { z } from 'zod';
 import * as schema from '@karasu-lab/db/schema';
-import { RedisRepository } from './redis-repository';
-import { userIdsOf, type FindRows } from './rows';
-
-const clientRowSchema = z.object({ clientId: z.string() });
+import { SessionRedisRepository } from './redis-repository';
+import { sessionsOfUsers, userIdsOf, type FindRows } from './rows';
 
 export const authorizedAppSchema = z.object({
   clientId: z.string(),
@@ -14,38 +12,41 @@ export const authorizedAppSchema = z.object({
 
 export type AuthorizedApp = z.output<typeof authorizedAppSchema>;
 
-export class AuthorizedAppGetRepository extends RedisRepository {
-  protected readonly prefix = 'authorized-apps:';
+export class AuthorizedAppGetRepository extends SessionRedisRepository {
+  protected readonly prefix = 'authorized-apps';
 
-  async get(userId: string): Promise<AuthorizedApp[] | null> {
-    const value = await this.redis.get<string>(`${this.prefix}${userId}`);
+  async get(): Promise<AuthorizedApp[] | null> {
+    const value = await this.redis.get<string>(this.key);
     return value === null ? null : z.array(authorizedAppSchema).parse(JSON.parse(value));
   }
 }
 
-export class AuthorizedAppCreateRepository extends RedisRepository {
-  protected readonly prefix = 'authorized-apps:';
+export class AuthorizedAppCreateRepository extends SessionRedisRepository {
+  protected readonly prefix = 'authorized-apps';
 
-  async create(userId: string, apps: AuthorizedApp[]): Promise<void> {
-    await this.redis.set(`${this.prefix}${userId}`, JSON.stringify(apps));
+  async create(apps: AuthorizedApp[]): Promise<void> {
+    await this.redis.set(this.key, JSON.stringify(apps));
   }
 }
 
-export class AuthorizedAppDeleteRepository extends RedisRepository {
-  protected readonly prefix = 'authorized-apps:';
+export class AuthorizedAppDeleteRepository extends SessionRedisRepository {
+  protected readonly prefix = 'authorized-apps';
 
-  async delete(userId: string): Promise<void> {
-    await this.redis.del(`${this.prefix}${userId}`);
+  async delete(): Promise<void> {
+    await this.redis.del(this.key);
   }
 
-  async invalidate(table: unknown, rows: unknown[], find: FindRows): Promise<void> {
+  static async invalidate(env: Env, table: unknown, rows: unknown[], find: FindRows): Promise<void> {
+    let userIds: string[] = [];
     if (table === schema.oauthConsents) {
-      await Promise.all(userIdsOf(rows).map((userId) => this.delete(userId)));
+      userIds = userIdsOf(rows);
     } else if (table === schema.oauthClients) {
       const consents = await Promise.all(
-        rows.map((row) => find(schema.oauthConsents, [{ field: 'clientId', value: clientRowSchema.parse(row).clientId }]))
+        rows.map((row) => find(schema.oauthConsents, [{ field: 'clientId', value: z.object({ clientId: z.string() }).parse(row).clientId }]))
       );
-      await Promise.all(userIdsOf(consents.flat()).map((userId) => this.delete(userId)));
+      userIds = userIdsOf(consents.flat());
     }
+    const sessions = await sessionsOfUsers(userIds, find);
+    await Promise.all(sessions.map((session) => new AuthorizedAppDeleteRepository(env, session).delete()));
   }
 }

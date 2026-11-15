@@ -1,17 +1,25 @@
-import { RedisRepository } from './redis-repository';
+import { SessionRedisRepository } from './redis-repository';
 
-export class SessionJwtGetRepository extends RedisRepository {
-  protected readonly prefix = 'session-jwt:';
+export class SessionJwtGetRepository extends SessionRedisRepository {
+  protected readonly prefix = 'session-jwt';
 
-  get(sessionId: string): Promise<string | null> {
-    return this.redis.get<string>(`${this.prefix}${sessionId}`);
+  get(): Promise<string | null> {
+    return this.redis.get<string>(this.key);
   }
 }
 
-export class SessionJwtCreateRepository extends RedisRepository {
-  protected readonly prefix = 'session-jwt:';
+export class SessionJwtCreateRepository extends SessionRedisRepository {
+  protected readonly prefix = 'session-jwt';
 
-  async create(sessionId: string, token: string, ttlSeconds: number): Promise<void> {
-    await this.redis.set(`${this.prefix}${sessionId}`, token, { ex: ttlSeconds });
+  async create(token: string, ttlSeconds: number): Promise<void> {
+    await this.redis.set(this.key, token, { ex: ttlSeconds });
+  }
+}
+
+export class SessionJwtDeleteRepository extends SessionRedisRepository {
+  protected readonly prefix = 'session-jwt';
+
+  async delete(): Promise<void> {
+    await this.redis.del(this.key);
   }
 }

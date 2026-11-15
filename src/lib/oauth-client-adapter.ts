@@ -10,7 +10,7 @@ import {
   OAuthClientGetRepository,
   OAuthClientUpdateRepository,
 } from './redis/oauth-client-repositories';
-import type { FindRows } from './redis/rows';
+import type { FindRows, RedisInvalidator } from './redis/rows';
 import { SecuritySettingDeleteRepository } from './redis/security-setting-repositories';
 
 export function oauthClientRedisAdapter(
@@ -24,12 +24,12 @@ export function oauthClientRedisAdapter(
   const createRepository = new OAuthClientCreateRepository(env);
   const updateRepository = new OAuthClientUpdateRepository(env);
   const deleteRepository = new OAuthClientDeleteRepository(env);
-  const invalidators = [
-    new AuthorizedAppDeleteRepository(env),
+  const invalidators: RedisInvalidator[] = [
     new ActiveSessionDeleteRepository(env),
-    new AccountLinkDeleteRepository(env),
-    new SecuritySettingDeleteRepository(env),
     new JwksDeleteRepository(env),
+    { invalidate: (table, rows, find) => AuthorizedAppDeleteRepository.invalidate(env, table, rows, find) },
+    { invalidate: (table, rows, find) => AccountLinkDeleteRepository.invalidate(env, table, rows, find) },
+    { invalidate: (table, rows, find) => SecuritySettingDeleteRepository.invalidate(env, table, rows, find) },
   ];
 
   return (options) => {

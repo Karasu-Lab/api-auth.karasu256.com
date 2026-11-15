@@ -19,6 +19,7 @@ import {
   AccountLinkUpdateRepository,
   type AccountLink,
 } from './redis/account-link-repositories';
+import type { RedisSession } from './redis/redis-repository';
 import type { ProviderProfile } from '@karasu-lab/types/shared';
 
 export type { ProviderProfile };
@@ -268,50 +269,51 @@ function accountProviderId(providerId: string): string {
   return isDerivedProvider(providerId) ? XBOX_PROVIDER_ID : providerId;
 }
 
-async function loadAccountLinks(env: Env, ctx: AuthContext, uid: string): Promise<AccountLink[]> {
-  const cached = await new AccountLinkGetRepository(env).get(uid);
+async function loadAccountLinks(env: Env, ctx: AuthContext, session: RedisSession): Promise<AccountLink[]> {
+  const cached = await new AccountLinkGetRepository(env, session).get();
   if (cached) return cached;
-  const accounts = await ctx.internalAdapter.findAccounts(uid);
+  const accounts = await ctx.internalAdapter.findAccounts(session.userId);
   const providerIds = [...ctx.socialProviders.map((provider) => provider.id), ...DERIVED_PROVIDER_IDS];
   const links = providerIds.map((providerId) => {
     const account = accounts.find((entry) => entry.providerId === accountProviderId(providerId));
     return { providerId, id: account?.id ?? null, url: null, linked: Boolean(account) };
   });
-  await new AccountLinkCreateRepository(env).create(uid, links);
+  await new AccountLinkCreateRepository(env, session).create(links);
   return links;
 }
 
-async function recordAccountLinkUrls(env: Env, uid: string, links: AccountLink[], profiles: Map<string, ProviderProfile | null>) {
+async function recordAccountLinkUrls(env: Env, session: RedisSession, links: AccountLink[], profiles: Map<string, ProviderProfile | null>) {
   const updated = links.map((link) => (profiles.has(link.providerId) ? { ...link, url: profiles.get(link.providerId)?.avatarUrl ?? null } : link));
-  if (updated.some((link, index) => link.url !== links[index].url)) await new AccountLinkUpdateRepository(env).update(uid, updated);
+  if (updated.some((link, index) => link.url !== links[index].url)) await new AccountLinkUpdateRepository(env, session).update(updated);
 }
 
 export async function getProviderProfile(
   env: Env,
   auth: Auth,
-  uid: string,
+  session: RedisSession,
   providerId: string,
   options?: ProviderProfileOptions
 ): Promise<ProviderProfile | null> {
   const ctx = (await auth.$context) as unknown as AuthContext;
-  const links = await loadAccountLinks(env, ctx, uid);
+  const links = await loadAccountLinks(env, ctx, session);
   const link = links.find((entry) => entry.providerId === providerId);
   if (link && !link.linked) return null;
-  const accounts = await ctx.internalAdapter.findAccounts(uid);
-  const profile = await resolveProfileFromAccounts(env, ctx, uid, accounts, providerId, new Map(), options);
-  if (link) await recordAccountLinkUrls(env, uid, links, new Map([[providerId, profile]]));
+  const accounts = await ctx.internalAdapter.findAccounts(session.userId);
+  const profile = await resolveProfileFromAccounts(env, ctx, session.userId, accounts, providerId, new Map(), options);
+  if (link) await recordAccountLinkUrls(env, session, links, new Map([[providerId, profile]]));
   return profile;
 }
 
 export async function streamProviderProfiles(
   env: Env,
   auth: Auth,
-  uid: string,
+  session: RedisSession,
   onProfile: (providerId: string, profile: ProviderProfile | null) => void,
   options?: ProviderProfileOptions
 ): Promise<void> {
+  const uid = session.userId;
   const ctx = (await auth.$context) as unknown as AuthContext;
-  const links = await loadAccountLinks(env, ctx, uid);
+  const links = await loadAccountLinks(env, ctx, session);
   const accounts = links.some((link) => link.linked) ? await ctx.internalAdapter.findAccounts(uid) : [];
   const sharedRefreshes: SharedRefreshes = new Map();
   const profiles = new Map<string, ProviderProfile | null>();
@@ -327,7 +329,7 @@ export async function streamProviderProfiles(
       }
     })
   );
-  await recordAccountLinkUrls(env, uid, links, profiles);
+  await recordAccountLinkUrls(env, session, links, profiles);
 }
 
 export async function getProviderAccessToken(auth: Auth, uid: string, providerId: string): Promise<string | null> {

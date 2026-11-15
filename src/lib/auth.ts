@@ -10,7 +10,7 @@ import type { Db } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
 import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
 import { getAuthConfig } from '../config';
-import { FirebaseDeleteUserWork, FirebaseLinkUserWork, NeonAuthSyncUserWork, runBatchWorks } from './batch-works';
+import { FirebaseDeleteUserWork, FirebaseLinkUserWork, NeonAuthSyncUserWork, RedisSessionCleanupWork, runBatchWorks } from './batch-works';
 import { assertNoDeviceSessionConflict } from './device-session-conflict';
 import { getLinkedFirebaseUid } from './firebase-link';
 import { githubAppInstallationPlugin } from './github-app-installation';
@@ -219,6 +219,10 @@ function createAuthOptions(env: Env, db: Db) {
             });
             await new ActiveSessionDeleteRepository(env).delete(session.userId);
             await new SessionExpiryCreateRepository(env).create(session.id, session.expiresAt);
+            const cleanup = new RedisSessionCleanupWork(env, db);
+            cleanup.scheduledAt = session.expiresAt;
+            await cleanup.enqueue({ sessionId: session.id, userId: session.userId });
+            context?.context.runInBackground(runBatchWorks(env));
           },
         },
         update: {
@@ -227,8 +231,10 @@ function createAuthOptions(env: Env, db: Db) {
           },
         },
         delete: {
-          after: async (session) => {
+          after: async (session, context) => {
             await new SessionExpiryRevokeRepository(env).revoke(session.id);
+            await new RedisSessionCleanupWork(env, db).enqueue({ sessionId: session.id, userId: session.userId });
+            context?.context.runInBackground(runBatchWorks(env));
           },
         },
       },

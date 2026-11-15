@@ -7,10 +7,11 @@ import { batchWorkStatusSchema, type BatchWork } from './batch-work';
 import { FirebaseDeleteUserWork } from './firebase-delete-user';
 import { FirebaseLinkUserWork } from './firebase-link-user';
 import { NeonAuthSyncUserWork } from './neon-auth-sync-user';
+import { RedisSessionCleanupWork } from './redis-session-cleanup';
 
-export { FirebaseDeleteUserWork, FirebaseLinkUserWork, NeonAuthSyncUserWork };
+export { FirebaseDeleteUserWork, FirebaseLinkUserWork, NeonAuthSyncUserWork, RedisSessionCleanupWork };
 
-const batchWorkClasses = [FirebaseLinkUserWork, FirebaseDeleteUserWork, NeonAuthSyncUserWork];
+const batchWorkClasses = [FirebaseLinkUserWork, FirebaseDeleteUserWork, NeonAuthSyncUserWork, RedisSessionCleanupWork];
 
 function createBatchWork(env: Env, db: Db, type: string): BatchWork<z.ZodType> | null {
   for (const Work of batchWorkClasses) {

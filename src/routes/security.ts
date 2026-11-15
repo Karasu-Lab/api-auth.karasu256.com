@@ -7,10 +7,12 @@ import {
   SecuritySettingGetRepository,
   type SecuritySettings,
 } from '../lib/redis/security-setting-repositories';
+import type { RedisSession } from '../lib/redis/redis-repository';
 import { withAuth } from '../lib/request-auth';
 
-async function loadSecuritySettings(env: Env, userId: string): Promise<SecuritySettings> {
-  const cached = await new SecuritySettingGetRepository(env).get(userId);
+async function loadSecuritySettings(env: Env, session: RedisSession): Promise<SecuritySettings> {
+  const userId = session.userId;
+  const cached = await new SecuritySettingGetRepository(env, session).get();
   if (cached) return cached;
   const db = createDb(env.DATABASE_URL);
   try {
@@ -28,7 +30,7 @@ async function loadSecuritySettings(env: Env, userId: string): Promise<SecurityS
       hasPassword: Boolean(credential),
       passkeys: passkeys.map((passkey) => ({ id: passkey.id, name: passkey.name, createdAt: passkey.createdAt?.toISOString() ?? null })),
     };
-    await new SecuritySettingCreateRepository(env).create(userId, settings);
+    await new SecuritySettingCreateRepository(env, session).create(settings);
     return settings;
   } finally {
     waitUntil(db.$client.end());
@@ -39,6 +41,6 @@ export async function handleSecuritySettings(env: Env, request: Request): Promis
   return withAuth(env, async (auth) => {
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    return Response.json(await loadSecuritySettings(env, session.user.id));
+    return Response.json(await loadSecuritySettings(env, { id: session.session.id, userId: session.user.id }));
   });
 }

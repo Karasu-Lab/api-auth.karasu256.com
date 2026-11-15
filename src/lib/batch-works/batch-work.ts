@@ -76,6 +76,12 @@ export abstract class BatchWork<TContextSchema extends z.ZodType> {
     this.finishedAt = new Date();
   }
 
+  protected reschedule(scheduledAt: Date): void {
+    this.status = batchWorkStatusSchema.enum.pending;
+    this.scheduledAt = scheduledAt;
+    this.startedAt = null;
+  }
+
   protected async fail(error: unknown): Promise<void> {
     this.status = batchWorkStatusSchema.enum.error;
     this.error = await this.encrypt(error instanceof Error ? (error.stack ?? `${error.name}: ${error.message}`) : String(error));
