@@ -8,10 +8,11 @@ import {
   AuthorizedAppGetRepository,
   type AuthorizedApp,
 } from '../lib/redis/authorized-app-repositories';
+import type { RedisSession } from '../lib/redis/redis-repository';
 import { withAuth } from '../lib/request-auth';
 
-async function loadAuthorizedApps(env: Env, auth: Auth, db: Db, userId: string): Promise<AuthorizedApp[]> {
-  const cached = await new AuthorizedAppGetRepository(env).get(userId);
+async function loadAuthorizedApps(env: Env, auth: Auth, db: Db, session: RedisSession): Promise<AuthorizedApp[]> {
+  const cached = await new AuthorizedAppGetRepository(env, session).get();
   if (cached) return cached;
   const supportedScopes = (await auth.$context).getPlugin('oauth-provider')?.options.scopes ?? [];
   const scopesToPermissions = (scopes: string[]) =>
@@ -25,9 +26,9 @@ async function loadAuthorizedApps(env: Env, auth: Auth, db: Db, userId: string):
     })
     .from(schema.oauthConsents)
     .leftJoin(schema.oauthClients, eq(schema.oauthClients.clientId, schema.oauthConsents.clientId))
-    .where(eq(schema.oauthConsents.userId, userId));
+    .where(eq(schema.oauthConsents.userId, session.userId));
   const apps = rows.map((row) => ({ clientId: row.clientId, permissions: scopesToPermissions(row.scopes), icon: row.icon, name: row.name }));
-  await new AuthorizedAppCreateRepository(env).create(userId, apps);
+  await new AuthorizedAppCreateRepository(env, session).create(apps);
   return apps;
 }
 
@@ -38,7 +39,7 @@ export async function handleAuthorizedAppList(env: Env, request: Request): Promi
 
     const db = createDb(env.DATABASE_URL);
     try {
-      const apps = await loadAuthorizedApps(env, auth, db, session.user.id);
+      const apps = await loadAuthorizedApps(env, auth, db, { id: session.session.id, userId: session.user.id });
       const consents = await db
         .select({ id: schema.oauthConsents.id, clientId: schema.oauthConsents.clientId, createdAt: schema.oauthConsents.createdAt })
         .from(schema.oauthConsents)
@@ -78,7 +79,9 @@ export async function handleAuthorizedAppDetails(env: Env, request: Request, con
         .from(schema.oauthConsents)
         .where(and(eq(schema.oauthConsents.id, consentId), eq(schema.oauthConsents.userId, session.user.id)));
       if (!consent) return Response.json({ error: 'Not Found' }, { status: 404 });
-      const app = (await loadAuthorizedApps(env, auth, db, session.user.id)).find((entry) => entry.clientId === consent.clientId);
+      const app = (await loadAuthorizedApps(env, auth, db, { id: session.session.id, userId: session.user.id })).find(
+        (entry) => entry.clientId === consent.clientId
+      );
       return Response.json({
         id: consent.id,
         clientId: consent.clientId,

@@ -39,14 +39,14 @@ export class SessionSourceStore {
         .insert(schema.sessionDevicesSource)
         .values({ sessionId: session.id, userId: session.userId, source })
         .onConflictDoNothing();
-      await new SessionSourceCreateRepository(this.env).create(session.id, source, session.expiresAt);
+      await new SessionSourceCreateRepository(this.env, session).create(source, session.expiresAt);
     } catch (error) {
       console.error(`Failed to record the session source for session ${session.id}`, error);
     }
   }
 
-  async get(session: { id: string; expiresAt: Date }): Promise<SessionSource> {
-    const cached = SessionSourceStore.cache.get(session.id) ?? (await new SessionSourceGetRepository(this.env).get(session.id));
+  async get(session: { id: string; userId: string; expiresAt: Date }): Promise<SessionSource> {
+    const cached = SessionSourceStore.cache.get(session.id) ?? (await new SessionSourceGetRepository(this.env, session).get());
     if (cached?.endsWith(`-${session.id}`)) {
       this.remember(session.id, cached);
       return cached;
@@ -60,7 +60,7 @@ export class SessionSourceStore {
       ? row.source
       : `${SessionSourceStore.unknownProviderId}-${session.id}`;
     this.remember(session.id, source);
-    await new SessionSourceCreateRepository(this.env).create(session.id, source, session.expiresAt);
+    await new SessionSourceCreateRepository(this.env, session).create(source, session.expiresAt);
     return source;
   }
 

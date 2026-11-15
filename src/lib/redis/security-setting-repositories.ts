@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import * as schema from '@karasu-lab/db/schema';
-import { RedisRepository } from './redis-repository';
-import { userIdsOf } from './rows';
+import { SessionRedisRepository } from './redis-repository';
+import { sessionsOfUsers, userIdsOf, type FindRows } from './rows';
 
 export const securitySettingsSchema = z.object({
   hasPassword: z.boolean(),
@@ -10,33 +10,33 @@ export const securitySettingsSchema = z.object({
 
 export type SecuritySettings = z.output<typeof securitySettingsSchema>;
 
-export class SecuritySettingGetRepository extends RedisRepository {
-  protected readonly prefix = 'security-settings:';
+export class SecuritySettingGetRepository extends SessionRedisRepository {
+  protected readonly prefix = 'security-settings';
 
-  async get(userId: string): Promise<SecuritySettings | null> {
-    const value = await this.redis.get<string>(`${this.prefix}${userId}`);
+  async get(): Promise<SecuritySettings | null> {
+    const value = await this.redis.get<string>(this.key);
     return value === null ? null : securitySettingsSchema.parse(JSON.parse(value));
   }
 }
 
-export class SecuritySettingCreateRepository extends RedisRepository {
-  protected readonly prefix = 'security-settings:';
+export class SecuritySettingCreateRepository extends SessionRedisRepository {
+  protected readonly prefix = 'security-settings';
 
-  async create(userId: string, settings: SecuritySettings): Promise<void> {
-    await this.redis.set(`${this.prefix}${userId}`, JSON.stringify(settings));
+  async create(settings: SecuritySettings): Promise<void> {
+    await this.redis.set(this.key, JSON.stringify(settings));
   }
 }
 
-export class SecuritySettingDeleteRepository extends RedisRepository {
-  protected readonly prefix = 'security-settings:';
+export class SecuritySettingDeleteRepository extends SessionRedisRepository {
+  protected readonly prefix = 'security-settings';
 
-  async delete(userId: string): Promise<void> {
-    await this.redis.del(`${this.prefix}${userId}`);
+  async delete(): Promise<void> {
+    await this.redis.del(this.key);
   }
 
-  async invalidate(table: unknown, rows: unknown[]): Promise<void> {
-    if (table === schema.accounts || table === schema.passkeys) {
-      await Promise.all(userIdsOf(rows).map((userId) => this.delete(userId)));
-    }
+  static async invalidate(env: Env, table: unknown, rows: unknown[], find: FindRows): Promise<void> {
+    if (table !== schema.accounts && table !== schema.passkeys) return;
+    const sessions = await sessionsOfUsers(userIdsOf(rows), find);
+    await Promise.all(sessions.map((session) => new SecuritySettingDeleteRepository(env, session).delete()));
   }
 }
