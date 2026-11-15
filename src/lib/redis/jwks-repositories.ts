@@ -24,28 +24,28 @@ const jwksSchema = z.array(
 export type Jwks = z.output<typeof jwksSchema>;
 
 export class JwksGetRepository extends RedisRepository {
-  protected readonly prefix = 'jwks:';
+  protected readonly prefix = 'jwks';
 
   async get(): Promise<Jwks | null> {
-    const value = await this.redis.get<string>(`${this.prefix}keys`);
+    const value = await this.redis.get<string>(`${this.prefix}-keys`);
     return value === null ? null : jwksSchema.parse(JSON.parse(value));
   }
 }
 
 export class JwksCreateRepository extends RedisRepository {
-  protected readonly prefix = 'jwks:';
+  protected readonly prefix = 'jwks';
 
   async create(keys: unknown[]): Promise<Jwks> {
     const parsed = jwksSchema.parse(keys);
-    await this.redis.set(`${this.prefix}keys`, JSON.stringify(parsed));
+    await this.redis.set(`${this.prefix}-keys`, JSON.stringify(parsed));
     return parsed;
   }
 }
 
 export class JwksDeleteRepository extends RedisRepository {
-  protected readonly prefix = 'jwks:';
+  protected readonly prefix = 'jwks';
 
   async invalidate(table: unknown): Promise<void> {
-    if (table === schema.jwks) await this.redis.del(`${this.prefix}keys`);
+    if (table === schema.jwks) await this.redis.del(`${this.prefix}-keys`);
   }
 }
