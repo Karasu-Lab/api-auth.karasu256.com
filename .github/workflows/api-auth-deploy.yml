@@ -25,7 +25,6 @@ jobs:
             - FIREBASE_ADMIN_CLIENT_EMAIL
             - FIREBASE_ADMIN_PRIVATE_KEY
             - RESEND_API_KEY
-            - RESEND_FROM_EMAIL
             - NEON_AUTH_BASE_URL
             - GOOGLE_CLIENT_SECRET
             - GITHUB_CLIENT_SECRET
