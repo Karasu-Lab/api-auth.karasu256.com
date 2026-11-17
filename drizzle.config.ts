@@ -3,6 +3,7 @@ import { defineConfig } from 'drizzle-kit';
 export default defineConfig({
   dialect: 'postgresql',
   schema: [
+    './src/db/email-challenges.ts',
     '../../packages/db/src/schema/batch-works.ts',
     '../../packages/db/src/schema/device-codes.ts',
     '../../packages/db/src/schema/oauth-client-info.ts',
