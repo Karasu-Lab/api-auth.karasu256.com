@@ -11,7 +11,7 @@ import type { Db } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
 import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
 import { getAuthConfig } from '../config';
-import { emailChallenges } from '../db/email-challenges';
+import { emailChallenges } from '../db/schema/email-challenges';
 import { sendChallengeEmail } from './challenge-email';
 import { FirebaseDeleteUserWork, FirebaseLinkUserWork, NeonAuthSyncUserWork, RedisSessionCleanupWork, runBatchWorks } from './batch-works';
 import { assertNoDeviceSessionConflict } from './device-session-conflict';
