@@ -25,5 +25,8 @@ export async function sendChallengeEmail(env: Env, { email, otp, expiresAt }: Ch
     ].join(''),
     text: `Karasu Lab のサインインコード: ${otp}\nこのコードは ${minutes} 分間有効です。心当たりがない場合は、このメールを破棄してください。`,
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('Resend rejected the sign-in code email', error);
+    throw new Error(error.message);
+  }
 }
