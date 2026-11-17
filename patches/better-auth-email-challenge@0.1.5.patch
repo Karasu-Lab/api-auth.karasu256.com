@@ -1,0 +1,31 @@
+diff --git a/dist/index.js b/dist/index.js
+index bb6dc12b0dd0c88dc2db4c1142e498394d2bc552..e136245fb92ad2167cc53832ee32354ecb706ffc 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -49,7 +49,7 @@ var sha256Hex = async (input) => {
+ };
+ var generateApprovalToken = () => generateRandomString(32, "a-z", "A-Z", "0-9");
+ var generateBrowserSecret = () => generateRandomString(32, "a-z", "A-Z", "0-9");
+-var generateOtp = (length) => generateRandomString(length, "0-9");
++var generateOtp = (length) => generateRandomString(length, "A-Z", "0-9");
+ var constantTimeEqualHex = (a, b) => {
+   if (a.length !== b.length) return false;
+   let mismatch = 0;
+@@ -315,7 +315,7 @@ var pollEmailChallenge = (opts) => createAuthEndpoint2(
+ );
+ 
+ // src/routes/start.ts
+-import { APIError as APIError2, createAuthEndpoint as createAuthEndpoint3, getIp } from "better-auth/api";
++import { APIError as APIError2, createAuthEndpoint as createAuthEndpoint3, getIP } from "better-auth/api";
+ import * as z2 from "zod";
+ var bodySchema = z2.object({
+   email: z2.string().email(),
+@@ -356,7 +356,7 @@ var startEmailChallenge = (opts) => createAuthEndpoint3(
+       sha256Hex(browserSecret)
+     ]);
+     const expiresAt = new Date(Date.now() + opts.expiresIn * 1e3);
+-    const ipAddress = ctx.request ? getIp(ctx.request, ctx.context.options) ?? null : null;
++    const ipAddress = ctx.request ? getIP(ctx.request, ctx.context.options) ?? null : null;
+     const userAgent = ctx.request?.headers.get("user-agent") ?? null;
+     const now = /* @__PURE__ */ new Date();
+     const record2 = await ctx.context.adapter.create({

@@ -19,3 +19,5 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - '@karasu-lab/*'
   - '@karasu-lab/types@0.1.0-1950a9c'
+patchedDependencies:
+  better-auth-email-challenge@0.1.5: patches/better-auth-email-challenge@0.1.5.patch

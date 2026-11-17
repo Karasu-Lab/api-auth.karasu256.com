@@ -1,5 +1,6 @@
 import { waitUntil } from 'cloudflare:workers';
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
+import { emailChallenge } from 'better-auth-email-challenge';
 import { passkey } from '@better-auth/passkey';
 import { apiKey } from '@better-auth/api-key';
 import { sso } from '@better-auth/sso';
@@ -10,6 +11,8 @@ import type { Db } from '@karasu-lab/db/create-db';
 import * as schema from '@karasu-lab/db/schema';
 import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
 import { getAuthConfig } from '../config';
+import { emailChallenges } from '../db/schema/email-challenges';
+import { sendChallengeEmail } from './challenge-email';
 import { FirebaseDeleteUserWork, FirebaseLinkUserWork, NeonAuthSyncUserWork, RedisSessionCleanupWork, runBatchWorks } from './batch-works';
 import { assertNoDeviceSessionConflict } from './device-session-conflict';
 import { getLinkedFirebaseUid } from './firebase-link';
@@ -69,6 +72,11 @@ function createPlugins(env: Env, db: Db) {
       rpName: webauthn.rpName,
       origin: webauthn.expectedOrigins,
     }),
+    emailChallenge({
+      otpLength: 6,
+      disableSignUp: true,
+      sendChallengeEmail: ({ email, otp, challenge }) => sendChallengeEmail(env, { email, otp, expiresAt: challenge.expiresAt }),
+    }),
     multiSession({ maximumSessions: 5 }),
     organization({ teams: { enabled: true } }),
     oauthDeviceAuthorization({ verificationUri: `${env.AUTH_UI_URL}/device` }),
@@ -121,6 +129,7 @@ function createAuthOptions(env: Env, db: Db) {
         deviceCode: schema.deviceCodes,
         apikey: schema.apiKeys,
         ssoProvider: schema.ssoProviders,
+        emailChallenge: emailChallenges,
       },
     }),
     secret: env.BETTER_AUTH_SECRET,
