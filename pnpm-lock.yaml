@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  better-auth-email-challenge@0.1.5: 305866c5cd3b68d0da0e976e49fff5f33f7788a0594d14b3ca9e6a4c207d8859
+  better-auth-email-challenge@0.1.5: cc1ef12b8dcd7b5cdd36aa89db3cbc0ae79027b525ae4e369534385dc01616fa
 
 importers:
 
@@ -49,7 +49,7 @@ importers:
         version: 1.7.14(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(@upstash/redis@1.41.0)(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(pg@8.23.1)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
       better-auth-email-challenge:
         specifier: 0.1.5
-        version: 0.1.5(patch_hash=305866c5cd3b68d0da0e976e49fff5f33f7788a0594d14b3ca9e6a4c207d8859)(better-auth@1.7.14(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(@upstash/redis@1.41.0)(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(pg@8.23.1)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))))(zod@4.6.7)
+        version: 0.1.5(patch_hash=cc1ef12b8dcd7b5cdd36aa89db3cbc0ae79027b525ae4e369534385dc01616fa)(better-auth@1.7.14(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(@upstash/redis@1.41.0)(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(pg@8.23.1)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))))(zod@4.6.7)
       drizzle-orm:
         specifier: ^0.44.0
         version: 0.44.7(@upstash/redis@1.41.0)(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(pg@8.23.1)(postgres@3.4.9)
@@ -5346,7 +5346,7 @@ snapshots:
 
   assertion-error@2.0.1: {}
 
-  better-auth-email-challenge@0.1.5(patch_hash=305866c5cd3b68d0da0e976e49fff5f33f7788a0594d14b3ca9e6a4c207d8859)(better-auth@1.7.14(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(@upstash/redis@1.41.0)(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(pg@8.23.1)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))))(zod@4.6.7):
+  better-auth-email-challenge@0.1.5(patch_hash=cc1ef12b8dcd7b5cdd36aa89db3cbc0ae79027b525ae4e369534385dc01616fa)(better-auth@1.7.14(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(@upstash/redis@1.41.0)(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(pg@8.23.1)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))))(zod@4.6.7):
     dependencies:
       better-auth: 1.7.14(drizzle-kit@0.31.11)(drizzle-orm@0.44.7(@upstash/redis@1.41.0)(gel@2.2.1(supports-color@10.2.2))(kysely@0.29.7)(pg@8.23.1)(postgres@3.4.9))(next@15.5.28(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
       zod: 4.6.7
