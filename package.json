@@ -32,7 +32,7 @@
     "@better-auth/passkey": "1.7.12",
     "@better-auth/sso": "1.7.12",
     "@karasu-lab/sdk": "0.1.0-b98320f",
-    "@karasu-lab/types": "0.1.0-b9a53d3",
+    "@karasu-lab/types": "0.1.0-80684cd",
     "@karasu-lab/utils": "0.1.0-11f53a9",
     "@paralleldrive/cuid2": "^3.3.0",
     "@upstash/redis": "^1.41.0",
