@@ -1,3 +1,4 @@
+import { normalizeClientAuthentication } from '../lib/client-authentication';
 import { CookieSessionStore } from '../lib/cookie-session';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import { withCdnProfileAvatarUrls } from '../lib/profile-avatar';
@@ -23,7 +24,8 @@ export class AuthDispatch implements Dispatchable {
     const cookieSession = request.method === 'GET' && pathname === '/api/auth/get-session' ? new CookieSessionStore(env, request) : null;
     const cached = await cookieSession?.get();
     if (cached) return cached;
-    const authResponse = await withAuth(env, (auth) => auth.handler(request));
+    const authRequest = await normalizeClientAuthentication(env, request, pathname);
+    const authResponse = await withAuth(env, (auth) => auth.handler(authRequest));
     if (pathname === '/api/auth/oauth2/token') await assertTokenSessionActive(env, authResponse);
     const response = await withCdnProfileAvatarUrls(env, pathname, authResponse);
     await cookieSession?.save(response);
