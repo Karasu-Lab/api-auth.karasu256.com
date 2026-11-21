@@ -12,6 +12,16 @@ async function consume(kv: KVNamespace, key: string, limit: number): Promise<boo
   return true;
 }
 
+export async function sendVerificationWithLimit(env: Env, email: string, request: Request): Promise<boolean> {
+  const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
+  const allowed =
+    (await consume(env.VERIFICATION_RESEND_KV, `resend:email:${email}`, 3)) && (await consume(env.VERIFICATION_RESEND_KV, `resend:ip:${ip}`, 10));
+  if (!allowed) return false;
+
+  await withAuth(env, (auth) => auth.api.sendVerificationEmail({ body: { email, callbackURL: `${env.AUTH_UI_URL}/email/verify/complete` } }));
+  return true;
+}
+
 export async function resendVerificationForUnverifiedUser(env: Env, request: Request, pathname: string): Promise<Response | null> {
   if (request.method !== 'POST' || pathname !== '/api/auth/sign-up/email') return null;
   const body = z.object({ email: z.email() }).safeParse(
@@ -33,13 +43,8 @@ export async function resendVerificationForUnverifiedUser(env: Env, request: Req
   }
   if (!unverified) return null;
 
-  const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
-  const allowed =
-    (await consume(env.VERIFICATION_RESEND_KV, `resend:email:${email}`, 3)) && (await consume(env.VERIFICATION_RESEND_KV, `resend:ip:${ip}`, 10));
-  if (!allowed) {
+  if (!(await sendVerificationWithLimit(env, email, request))) {
     return Response.json({ code: 'VERIFICATION_EMAIL_RATE_LIMITED', message: 'Too many verification emails were requested.' }, { status: 429 });
   }
-
-  await withAuth(env, (auth) => auth.api.sendVerificationEmail({ body: { email, callbackURL: `${env.AUTH_UI_URL}/email/verify/complete` } }));
   return Response.json({ code: 'VERIFICATION_EMAIL_RESENT', message: 'The verification email was sent again.' }, { status: 409 });
 }

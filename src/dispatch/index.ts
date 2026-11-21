@@ -11,6 +11,7 @@ import {
 } from './api-keys';
 import { AuthDispatch } from './auth';
 import { ClientRegistrationDispatch } from './client-registration';
+import { ResendVerificationEmailDispatch } from './email-verification';
 import { GithubAppInstallUrlDispatch, GithubAppTokenDispatch, GithubRepositoriesDispatch, GithubUserDispatch } from './github';
 import { McpIconUploadUrlDispatch, McpSessionTokenDispatch } from './mcp';
 import { LinkMinecraftDispatch } from './minecraft';
@@ -87,4 +88,5 @@ export const dispatchables: DispatchableClass[] = [
   UpdateUserProfileDispatch,
   LinkMinecraftDispatch,
   WellKnownMetadataDispatch,
+  ResendVerificationEmailDispatch,
 ];
