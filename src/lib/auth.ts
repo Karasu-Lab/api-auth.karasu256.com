@@ -27,6 +27,7 @@ import { redisSecondaryStorage } from './redis-storage';
 import { sessionJwtHeaderPlugin } from './session-jwt';
 import { SessionSourceStore } from './session-source';
 import { tenantTypePlugin } from './tenant-type';
+import { sendVerificationEmail } from './verification-email';
 
 function createPlugins(env: Env, db: Db) {
   const { webauthn } = getAuthConfig(env);
@@ -34,10 +35,14 @@ function createPlugins(env: Env, db: Db) {
   const oauthProviders = mockOAuthUrl ? getMockOAuthProviders(mockOAuthUrl) : getGithubOAuthProviders(env);
 
   const jwtOptions = {
+    jwks: { keyPairConfig: { alg: 'RS256', modulusLength: 2048 } },
     adapter: {
-      getJwks: async (ctx) =>
-        (await new JwksGetRepository(env).get()) ??
-        (await new JwksCreateRepository(env).create(await ctx.context.adapter.findMany({ model: 'jwks' }))),
+      getJwks: async (ctx) => {
+        const keys =
+          (await new JwksGetRepository(env).get()) ??
+          (await new JwksCreateRepository(env).create(await ctx.context.adapter.findMany({ model: 'jwks' })));
+        return keys.some((key) => key.alg === 'RS256') ? [...keys].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()) : [];
+      },
     },
   } satisfies JwtOptions;
 
@@ -63,8 +68,7 @@ function createPlugins(env: Env, db: Db) {
       allowDynamicClientRegistration: true,
       allowUnauthenticatedClientRegistration: true,
       accessTokenExpiresIn: 15 * 60,
-      customAccessTokenClaims: ({ user }) =>
-        user ? { email: user.email, name: user.name, picture: user.image ?? null } : {},
+      customAccessTokenClaims: ({ user }) => (user ? { email: user.email, name: user.name, picture: user.image ?? null } : {}),
       refreshTokenReuseInterval: 30,
     }),
     passkey({
@@ -150,6 +154,12 @@ function createAuthOptions(env: Env, db: Db) {
         await sendPasswordResetEmail({ apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM_EMAIL, to: user.email, resetUrl: url });
       },
     },
+    emailVerification: {
+      sendOnSignUp: true,
+      sendVerificationEmail: async ({ user, url }) => {
+        await sendVerificationEmail(env, { email: user.email, url });
+      },
+    },
     session: {
       storeSessionInDatabase: true,
       cookieCache: {
@@ -218,7 +228,7 @@ function createAuthOptions(env: Env, db: Db) {
                 getSignedCookie: (name) => context.getSignedCookie(name, context.context.secret),
                 findSessions: (tokens) => context.context.internalAdapter.findSessions(tokens, { onlyActiveSessions: true }),
               },
-              session.userId,
+              session.userId
             );
           },
           after: async (session, context) => {
