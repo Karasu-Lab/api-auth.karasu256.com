@@ -12,7 +12,12 @@ const CONFIGS: Record<Env['APP_ENV'], AuthConfig> = {
     webauthn: {
       rpId: 'karasu256.com',
       rpName: 'Karasu Lab',
-      expectedOrigins: ['https://local-accounts.karasu256.com', 'https://local-auth.karasu256.com', 'https://local-sso.karasu256.com', ...ANDROID_ORIGINS],
+      expectedOrigins: [
+        'https://local-accounts.karasu256.com',
+        'https://local-auth.karasu256.com',
+        'https://local-sso.karasu256.com',
+        ...ANDROID_ORIGINS,
+      ],
     },
     turnstileHostnames: ['local-auth.karasu256.com', 'local-sso.karasu256.com'],
     batchWorks: { maxConcurrency: 2 },
@@ -36,7 +41,13 @@ const CONFIGS: Record<Env['APP_ENV'], AuthConfig> = {
     webauthn: {
       rpId: 'karasu256.com',
       rpName: 'Karasu Lab',
-      expectedOrigins: ['https://dev.accounts.karasu256.com', 'https://dev-auth.karasu256.com', 'https://dev-sso.karasu256.com', 'https://dev.karasu256.com', ...ANDROID_ORIGINS],
+      expectedOrigins: [
+        'https://dev.accounts.karasu256.com',
+        'https://dev-auth.karasu256.com',
+        'https://dev-sso.karasu256.com',
+        'https://dev.karasu256.com',
+        ...ANDROID_ORIGINS,
+      ],
     },
     turnstileHostnames: ['dev-auth.karasu256.com', 'dev-sso.karasu256.com'],
     batchWorks: { maxConcurrency: 2 },
@@ -54,7 +65,13 @@ const CONFIGS: Record<Env['APP_ENV'], AuthConfig> = {
     webauthn: {
       rpId: 'karasu256.com',
       rpName: 'Karasu Lab',
-      expectedOrigins: ['https://accounts.karasu256.com', 'https://auth.karasu256.com', 'https://sso.karasu256.com', 'https://karasu256.com', ...ANDROID_ORIGINS],
+      expectedOrigins: [
+        'https://accounts.karasu256.com',
+        'https://auth.karasu256.com',
+        'https://sso.karasu256.com',
+        'https://karasu256.com',
+        ...ANDROID_ORIGINS,
+      ],
     },
     turnstileHostnames: ['auth.karasu256.com', 'sso.karasu256.com'],
     batchWorks: { maxConcurrency: 5 },

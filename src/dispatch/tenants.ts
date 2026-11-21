@@ -1,22 +1,11 @@
 import { createDb } from '../db/create-db';
 import type { Db } from '../db/create-db';
-import {
-  members,
-  organizations,
-  tenantGithubInstallations,
-  tenantLinkedPackages,
-  tenantTypes,
-  type TenantGithubInstallation,
-} from '../db/schema';
+import { members, organizations, tenantGithubInstallations, tenantLinkedPackages, tenantTypes, type TenantGithubInstallation } from '../db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { BadRequestError, HttpError, NotFoundError } from '@karasu-lab/types/server';
-import {
-  assignTenantTypeRequestSchema,
-  assignTenantTypeResponseSchema,
-  githubInstallationWebhookActionSchema,
-} from '@karasu-lab/types/shared';
+import { assignTenantTypeRequestSchema, assignTenantTypeResponseSchema, githubInstallationWebhookActionSchema } from '@karasu-lab/types/shared';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import {
   deleteInstallation,
@@ -52,11 +41,7 @@ function packageSegment(pathname: string, suffix: string): { organizationId: str
 }
 
 async function requireInstallation(db: Db, organizationId: string): Promise<TenantGithubInstallation> {
-  const rows = await db
-    .select()
-    .from(tenantGithubInstallations)
-    .where(eq(tenantGithubInstallations.organizationId, organizationId))
-    .limit(1);
+  const rows = await db.select().from(tenantGithubInstallations).where(eq(tenantGithubInstallations.organizationId, organizationId)).limit(1);
   if (!rows[0]) throw new HttpError(409, { error: 'github_app_not_installed' });
   return rows[0];
 }
@@ -171,11 +156,7 @@ export class TenantInstallationDispatch implements Dispatchable {
     const organizationId = tenantSegment(this.context.pathname, '/github-installation')!;
     const db = createDb(env.DATABASE_URL);
     try {
-      const rows = await db
-        .select()
-        .from(tenantGithubInstallations)
-        .where(eq(tenantGithubInstallations.organizationId, organizationId))
-        .limit(1);
+      const rows = await db.select().from(tenantGithubInstallations).where(eq(tenantGithubInstallations.organizationId, organizationId)).limit(1);
       if (!rows[0]) return Response.json({ installation: null });
       const row = rows[0];
       let live: GithubAppInstallationInfo | null = null;
@@ -225,9 +206,7 @@ export class UninstallBotDispatch implements Dispatchable {
       await requireTenantRole(db, parsed.data.userId, organizationId, TENANT_SETUP_ROLES);
       const installation = await requireInstallation(db, organizationId);
       await deleteInstallation(env, installation.installationId);
-      await db
-        .delete(tenantGithubInstallations)
-        .where(eq(tenantGithubInstallations.organizationId, organizationId));
+      await db.delete(tenantGithubInstallations).where(eq(tenantGithubInstallations.organizationId, organizationId));
       return Response.json({ uninstalled: true });
     } finally {
       waitUntil(db.$client.end());
@@ -345,12 +324,7 @@ export class SetLinkedPackageEnabledDispatch implements Dispatchable {
       const updated = await db
         .update(tenantLinkedPackages)
         .set({ webhookEnabled: parsed.data.enabled })
-        .where(
-          and(
-            eq(tenantLinkedPackages.organizationId, segment.organizationId),
-            eq(tenantLinkedPackages.id, segment.packageId)
-          )
-        )
+        .where(and(eq(tenantLinkedPackages.organizationId, segment.organizationId), eq(tenantLinkedPackages.id, segment.packageId)))
         .returning();
       if (!updated[0]) throw new NotFoundError();
       return Response.json({ enabled: updated[0].webhookEnabled });
@@ -383,9 +357,7 @@ export class UnlinkPackageDispatch implements Dispatchable {
       await requireTenantRole(db, parsed.data.userId, segment.organizationId, TENANT_SETUP_ROLES);
       const deleted = await db
         .delete(tenantLinkedPackages)
-        .where(
-          and(eq(tenantLinkedPackages.organizationId, segment.organizationId), eq(tenantLinkedPackages.id, segment.packageId))
-        )
+        .where(and(eq(tenantLinkedPackages.organizationId, segment.organizationId), eq(tenantLinkedPackages.id, segment.packageId)))
         .returning();
       if (!deleted[0]) throw new NotFoundError();
       return Response.json({ unlinked: true });
@@ -418,12 +390,7 @@ export class UpdateLinkedPackagePointerDispatch implements Dispatchable {
       const updated = await db
         .update(tenantLinkedPackages)
         .set({ lastSyncedSha: parsed.data.sha })
-        .where(
-          and(
-            eq(tenantLinkedPackages.organizationId, segment.organizationId),
-            eq(tenantLinkedPackages.id, segment.packageId)
-          )
-        )
+        .where(and(eq(tenantLinkedPackages.organizationId, segment.organizationId), eq(tenantLinkedPackages.id, segment.packageId)))
         .returning();
       if (!updated[0]) throw new NotFoundError();
       return Response.json({ lastSyncedSha: updated[0].lastSyncedSha });
@@ -452,10 +419,7 @@ export class AssignTenantTypeDispatch implements Dispatchable {
     const db = createDb(env.DATABASE_URL);
     try {
       await requireTenantRole(db, parsed.data.userId, organizationId, ['owner', 'admin', 'member']);
-      await db
-        .insert(tenantTypes)
-        .values({ tenantId: organizationId, type: parsed.data.type })
-        .onConflictDoNothing();
+      await db.insert(tenantTypes).values({ tenantId: organizationId, type: parsed.data.type }).onConflictDoNothing();
       const rows = await db.select().from(tenantTypes).where(eq(tenantTypes.tenantId, organizationId)).limit(1);
       const row = rows[0]!;
       return Response.json(assignTenantTypeResponseSchema.parse({ tenantId: row.tenantId, type: row.type }));
@@ -465,7 +429,7 @@ export class AssignTenantTypeDispatch implements Dispatchable {
   }
 }
 
-const pushWebhookBodySchema =z.object({
+const pushWebhookBodySchema = z.object({
   installationId: z.number(),
   repositoryFullName: z.string().min(1),
   afterSha: z.string().min(7),
@@ -500,12 +464,7 @@ export class PushWebhookDispatch implements Dispatchable {
       const packageRows = await db
         .select()
         .from(tenantLinkedPackages)
-        .where(
-          and(
-            eq(tenantLinkedPackages.organizationId, organizationId),
-            eq(tenantLinkedPackages.repositoryFullName, repositoryFullName)
-          )
-        )
+        .where(and(eq(tenantLinkedPackages.organizationId, organizationId), eq(tenantLinkedPackages.repositoryFullName, repositoryFullName)))
         .limit(1);
       const linked = packageRows[0];
       if (!linked) return Response.json({ accepted: false, reason: 'package_not_linked' });
@@ -551,18 +510,12 @@ export class InstallationWebhookDispatch implements Dispatchable {
     const { installationId, action } = parsed.data;
     const db = createDb(env.DATABASE_URL);
     try {
-      const rows = await db
-        .select()
-        .from(tenantGithubInstallations)
-        .where(eq(tenantGithubInstallations.installationId, installationId))
-        .limit(1);
+      const rows = await db.select().from(tenantGithubInstallations).where(eq(tenantGithubInstallations.installationId, installationId)).limit(1);
       const row = rows[0];
       if (!row) return Response.json({ accepted: false, reason: 'installation_not_linked' });
       const organizationId = row.organizationId;
       if (action === 'deleted') {
-        await db
-          .delete(tenantGithubInstallations)
-          .where(eq(tenantGithubInstallations.organizationId, organizationId));
+        await db.delete(tenantGithubInstallations).where(eq(tenantGithubInstallations.organizationId, organizationId));
         return Response.json({ accepted: true, organizationId, action });
       }
       if (action === 'suspend' || action === 'unsuspend') {
@@ -589,4 +542,3 @@ export class InstallationWebhookDispatch implements Dispatchable {
     }
   }
 }
-

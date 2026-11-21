@@ -18,7 +18,13 @@ export async function handleProviderDetails(env: Env, request: Request, provider
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const profile = await getProviderProfile(env, auth, { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt }, providerId, profileOptions(env));
+    const profile = await getProviderProfile(
+      env,
+      auth,
+      { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt },
+      providerId,
+      profileOptions(env)
+    );
     if (!profile) return Response.json({ error: 'Not Found' }, { status: 404 });
     return Response.json(profile);
   });

@@ -40,13 +40,13 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
         method: request.method,
         path: new URL(request.url).pathname,
       },
-      'error',
+      'error'
     );
     return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   })
   .get('/api/users/me/providers', ({ request }) => handleProviderList(env, request))
   .get('/api/users/me/providers/stream', ({ request }) => handleProviderStream(env, request))
-  .get('/api/users/me/authorized-apps',({ request }) => handleAuthorizedAppList(env, request))
+  .get('/api/users/me/authorized-apps', ({ request }) => handleAuthorizedAppList(env, request))
   .get('/api/users/me/security', ({ request }) => handleSecuritySettings(env, request))
   .get('/api/users/me/authorized-apps/:id', ({ request, params }) => handleAuthorizedAppDetails(env, request, params.id))
   .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
@@ -64,7 +64,12 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
     '/*',
     async ({ request }) => {
       const body =
-        request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.clone().json().catch(() => null);
+        request.method === 'GET' || request.method === 'HEAD'
+          ? undefined
+          : await request
+              .clone()
+              .json()
+              .catch(() => null);
       const context: DispatchContext = { env, request, pathname: new URL(request.url).pathname, body };
       for (const Dispatchable of dispatchables) {
         const dispatchable = new Dispatchable(context);
@@ -90,4 +95,5 @@ export default {
     if (preflight) return preflight;
     const rejected = await rejectInvalidSignature(env, request);
     return withCors(env, request, rejected ?? (await app.fetch(request)));
-  },};
+  },
+};

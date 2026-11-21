@@ -1,11 +1,11 @@
-import { pgTable, text } from "drizzle-orm/pg-core";
-import { organizations } from "./organizations";
+import { pgTable, text } from 'drizzle-orm/pg-core';
+import { organizations } from './organizations';
 
-export const tenantTypes = pgTable("tenant_types", {
-    tenantId: text("tenant_id")
-        .primaryKey()
-        .references(() => organizations.id, { onDelete: "cascade" }),
-    type: text("type").notNull(),
+export const tenantTypes = pgTable('tenant_types', {
+  tenantId: text('tenant_id')
+    .primaryKey()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
 });
 
 export type TenantTypeRow = typeof tenantTypes.$inferSelect;

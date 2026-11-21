@@ -57,7 +57,16 @@ export class XboxLiveError extends Error {
       const headerXErr = Number.parseInt(xErrHeader, 10);
       if (Number.isInteger(headerXErr)) xErr = headerXErr;
     }
-    super([`${stage} failed`, status != null ? `HTTP ${status}` : null, xErr != null ? `XErr ${xErr}` : null, (xErr != null ? XBOX_ERROR_MESSAGES[xErr] : undefined) ?? resolvedDetail].filter(Boolean).join(': '));
+    super(
+      [
+        `${stage} failed`,
+        status != null ? `HTTP ${status}` : null,
+        xErr != null ? `XErr ${xErr}` : null,
+        (xErr != null ? XBOX_ERROR_MESSAGES[xErr] : undefined) ?? resolvedDetail,
+      ]
+        .filter(Boolean)
+        .join(': ')
+    );
     this.name = 'XboxLiveError';
     this.status = status;
     this.xErr = xErr;
@@ -107,11 +116,7 @@ export async function authorizeXsts(xboxLiveToken: string, relyingParty: string)
   return token;
 }
 
-export async function refreshMicrosoftTokens(
-  refreshToken: string,
-  clientId: string,
-  clientSecret: string
-): Promise<OAuth2Tokens | null> {
+export async function refreshMicrosoftTokens(refreshToken: string, clientId: string, clientSecret: string): Promise<OAuth2Tokens | null> {
   const res = await fetch(MICROSOFT_TOKEN_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -125,9 +130,7 @@ export async function refreshMicrosoftTokens(
   }).catch(() => null);
   if (!res?.ok) {
     const detail = res ? await res.text().catch(() => '') : '';
-    console.error(
-      `Failed to refresh the Microsoft tokens: HTTP ${res?.status ?? 'no response'}${detail ? `: ${detail}` : ''}`
-    );
+    console.error(`Failed to refresh the Microsoft tokens: HTTP ${res?.status ?? 'no response'}${detail ? `: ${detail}` : ''}`);
     return null;
   }
   const parsed = microsoftTokenResponseSchema.safeParse(await res.json().catch(() => null));

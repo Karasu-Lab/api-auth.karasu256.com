@@ -62,15 +62,10 @@ function toPkcs8Pem(pem: string): string {
   if (!pem.includes('BEGIN RSA PRIVATE KEY')) return pem;
   const pkcs1Der = Buffer.from(
     pem.replace('-----BEGIN RSA PRIVATE KEY-----', '').replace('-----END RSA PRIVATE KEY-----', '').replace(/\s+/g, ''),
-    'base64',
+    'base64'
   );
   const algorithmIdentifier = Buffer.from([0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00]);
-  const body = Buffer.concat([
-    Buffer.from([0x02, 0x01, 0x00]),
-    algorithmIdentifier,
-    Buffer.from([0x04, ...derLength(pkcs1Der.length)]),
-    pkcs1Der,
-  ]);
+  const body = Buffer.concat([Buffer.from([0x02, 0x01, 0x00]), algorithmIdentifier, Buffer.from([0x04, ...derLength(pkcs1Der.length)]), pkcs1Der]);
   const pkcs8Der = Buffer.concat([Buffer.from([0x30, ...derLength(body.length)]), body]);
   const lines = pkcs8Der.toString('base64').match(/.{1,64}/g) ?? [];
   return `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----`;
@@ -181,4 +176,3 @@ export async function getInstallationToken(env: Env, installationId: number): Pr
   tokenCache.set(installationId, { token: issued.token, expiresAt: new Date(issued.expires_at).getTime() });
   return { token: issued.token, expiresAt: issued.expires_at };
 }
-

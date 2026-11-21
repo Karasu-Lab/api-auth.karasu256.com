@@ -69,12 +69,7 @@ export async function rejectUnverifiedTurnstile(env: Env, request: Request): Pro
   }
 
   const { turnstileHostnames } = getAuthConfig(env);
-  if (
-    result.success !== true ||
-    result.action !== expectedAction ||
-    !result.hostname ||
-    !turnstileHostnames.includes(result.hostname)
-  ) {
+  if (result.success !== true || result.action !== expectedAction || !result.hostname || !turnstileHostnames.includes(result.hostname)) {
     return forbidden();
   }
   return null;

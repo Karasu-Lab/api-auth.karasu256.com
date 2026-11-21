@@ -4,11 +4,7 @@ import { waitUntil } from 'cloudflare:workers';
 import { and, desc, eq, gt, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
-import {
-  ActiveSessionCreateRepository,
-  ActiveSessionGetRepository,
-  type ActiveSession,
-} from '../lib/redis/active-session-repositories';
+import { ActiveSessionCreateRepository, ActiveSessionGetRepository, type ActiveSession } from '../lib/redis/active-session-repositories';
 import { withAuth } from '../lib/request-auth';
 import { BadRequestError, NotFoundError } from '@karasu-lab/types/server';
 import type { AuthSession, SessionDeviceSource } from '@karasu-lab/types/shared';
@@ -97,7 +93,15 @@ export class ListAuthSessionsDispatch implements Dispatchable {
           expiresAt: schema.sessions.expiresAt,
         })
         .from(schema.sessions)
-        .where(and(inArray(schema.sessions.id, active.map((session) => session.id)), gt(schema.sessions.expiresAt, new Date())))
+        .where(
+          and(
+            inArray(
+              schema.sessions.id,
+              active.map((session) => session.id)
+            ),
+            gt(schema.sessions.expiresAt, new Date())
+          )
+        )
     );
     const sessions: AuthSession[] = active.flatMap((session) => {
       const row = rows.find((entry) => entry.id === session.id);

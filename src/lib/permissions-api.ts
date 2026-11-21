@@ -25,7 +25,7 @@ export async function getGrantedPermissions(env: Env, apiKeyIds: string[]): Prom
       headers: { 'Content-Type': 'application/json', ...internalHeaders(env) },
       body: JSON.stringify({ apiKeyIds }),
       cache: 'no-store',
-    }),
+    })
   );
 }
 
