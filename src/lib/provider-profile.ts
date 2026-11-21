@@ -2,15 +2,8 @@ import { decryptOAuthToken, setTokenUtil } from 'better-auth/oauth2';
 import type { AuthContext } from '@better-auth/core';
 import type { OAuth2Tokens } from '@better-auth/core/oauth2';
 import type { Auth } from './auth';
-import { getMinecraftProfile, loginToMinecraft } from './minecraft';
-import {
-  authenticateXboxLive,
-  authorizeXsts,
-  getXboxProfile,
-  refreshMicrosoftTokens,
-  MINECRAFT_RELYING_PARTY,
-  XBOX_RELYING_PARTY,
-} from './xbox-live';
+import { signRequest } from '@karasu-lab/utils/server/request-signature';
+import { authenticateXboxLive, authorizeXsts, getXboxProfile, refreshMicrosoftTokens, XBOX_RELYING_PARTY } from './xbox-live';
 import { XBOX_PROVIDER_ID } from './xbox-link';
 import { storeProviderAvatar } from './avatar-api';
 import {
@@ -27,15 +20,15 @@ export type { ProviderProfile };
 export interface ProviderProfileOptions {
   microsoftClientId?: string;
   microsoftClientSecret?: string;
-  minecraftAuthEnabled?: boolean;
 }
 
-export const DERIVED_PROVIDER_IDS = ['xbox', 'minecraft'] as const;
+export const DERIVED_PROVIDER_IDS = ['xbox'] as const;
 
 type SocialProvider = AuthContext['socialProviders'][number];
 
 interface StoredAccount {
   id: string;
+  accountId: string;
   accessToken?: string | null;
   refreshToken?: string | null;
   idToken?: string | null;
@@ -210,17 +203,17 @@ function xboxProfileSync(options?: ProviderProfileOptions): ProviderProfileSync 
   };
 }
 
-function minecraftProfileSync(options?: ProviderProfileOptions): ProviderProfileSync {
+async function resolveMinecraftProfile(env: Env, uuid: string): Promise<ProviderProfile & { accountId?: string }> {
+  const url = new URL('/api/mc/profile', env.MC_AUTH_URL);
+  url.searchParams.set('uuid', uuid);
+  const res = await fetch(url, { headers: signRequest({ secret: env.INTERNAL_API_SECRET, method: 'GET', url: url.toString() }) }).catch(() => null);
+  if (!res?.ok) return { name: null, email: null, avatarUrl: null };
+  const profile = (await res.json()) as { name: string; skin: string | null };
   return {
-    ...microsoftRefreshTokens(options),
-    async fetchProfile(tokens) {
-      if (!tokens.accessToken) return null;
-      const xboxLive = await authenticateXboxLive(tokens.accessToken);
-      const xsts = await authorizeXsts(xboxLive.token, MINECRAFT_RELYING_PARTY);
-      const minecraftToken = await loginToMinecraft(xsts);
-      const profile = await getMinecraftProfile(minecraftToken);
-      return { name: profile.name, email: null, avatarUrl: profile.skinTextureUrl };
-    },
+    name: profile.name,
+    email: null,
+    avatarUrl: profile.skin,
+    accountId: uuid.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5'),
   };
 }
 
@@ -253,10 +246,13 @@ async function resolveProfileFromAccounts(
   if (!account) return null;
 
   return withProfileCache(account.id, providerId, async () => {
-    const profile = isDerivedProvider(providerId)
-      ? await resolveDerivedProfile(ctx, account, providerId, sharedRefreshes, options)
-      : await resolveSocialProfile(ctx, account, providerId, sharedRefreshes);
-    if (!profile?.avatarUrl) return profile;
+    const profile =
+      providerId === 'minecraft'
+        ? await resolveMinecraftProfile(env, account.accountId)
+        : isDerivedProvider(providerId)
+          ? await resolveDerivedProfile(ctx, account, sharedRefreshes, options)
+          : await resolveSocialProfile(ctx, account, providerId, sharedRefreshes);
+    if (!profile?.avatarUrl || providerId === 'minecraft') return profile;
     return { ...profile, avatarUrl: await storeProviderAvatar(env, uid, providerId, profile.avatarUrl) };
   });
 }
@@ -273,7 +269,7 @@ async function loadAccountLinks(env: Env, ctx: AuthContext, session: RedisSessio
   const cached = await new AccountLinkGetRepository(env, session).get();
   if (cached) return cached;
   const accounts = await ctx.internalAdapter.findAccounts(session.userId);
-  const providerIds = [...ctx.socialProviders.map((provider) => provider.id), ...DERIVED_PROVIDER_IDS];
+  const providerIds = [...ctx.socialProviders.map((provider) => provider.id), ...DERIVED_PROVIDER_IDS, 'minecraft'];
   const links = providerIds.map((providerId) => {
     const account = accounts.find((entry) => entry.providerId === accountProviderId(providerId));
     return { providerId, id: account?.id ?? null, url: null, linked: Boolean(account) };
@@ -319,7 +315,7 @@ export async function streamProviderProfiles(
   const profiles = new Map<string, ProviderProfile | null>();
   await Promise.all(
     links.map(async ({ providerId, linked }) => {
-      if (!linked || (providerId === 'minecraft' && !options?.minecraftAuthEnabled)) return onProfile(providerId, null);
+      if (!linked) return onProfile(providerId, null);
       try {
         const profile = await resolveProfileFromAccounts(env, ctx, uid, accounts, providerId, sharedRefreshes, options);
         profiles.set(providerId, profile);
@@ -368,24 +364,17 @@ async function getMicrosoftPhotoDataUrl(accessToken: string): Promise<string | n
 async function resolveDerivedProfile(
   ctx: AuthContext,
   account: StoredAccount & { providerId: string },
-  providerId: string,
   sharedRefreshes: SharedRefreshes,
   options?: ProviderProfileOptions
 ): Promise<ProviderProfile | null> {
-  if (providerId === 'minecraft' && options?.minecraftAuthEnabled === false) {
-    return { name: null, email: null, avatarUrl: null };
-  }
-
   const stored = await decryptStoredTokens(ctx, account);
   if (!stored) return null;
 
-  const sync = providerId === 'xbox' ? xboxProfileSync(options) : minecraftProfileSync(options);
-
   try {
-    const profile = await syncProviderProfile(ctx, account.id, stored, sync, sharedRefreshes);
+    const profile = await syncProviderProfile(ctx, account.id, stored, xboxProfileSync(options), sharedRefreshes);
     if (profile) return profile;
   } catch (error) {
-    console.error(`Failed to resolve the ${providerId} profile:`, error);
+    console.error('Failed to resolve the xbox profile:', error);
   }
   return { name: null, email: null, avatarUrl: null };
 }

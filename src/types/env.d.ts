@@ -9,8 +9,7 @@ declare global {
     ACCOUNTS_URL: string;
     MCP_URL: string;
     API_URL: string;
-    FEATURE_FLAGS_API_URL: string;
-    FEATURE_FLAGS_ORIGIN: string;
+    MC_AUTH_URL: string;
     BASE_DOMAIN?: string;
     BETTER_AUTH_SECRET: string;
     AUTH_SECRET: string;

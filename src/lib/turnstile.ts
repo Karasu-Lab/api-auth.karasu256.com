@@ -37,7 +37,7 @@ export async function rejectUnverifiedTurnstile(env: Env, request: Request): Pro
   if (request.method !== 'POST') return null;
   const { pathname } = new URL(request.url);
   const expectedAction = GATED_ACTIONS[pathname];
-  if (!expectedAction) return null;
+  if (!expectedAction || env.APP_ENV === 'local') return null;
 
   const secret = env.CLOUDFLARE_TURNSTILE_SECRET;
   if (!secret) {

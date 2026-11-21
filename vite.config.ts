@@ -11,5 +11,5 @@ const { allowedHosts } = parseYaml(fs.readFileSync(configPath, 'utf-8')) as { al
 
 export default defineConfig({
   plugins: [cloudflare({ inspectorPort: 9232 })],
-  server: { allowedHosts },
+  server: { allowedHosts, cors: false },
 });

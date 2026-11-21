@@ -10,7 +10,8 @@
       "invocation_logs": false,
     },
   },
-  "routes": [{ "pattern": "api-auth.karasu256.com", "custom_domain": true }],  "vars": {
+  "routes": [{ "pattern": "api-auth.karasu256.com", "custom_domain": true }],
+  "vars": {
     "APP_ENV": "production",
     "BETTER_AUTH_URL": "https://api-auth.karasu256.com",
     "AUTH_UI_URL": "https://auth.karasu256.com",
@@ -18,8 +19,7 @@
     "ACCOUNTS_URL": "https://accounts.karasu256.com",
     "MCP_URL": "https://mcp.karasu256.com/mcp",
     "API_URL": "https://api.karasu256.com",
-    "FEATURE_FLAGS_API_URL": "https://flags.karasu256.com",
-    "FEATURE_FLAGS_ORIGIN": "https://api-auth.karasu256.com",
+    "MC_AUTH_URL": "https://mc-auth.karasu256.com",
     "BASE_DOMAIN": "karasu256.com",
     "CDN_URL": "https://cdn.karasu256.com",
     "STORAGE_BUCKET": "cdn",
@@ -29,7 +29,13 @@
     "MICROSOFT_CLIENT_ID": "3f583452-5b65-49a0-8df6-99264d2d876f",
   },
   "ratelimits": [{ "name": "CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
-  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "858c91ee12f54fb191816dd81a34ffe0", "localConnectionString": "postgres://postgres:postgres@localhost:5433/karasu256" }],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "858c91ee12f54fb191816dd81a34ffe0",
+      "localConnectionString": "postgres://postgres:postgres@localhost:5433/karasu256",
+    },
+  ],
   "preview_urls": true,
   "previews": {
     "vars": {
@@ -40,8 +46,7 @@
       "ACCOUNTS_URL": "https://dev.accounts.karasu256.com",
       "MCP_URL": "https://dev.mcp.karasu256.com/mcp",
       "API_URL": "https://dev-api.karasu256.com",
-      "FEATURE_FLAGS_API_URL": "https://dev-flags.karasu256.com",
-      "FEATURE_FLAGS_ORIGIN": "https://dev-api-auth.karasu256.com",
+      "MC_AUTH_URL": "https://dev-mc-auth.karasu256.com",
       "BASE_DOMAIN": "karasu256.com",
       "CDN_URL": "https://dev.cdn.karasu256.com",
       "STORAGE_BUCKET": "cdn",
@@ -54,6 +59,13 @@
   "env": {
     "local": {
       "routes": [],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          "id": "858c91ee12f54fb191816dd81a34ffe0",
+          "localConnectionString": "postgres://postgres:postgres@localhost:5433/karasu256",
+        },
+      ],
       "vars": {
         "APP_ENV": "local",
         "BETTER_AUTH_URL": "http://localhost:8790",
@@ -62,11 +74,12 @@
         "ACCOUNTS_URL": "http://localhost:3001",
         "MCP_URL": "http://localhost:8791/mcp",
         "API_URL": "http://localhost:8789",
-        "FEATURE_FLAGS_API_URL": "https://dev-flags.karasu256.com",
-        "FEATURE_FLAGS_ORIGIN": "https://dev-api-auth.karasu256.com",
+        "MC_AUTH_URL": "http://localhost:8793",
         "BETTER_AUTH_SECRET": "local-development-better-auth-secret-not-for-production",
         "AUTH_SECRET": "local-development-auth-secret-not-for-production",
         "INTERNAL_API_SECRET": "local-development-internal-api-secret",
+        "UPSTASH_REDIS_REST_URL": "http://localhost:8079",
+        "UPSTASH_REDIS_REST_TOKEN": "local-development-redis-token",
         "DATABASE_URL": "postgres://postgres:postgres@localhost:5433/karasu256",
         "GOOGLE_CLOUD_PROJECT_ID": "demo-karasu256",
         "FIREBASE_ADMIN_CLIENT_EMAIL": "firebase-adminsdk@demo-karasu256.iam.gserviceaccount.com",
