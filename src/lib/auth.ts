@@ -45,7 +45,7 @@ function createPlugins(env: Env, db: Db) {
     jwt({ ...jwtOptions, disableSettingJwtHeader: true }),
     sessionJwtHeaderPlugin(env, jwtOptions),
     oauthProvider({
-      loginPage: `${env.AUTH_UI_URL}/sign-in`,
+      loginPage: `${env.SSO_UI_URL}/sign-in`,
       consentPage: `${env.AUTH_UI_URL}/oauth/consent`,
       scopes: [
         'openid',
