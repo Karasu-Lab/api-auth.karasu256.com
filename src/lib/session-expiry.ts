@@ -10,7 +10,12 @@ export async function isSessionExpired(env: Env, sessionId: string): Promise<boo
 
 export async function assertTokenSessionActive(env: Env, response: Response): Promise<void> {
   if (!response.ok) return;
-  const token = z.object({ access_token: z.string() }).safeParse(await response.clone().json().catch(() => null));
+  const token = z.object({ access_token: z.string() }).safeParse(
+    await response
+      .clone()
+      .json()
+      .catch(() => null)
+  );
   if (!token.success) return;
   let sessionId: string;
   try {

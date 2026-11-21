@@ -49,7 +49,7 @@ async function syncClientAuthMethod(
   db: ReturnType<typeof createDb>,
   client: { clientId: string; clientSecret: string | null; grantTypes: string[] | null; tokenEndpointAuthMethod: string | null },
   publicFlag: boolean,
-  issueSecret: boolean,
+  issueSecret: boolean
 ): Promise<string | undefined> {
   const grantTypes = client.grantTypes ?? [];
   const isDeviceClient = grantTypes.includes(DEVICE_CODE_GRANT_TYPE) && !grantTypes.includes('authorization_code');
@@ -206,11 +206,7 @@ export class GetOAuthClientInfoDispatch implements Dispatchable {
         .limit(1);
       if (!client) throw new NotFoundError();
 
-      const [row] = await db
-        .select()
-        .from(schema.oauthClientInfo)
-        .where(eq(schema.oauthClientInfo.clientId, clientId))
-        .limit(1);
+      const [row] = await db.select().from(schema.oauthClientInfo).where(eq(schema.oauthClientInfo.clientId, clientId)).limit(1);
       if (!row) throw new NotFoundError();
 
       const body: OAuthClientInfoResponse = {
@@ -297,12 +293,7 @@ export class UpsertOAuthClientInfoDispatch implements Dispatchable {
       const deleteLink = async (resourceId: string) => {
         await db
           .delete(schema.oauthClientResources)
-          .where(
-            and(
-              eq(schema.oauthClientResources.clientId, clientId),
-              eq(schema.oauthClientResources.resourceId, resourceId),
-            ),
-          );
+          .where(and(eq(schema.oauthClientResources.clientId, clientId), eq(schema.oauthClientResources.resourceId, resourceId)));
       };
       if (previous?.resource && previous.resource !== values.resource) {
         await deleteLink(previous.resource);
@@ -327,20 +318,12 @@ export class UpsertOAuthClientInfoDispatch implements Dispatchable {
           });
         } else if (row.id !== values.resource) {
           await deleteLink(row.id);
-          await db
-            .update(schema.oauthResources)
-            .set({ id: values.resource })
-            .where(eq(schema.oauthResources.identifier, values.resource));
+          await db.update(schema.oauthResources).set({ id: values.resource }).where(eq(schema.oauthResources.identifier, values.resource));
         }
         const [link] = await db
           .select({ id: schema.oauthClientResources.id })
           .from(schema.oauthClientResources)
-          .where(
-            and(
-              eq(schema.oauthClientResources.clientId, clientId),
-              eq(schema.oauthClientResources.resourceId, values.resource),
-            ),
-          )
+          .where(and(eq(schema.oauthClientResources.clientId, clientId), eq(schema.oauthClientResources.resourceId, values.resource)))
           .limit(1);
         if (!link) {
           await db.insert(schema.oauthClientResources).values({
@@ -468,7 +451,12 @@ const DEVICE_CODE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code';
 const rotateSecretBodySchema = z.object({ client_id: z.string().min(1) });
 
 export async function assertSecretRotationAllowed(env: Env, request: Request): Promise<void> {
-  const parsed = rotateSecretBodySchema.safeParse(await request.clone().json().catch(() => null));
+  const parsed = rotateSecretBodySchema.safeParse(
+    await request
+      .clone()
+      .json()
+      .catch(() => null)
+  );
   if (!parsed.success) return;
   const clientId = parsed.data.client_id;
 

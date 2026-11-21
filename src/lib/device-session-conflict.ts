@@ -11,9 +11,7 @@ export async function assertNoDeviceSessionConflict(source: DeviceSessionSource,
   if (!source.cookieHeader) return;
   const tokens = (
     await Promise.all(
-      [...parseCookies(source.cookieHeader).keys()]
-        .filter((name) => name.includes('_multi-'))
-        .map((name) => source.getSignedCookie(name)),
+      [...parseCookies(source.cookieHeader).keys()].filter((name) => name.includes('_multi-')).map((name) => source.getSignedCookie(name))
     )
   ).filter((token): token is string => z.string().safeParse(token).success);
   if (tokens.length === 0) return;

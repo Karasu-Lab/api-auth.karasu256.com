@@ -10,9 +10,7 @@ export async function resolveSessionUserId(db: Db, auth: Auth, sessionId: string
   const rows = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
   const session = rows[0];
   if (!session || session.expiresAt.getTime() <= Date.now()) return null;
-  const found = await auth.$context
-    .then((ctx) => ctx.internalAdapter.findSession(session.token))
-    .catch(() => null);
+  const found = await auth.$context.then((ctx) => ctx.internalAdapter.findSession(session.token)).catch(() => null);
   if (!found || found.session.id !== session.id) return null;
   if (found.session.expiresAt.getTime() <= Date.now()) return null;
   return found.user.id;
@@ -27,12 +25,7 @@ export async function getTenantRole(db: Db, userId: string, organizationId: stri
   return rows[0]?.role ?? null;
 }
 
-export async function requireTenantRole(
-  db: Db,
-  userId: string,
-  organizationId: string,
-  allowed: readonly string[]
-): Promise<string> {
+export async function requireTenantRole(db: Db, userId: string, organizationId: string, allowed: readonly string[]): Promise<string> {
   const role = await getTenantRole(db, userId, organizationId);
   if (!role || !allowed.includes(role)) throw new HttpError(403, { error: 'Forbidden' });
   return role;

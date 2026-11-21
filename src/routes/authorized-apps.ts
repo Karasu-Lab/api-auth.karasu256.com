@@ -3,11 +3,7 @@ import { and, asc, eq } from 'drizzle-orm';
 import { createDb, type Db } from '../db/create-db';
 import * as schema from '../db/schema';
 import type { Auth } from '../lib/auth';
-import {
-  AuthorizedAppCreateRepository,
-  AuthorizedAppGetRepository,
-  type AuthorizedApp,
-} from '../lib/redis/authorized-app-repositories';
+import { AuthorizedAppCreateRepository, AuthorizedAppGetRepository, type AuthorizedApp } from '../lib/redis/authorized-app-repositories';
 import type { RedisSession } from '../lib/redis/redis-repository';
 import { withAuth } from '../lib/request-auth';
 
@@ -79,9 +75,9 @@ export async function handleAuthorizedAppDetails(env: Env, request: Request, con
         .from(schema.oauthConsents)
         .where(and(eq(schema.oauthConsents.id, consentId), eq(schema.oauthConsents.userId, session.user.id)));
       if (!consent) return Response.json({ error: 'Not Found' }, { status: 404 });
-      const app = (await loadAuthorizedApps(env, auth, db, { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt })).find(
-        (entry) => entry.clientId === consent.clientId
-      );
+      const app = (
+        await loadAuthorizedApps(env, auth, db, { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt })
+      ).find((entry) => entry.clientId === consent.clientId);
       return Response.json({
         id: consent.id,
         clientId: consent.clientId,

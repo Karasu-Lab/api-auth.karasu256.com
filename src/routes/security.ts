@@ -2,11 +2,7 @@ import { waitUntil } from 'cloudflare:workers';
 import { and, asc, eq } from 'drizzle-orm';
 import { createDb } from '../db/create-db';
 import * as schema from '../db/schema';
-import {
-  SecuritySettingCreateRepository,
-  SecuritySettingGetRepository,
-  type SecuritySettings,
-} from '../lib/redis/security-setting-repositories';
+import { SecuritySettingCreateRepository, SecuritySettingGetRepository, type SecuritySettings } from '../lib/redis/security-setting-repositories';
 import type { RedisSession } from '../lib/redis/redis-repository';
 import { withAuth } from '../lib/request-auth';
 

@@ -21,8 +21,12 @@ export async function sessionsOfUsers(userIds: string[], find: FindRows): Promis
 const userRowSchema = z.object({ userId: z.string() });
 
 export function userIdsOf(rows: unknown[]): string[] {
-  return [...new Set(rows.flatMap((row) => {
-    const parsed = userRowSchema.safeParse(row);
-    return parsed.success ? [parsed.data.userId] : [];
-  }))];
+  return [
+    ...new Set(
+      rows.flatMap((row) => {
+        const parsed = userRowSchema.safeParse(row);
+        return parsed.success ? [parsed.data.userId] : [];
+      })
+    ),
+  ];
 }

@@ -24,7 +24,10 @@ function createBatchWork(env: Env, db: Db, type: string): BatchWork<z.ZodType> |
 async function claimBatchWorks(db: Db, maxConcurrency: number): Promise<{ id: string; type: string }[]> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('batch_works'))`);
-    const [{ syncing }] = await tx.select({ syncing: count() }).from(schema.batchWorks).where(eq(schema.batchWorks.status, batchWorkStatusSchema.enum.syncing));
+    const [{ syncing }] = await tx
+      .select({ syncing: count() })
+      .from(schema.batchWorks)
+      .where(eq(schema.batchWorks.status, batchWorkStatusSchema.enum.syncing));
     const limit = maxConcurrency - syncing;
     if (limit <= 0) return [];
 

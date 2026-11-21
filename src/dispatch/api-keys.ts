@@ -145,7 +145,7 @@ export class GetApiKeyDispatch implements Dispatchable {
         lastRequest: key.lastRequest ? new Date(key.lastRequest).toISOString() : null,
         permissions_bitmask: encodePermissionBitmask(
           catalog.map((permission) => permission.publicId),
-          (granted[keyId] ?? []).map((permission) => permission.publicId),
+          (granted[keyId] ?? []).map((permission) => permission.publicId)
         ),
       };
       return Response.json(body);
@@ -162,7 +162,12 @@ export class UpdateApiKeyPermissionsDispatch implements Dispatchable {
   }
 
   matches(): boolean {
-    if (!this.context.pathname.startsWith('/api/api-keys/') || !this.context.pathname.endsWith('/permissions') || this.context.request.method !== 'PUT') return false;
+    if (
+      !this.context.pathname.startsWith('/api/api-keys/') ||
+      !this.context.pathname.endsWith('/permissions') ||
+      this.context.request.method !== 'PUT'
+    )
+      return false;
     this.keyId = decodeURIComponent(this.context.pathname.slice('/api/api-keys/'.length, -'/permissions'.length));
     return true;
   }

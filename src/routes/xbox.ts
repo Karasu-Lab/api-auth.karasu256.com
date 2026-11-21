@@ -1,5 +1,12 @@
 import type { AuthContext } from '@better-auth/core';
-import { buildXboxAuthorizeUrl, createXboxLinkState, exchangeXboxLinkCode, storeXboxLink, verifyXboxLinkState, XboxLinkError } from '../lib/xbox-link';
+import {
+  buildXboxAuthorizeUrl,
+  createXboxLinkState,
+  exchangeXboxLinkCode,
+  storeXboxLink,
+  verifyXboxLinkState,
+  XboxLinkError,
+} from '../lib/xbox-link';
 import { withAuth } from '../lib/request-auth';
 import type { Auth } from '../lib/auth';
 

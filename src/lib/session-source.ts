@@ -35,10 +35,7 @@ export class SessionSourceStore {
     const source = `${this.resolveProviderId(signals)}-${session.id}`;
     this.remember(session.id, source);
     try {
-      await this.db
-        .insert(schema.sessionDevicesSource)
-        .values({ sessionId: session.id, userId: session.userId, source })
-        .onConflictDoNothing();
+      await this.db.insert(schema.sessionDevicesSource).values({ sessionId: session.id, userId: session.userId, source }).onConflictDoNothing();
       await new SessionSourceCreateRepository(this.env, session).create(source);
     } catch (error) {
       console.error(`Failed to record the session source for session ${session.id}`, error);
@@ -56,9 +53,7 @@ export class SessionSourceStore {
       .from(schema.sessionDevicesSource)
       .where(eq(schema.sessionDevicesSource.sessionId, session.id))
       .limit(1);
-    const source = row?.source.endsWith(`-${session.id}`)
-      ? row.source
-      : `${SessionSourceStore.unknownProviderId}-${session.id}`;
+    const source = row?.source.endsWith(`-${session.id}`) ? row.source : `${SessionSourceStore.unknownProviderId}-${session.id}`;
     this.remember(session.id, source);
     await new SessionSourceCreateRepository(this.env, session).create(source);
     return source;

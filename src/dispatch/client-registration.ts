@@ -102,7 +102,12 @@ export class ClientRegistrationDispatch implements Dispatchable {
     const response = await withAuth(env, (auth) => auth.handler(request));
     if (!response.ok) return response;
 
-    const registration = registrationResponseSchema.safeParse(await response.clone().json().catch(() => null));
+    const registration = registrationResponseSchema.safeParse(
+      await response
+        .clone()
+        .json()
+        .catch(() => null)
+    );
     if (!registration.success) return response;
 
     const linkDb = createDb(env.DATABASE_URL);

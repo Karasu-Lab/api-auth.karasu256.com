@@ -5,7 +5,19 @@ interface VerificationEmail {
   url: string;
 }
 
-export async function sendVerificationEmail(env: Env, { email, url }: VerificationEmail): Promise<void> {
+function resolveVerificationUrl(env: Env, url: string): string {
+  const link = new URL(url);
+  const callback = link.searchParams.get('callbackURL');
+  if (!callback || callback === '/') {
+    link.searchParams.set('callbackURL', `${env.AUTH_UI_URL}/email/verify/complete`);
+  } else if (callback.startsWith('/')) {
+    link.searchParams.set('callbackURL', `${env.AUTH_UI_URL}${callback}`);
+  }
+  return link.toString();
+}
+
+export async function sendVerificationEmail(env: Env, { email, url: rawUrl }: VerificationEmail): Promise<void> {
+  const url = resolveVerificationUrl(env, rawUrl);
   const { error } = await new Resend(env.RESEND_API_KEY).emails.send({
     from: env.RESEND_FROM_EMAIL,
     to: email,

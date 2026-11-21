@@ -9,7 +9,10 @@ const jwksSchema = z.array(
     publicKey: z.string(),
     privateKey: z.string(),
     createdAt: z.coerce.date(),
-    expiresAt: z.coerce.date().nullish().transform((value) => value ?? undefined),
+    expiresAt: z.coerce
+      .date()
+      .nullish()
+      .transform((value) => value ?? undefined),
     alg: z
       .custom<NonNullable<Jwk['alg']>>((value) => z.string().safeParse(value).success)
       .nullish()

@@ -37,10 +37,7 @@ function base64UrlDecode(value: string): Uint8Array {
 }
 
 async function hmacKey(secret: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, [
-    'sign',
-    'verify',
-  ]);
+  return crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
 
 export async function createXboxLinkState(secret: string, userId: string): Promise<string> {
@@ -76,12 +73,7 @@ export function buildXboxAuthorizeUrl(clientId: string, redirectUri: string, sta
   return url.toString();
 }
 
-export async function exchangeXboxLinkCode(
-  code: string,
-  redirectUri: string,
-  clientId: string,
-  clientSecret: string
-): Promise<XboxLinkExchange> {
+export async function exchangeXboxLinkCode(code: string, redirectUri: string, clientId: string, clientSecret: string): Promise<XboxLinkExchange> {
   const res = await fetch(MICROSOFT_TOKEN_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },

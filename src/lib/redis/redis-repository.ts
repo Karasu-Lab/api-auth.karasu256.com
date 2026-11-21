@@ -42,7 +42,7 @@ export abstract class RedisRepository {
 }
 
 export abstract class SessionRedisRepository extends RedisRepository {
-  protected declare readonly session: RedisSession;
+  declare protected readonly session: RedisSession;
   protected override readonly ttl: number;
 
   constructor(env: Env, session: RedisSession) {

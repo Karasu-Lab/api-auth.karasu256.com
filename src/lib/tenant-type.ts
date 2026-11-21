@@ -31,10 +31,7 @@ export function tenantTypePlugin(env: Env) {
             if (!created.success || !body.success) return;
             const db = createDb(env.DATABASE_URL);
             try {
-              await db
-                .insert(tenantTypes)
-                .values({ tenantId: created.data.id, type: body.data.type })
-                .onConflictDoNothing();
+              await db.insert(tenantTypes).values({ tenantId: created.data.id, type: body.data.type }).onConflictDoNothing();
             } finally {
               waitUntil(db.$client.end());
             }

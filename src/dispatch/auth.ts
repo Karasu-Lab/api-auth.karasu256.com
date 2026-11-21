@@ -5,6 +5,7 @@ import { withCdnProfileAvatarUrls } from '../lib/profile-avatar';
 import { withAuth } from '../lib/request-auth';
 import { assertTokenSessionActive } from '../lib/session-expiry';
 import { rejectUnverifiedTurnstile } from '../lib/turnstile';
+import { resendVerificationForUnverifiedUser } from '../lib/verification-resend';
 
 export class AuthDispatch implements Dispatchable {
   private context: DispatchContext;
@@ -21,6 +22,8 @@ export class AuthDispatch implements Dispatchable {
     const { env, request, pathname } = this.context;
     const rejectedTurnstile = await rejectUnverifiedTurnstile(env, request);
     if (rejectedTurnstile) return rejectedTurnstile;
+    const resent = await resendVerificationForUnverifiedUser(env, request, pathname);
+    if (resent) return resent;
     const cookieSession = request.method === 'GET' && pathname === '/api/auth/get-session' ? new CookieSessionStore(env, request) : null;
     const cached = await cookieSession?.get();
     if (cached) return cached;

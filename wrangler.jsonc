@@ -59,6 +59,7 @@
   "env": {
     "local": {
       "routes": [],
+      "kv_namespaces": [{ "binding": "VERIFICATION_RESEND_KV" }],
       "hyperdrive": [
         {
           "binding": "HYPERDRIVE",
