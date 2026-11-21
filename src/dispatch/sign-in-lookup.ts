@@ -1,5 +1,5 @@
-import { createDb } from '@karasu-lab/db/create-db';
-import * as schema from '@karasu-lab/db/schema';
+import { createDb } from '../db/create-db';
+import * as schema from '../db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { and, eq, isNotNull } from 'drizzle-orm';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';

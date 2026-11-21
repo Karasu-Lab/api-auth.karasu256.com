@@ -1,8 +1,8 @@
 import { and, eq, lte } from 'drizzle-orm';
 import { symmetricDecrypt, symmetricEncrypt } from 'better-auth/crypto';
 import { z } from 'zod';
-import type { Db } from '@karasu-lab/db/create-db';
-import * as schema from '@karasu-lab/db/schema';
+import type { Db } from '../../db/create-db';
+import * as schema from '../../db/schema';
 
 export const batchWorkStatusSchema = z.enum(schema.batchWorkStatus.enumValues);
 

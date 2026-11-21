@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import * as schema from '@karasu-lab/db/schema';
+import * as schema from '../../db/schema';
 import { AccountLinkDeleteRepository } from '../redis/account-link-repositories';
 import { AuthorizedAppDeleteRepository } from '../redis/authorized-app-repositories';
 import { SecuritySettingDeleteRepository } from '../redis/security-setting-repositories';

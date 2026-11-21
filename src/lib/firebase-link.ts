@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
-import type { Db } from '@karasu-lab/db/create-db';
-import * as schema from '@karasu-lab/db/schema';
+import type { Db } from '../db/create-db';
+import * as schema from '../db/schema';
 import { createFirebaseUser, findFirebaseUidByEmail, updateFirebaseUser } from './firebase';
 
 /**

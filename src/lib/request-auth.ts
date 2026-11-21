@@ -1,5 +1,5 @@
 import { waitUntil } from 'cloudflare:workers';
-import { createDb } from '@karasu-lab/db/create-db';
+import { createDb } from '../db/create-db';
 import { createAuth, type Auth } from './auth';
 
 export async function withAuth<T>(env: Env, fn: (auth: Auth) => Promise<T>): Promise<T> {

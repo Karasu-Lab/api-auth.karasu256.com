@@ -1,6 +1,6 @@
 import type { Jwk } from 'better-auth/plugins/jwt';
 import { z } from 'zod';
-import * as schema from '@karasu-lab/db/schema';
+import * as schema from '../../db/schema';
 import { RedisRepository } from './redis-repository';
 
 const jwksSchema = z.array(

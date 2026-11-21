@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import * as schema from '@karasu-lab/db/schema';
+import * as schema from '../../db/schema';
 import { RedisRepository } from './redis-repository';
 import { userIdsOf } from './rows';
 

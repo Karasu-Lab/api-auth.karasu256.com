@@ -1,6 +1,6 @@
 import type { Where as WhereClause } from 'better-auth';
 import { z } from 'zod';
-import * as schema from '@karasu-lab/db/schema';
+import * as schema from '../../db/schema';
 import type { RedisSession } from './redis-repository';
 
 export type Where = WhereClause[];

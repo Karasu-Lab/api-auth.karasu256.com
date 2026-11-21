@@ -1,5 +1,5 @@
 import { waitUntil } from 'cloudflare:workers';
-import { createDb } from '@karasu-lab/db/create-db';
+import { createDb } from '../db/create-db';
 import { SseServerStream } from '@karasu-lab/sdk/sse';
 import { ProviderStreamEvent, type ProviderStreamEvents } from '@karasu-lab/types/shared';
 import { createAuth } from '../lib/auth';

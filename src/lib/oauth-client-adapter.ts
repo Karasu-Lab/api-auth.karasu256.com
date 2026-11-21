@@ -1,5 +1,5 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
-import type { Db } from '@karasu-lab/db/create-db';
+import type { Db } from '../db/create-db';
 import { AccountLinkDeleteRepository } from './redis/account-link-repositories';
 import { ActiveSessionDeleteRepository } from './redis/active-session-repositories';
 import { AuthorizedAppDeleteRepository } from './redis/authorized-app-repositories';
