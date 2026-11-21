@@ -35,10 +35,14 @@ function createPlugins(env: Env, db: Db) {
   const oauthProviders = mockOAuthUrl ? getMockOAuthProviders(mockOAuthUrl) : getGithubOAuthProviders(env);
 
   const jwtOptions = {
+    jwks: { keyPairConfig: { alg: 'RS256', modulusLength: 2048 } },
     adapter: {
-      getJwks: async (ctx) =>
-        (await new JwksGetRepository(env).get()) ??
-        (await new JwksCreateRepository(env).create(await ctx.context.adapter.findMany({ model: 'jwks' }))),
+      getJwks: async (ctx) => {
+        const keys =
+          (await new JwksGetRepository(env).get()) ??
+          (await new JwksCreateRepository(env).create(await ctx.context.adapter.findMany({ model: 'jwks' })));
+        return keys.some((key) => key.alg === 'RS256') ? [...keys].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()) : [];
+      },
     },
   } satisfies JwtOptions;
 
