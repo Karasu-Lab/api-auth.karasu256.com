@@ -17,8 +17,7 @@ export default defineConfig({
     './src/db/schema/tenant-github-installations.ts',
     './src/db/schema/tenant-types.ts',
     './src/db/schema/user-signing-keys.ts',
-    './src/db/schema/tenant-linked-packages.ts',
-  ],
+    './src/db/schema/tenant-linked-packages.ts',  ],
   out: './drizzle/migrations',
   dbCredentials: {
     url: process.env.DATABASE_URL!,

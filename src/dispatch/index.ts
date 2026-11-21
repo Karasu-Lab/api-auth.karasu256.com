@@ -4,6 +4,7 @@ import { AuthDispatch } from './auth';
 import { ClientRegistrationDispatch } from './client-registration';
 import { GithubAppInstallUrlDispatch, GithubAppTokenDispatch, GithubRepositoriesDispatch, GithubUserDispatch } from './github';
 import { McpIconUploadUrlDispatch, McpSessionTokenDispatch } from './mcp';
+import { LinkMinecraftDispatch } from './minecraft';
 import {
   CompleteOAuthClientIconDispatch,
   GetOAuthClientInfoDispatch,
@@ -74,4 +75,5 @@ export const dispatchables: DispatchableClass[] = [
   DeleteTestAccountDispatch,
   GetUserProfileDispatch,
   UpdateUserProfileDispatch,
+  LinkMinecraftDispatch,
 ];

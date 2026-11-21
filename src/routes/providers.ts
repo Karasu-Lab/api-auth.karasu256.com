@@ -6,16 +6,11 @@ import { createAuth } from '../lib/auth';
 import { getProviderProfile, streamProviderProfiles, type ProviderProfile } from '../lib/provider-profile';
 import { withAuth } from '../lib/request-auth';
 
-function profileOptions(env: Env, minecraftAuthEnabled?: boolean) {
+function profileOptions(env: Env) {
   return {
     microsoftClientId: env.MICROSOFT_CLIENT_ID,
     microsoftClientSecret: env.MICROSOFT_CLIENT_SECRET,
-    minecraftAuthEnabled,
   };
-}
-
-function isMinecraftRequested(request: Request): boolean {
-  return new URL(request.url).searchParams.get('minecraft') === 'true';
 }
 
 export async function handleProviderDetails(env: Env, request: Request, providerId: string): Promise<Response> {
@@ -42,7 +37,7 @@ export async function handleProviderList(env: Env, request: Request): Promise<Re
       (providerId, profile) => {
         profiles[providerId] = profile;
       },
-      profileOptions(env, isMinecraftRequested(request))
+      profileOptions(env)
     );
     return Response.json(profiles);
   });
@@ -67,7 +62,7 @@ export async function handleProviderStream(env: Env, request: Request): Promise<
           auth,
           { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt },
           (providerId, profile) => stream.send(ProviderStreamEvent.Profile, { providerId, profile }),
-          profileOptions(env, isMinecraftRequested(request))
+          profileOptions(env)
         ),
       { onClose: release }
     );
