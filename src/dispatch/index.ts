@@ -1,10 +1,20 @@
 import type { DispatchableClass } from '../lib/dispatch';
-import { CreateApiKeyDispatch, DeleteApiKeyDispatch, GetApiKeyDispatch, IssueApiKeyDispatch, ListApiKeysDispatch, ListPermissionsDispatch, UpdateApiKeyPermissionsDispatch, VerifyApiKeyDispatch } from './api-keys';
+import {
+  CreateApiKeyDispatch,
+  DeleteApiKeyDispatch,
+  GetApiKeyDispatch,
+  IssueApiKeyDispatch,
+  ListApiKeysDispatch,
+  ListPermissionsDispatch,
+  UpdateApiKeyPermissionsDispatch,
+  VerifyApiKeyDispatch,
+} from './api-keys';
 import { AuthDispatch } from './auth';
 import { ClientRegistrationDispatch } from './client-registration';
 import { GithubAppInstallUrlDispatch, GithubAppTokenDispatch, GithubRepositoriesDispatch, GithubUserDispatch } from './github';
 import { McpIconUploadUrlDispatch, McpSessionTokenDispatch } from './mcp';
 import { LinkMinecraftDispatch } from './minecraft';
+import { WellKnownMetadataDispatch } from './well-known';
 import {
   CompleteOAuthClientIconDispatch,
   GetOAuthClientInfoDispatch,
@@ -76,4 +86,5 @@ export const dispatchables: DispatchableClass[] = [
   GetUserProfileDispatch,
   UpdateUserProfileDispatch,
   LinkMinecraftDispatch,
+  WellKnownMetadataDispatch,
 ];
