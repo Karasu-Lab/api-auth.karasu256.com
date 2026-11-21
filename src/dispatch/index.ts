@@ -29,6 +29,7 @@ import {
   UpdateLinkedPackagePointerDispatch,
 } from './tenants';
 import { CreateTestAccountDispatch, DeleteTestAccountDispatch } from './test-accounts';
+import { GetUserProfileDispatch, UpdateUserProfileDispatch } from './user-profile';
 
 export const dispatchables: DispatchableClass[] = [
   SetPasswordDispatch,
@@ -71,4 +72,6 @@ export const dispatchables: DispatchableClass[] = [
   SignInLookupDispatch,
   CreateTestAccountDispatch,
   DeleteTestAccountDispatch,
+  GetUserProfileDispatch,
+  UpdateUserProfileDispatch,
 ];

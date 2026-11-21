@@ -1,5 +1,5 @@
-import { createDb } from '@karasu-lab/db/create-db';
-import { tenantTypes } from '@karasu-lab/db/schema';
+import { createDb } from '../db/create-db';
+import { tenantTypes } from '../db/schema';
 import { createTenantBodySchema } from '@karasu-lab/types/shared';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { waitUntil } from 'cloudflare:workers';

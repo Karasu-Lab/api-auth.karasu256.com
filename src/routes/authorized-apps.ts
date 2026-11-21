@@ -1,7 +1,7 @@
 import { waitUntil } from 'cloudflare:workers';
 import { and, asc, eq } from 'drizzle-orm';
-import { createDb, type Db } from '@karasu-lab/db/create-db';
-import * as schema from '@karasu-lab/db/schema';
+import { createDb, type Db } from '../db/create-db';
+import * as schema from '../db/schema';
 import type { Auth } from '../lib/auth';
 import {
   AuthorizedAppCreateRepository,

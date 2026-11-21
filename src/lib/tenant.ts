@@ -1,5 +1,5 @@
-import { members, sessions } from '@karasu-lab/db/schema';
-import type { Db } from '@karasu-lab/db/create-db';
+import { members, sessions } from '../db/schema';
+import type { Db } from '../db/create-db';
 import { and, eq } from 'drizzle-orm';
 import { HttpError } from '@karasu-lab/types/server';
 import type { Auth } from './auth';

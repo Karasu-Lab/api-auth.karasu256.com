@@ -1,7 +1,7 @@
 import { and, asc, count, eq, inArray, lte, sql } from 'drizzle-orm';
 import type { z } from 'zod';
-import { createDb, type Db } from '@karasu-lab/db/create-db';
-import * as schema from '@karasu-lab/db/schema';
+import { createDb, type Db } from '../../db/create-db';
+import * as schema from '../../db/schema';
 import { getAuthConfig } from '../../config';
 import { batchWorkStatusSchema, type BatchWork } from './batch-work';
 import { FirebaseDeleteUserWork } from './firebase-delete-user';

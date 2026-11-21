@@ -1,5 +1,5 @@
-import type { Db } from '@karasu-lab/db/create-db';
-import * as schema from '@karasu-lab/db/schema';
+import type { Db } from '../db/create-db';
+import * as schema from '../db/schema';
 import type { SessionSource } from '@karasu-lab/types/shared';
 import { eq } from 'drizzle-orm';
 import { SessionSourceCreateRepository, SessionSourceGetRepository } from './redis/session-source-repositories';

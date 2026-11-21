@@ -1,5 +1,5 @@
-import { createDb } from '@karasu-lab/db/create-db';
-import type { Db } from '@karasu-lab/db/create-db';
+import { createDb } from '../db/create-db';
+import type { Db } from '../db/create-db';
 import {
   members,
   organizations,
@@ -7,7 +7,7 @@ import {
   tenantLinkedPackages,
   tenantTypes,
   type TenantGithubInstallation,
-} from '@karasu-lab/db/schema';
+} from '../db/schema';
 import { waitUntil } from 'cloudflare:workers';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
