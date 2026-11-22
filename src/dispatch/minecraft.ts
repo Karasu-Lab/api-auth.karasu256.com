@@ -1,13 +1,10 @@
 import type { AuthContext } from '@better-auth/core';
-import { waitUntil } from 'cloudflare:workers';
-import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { BadRequestError, HttpError, RateLimitedError } from '@karasu-lab/types/server';
-import { createDb } from '../db/create-db';
-import * as schema from '../db/schema';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
+import { getMinecraftLinkStatus, normalizeMinecraftUuid } from '../lib/minecraft-link-status';
 import { checkMinecraftStatusRateLimit } from '../lib/minecraft-status-rate-limit';
-import { MinecraftLinkStatusGetRepository, MinecraftLinkStatusSetRepository } from '../lib/redis/minecraft-link-status-repositories';
+import { MinecraftLinkStatusSetRepository } from '../lib/redis/minecraft-link-status-repositories';
 import { withAuth } from '../lib/request-auth';
 
 const LINK_PATH = /^\/api\/internal\/users\/([^/]+)\/minecraft-link$/;
@@ -81,27 +78,12 @@ export class MinecraftVerifyStatusDispatch implements Dispatchable {
 
     const uuid = z
       .string()
-      .transform((value) => value.replaceAll('-', '').toLowerCase())
+      .transform(normalizeMinecraftUuid)
       .pipe(z.string().regex(/^[0-9a-f]{32}$/))
       .safeParse(new URL(request.url).searchParams.get('uuid'));
     if (!uuid.success) throw new BadRequestError();
 
-    const cached = await new MinecraftLinkStatusGetRepository(env).get(uuid.data);
-    if (cached) return Response.json({ linked: cached.linked });
-
-    const db = createDb(env.DATABASE_URL);
-    let linked: boolean;
-    try {
-      const [account] = await db
-        .select({ id: schema.accounts.id })
-        .from(schema.accounts)
-        .where(and(eq(schema.accounts.providerId, 'minecraft'), eq(schema.accounts.accountId, uuid.data)))
-        .limit(1);
-      linked = Boolean(account);
-    } finally {
-      waitUntil(db.$client.end());
-    }
-    await new MinecraftLinkStatusSetRepository(env).set(uuid.data, { linked });
+    const { linked } = await getMinecraftLinkStatus(env, uuid.data);
     return Response.json({ linked });
   }
 }
