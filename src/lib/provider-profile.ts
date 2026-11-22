@@ -1,3 +1,4 @@
+import { waitUntil } from 'cloudflare:workers';
 import { decryptOAuthToken, setTokenUtil } from 'better-auth/oauth2';
 import type { AuthContext } from '@better-auth/core';
 import type { OAuth2Tokens } from '@better-auth/core/oauth2';
@@ -6,6 +7,7 @@ import { signRequest } from '@karasu-lab/utils/server/request-signature';
 import { authenticateXboxLive, authorizeXsts, getXboxProfile, refreshMicrosoftTokens, XBOX_RELYING_PARTY } from './xbox-live';
 import { XBOX_PROVIDER_ID } from './xbox-link';
 import { storeProviderAvatar } from './avatar-api';
+import { getMinecraftLinkStatus } from './minecraft-link-status';
 import {
   AccountLinkCreateRepository,
   AccountLinkGetRepository,
@@ -90,7 +92,7 @@ async function syncProviderProfile(
       pending = (async () => {
         const refreshed = await sync.refreshTokens(refreshToken).catch(() => null);
         if (!refreshed?.accessToken) return null;
-        await persistRefreshedTokens(ctx, accountId, refreshed);
+        waitUntil(persistRefreshedTokens(ctx, accountId, refreshed));
         return {
           accessToken: refreshed.accessToken,
           refreshToken: refreshed.refreshToken ?? refreshToken,
@@ -265,15 +267,20 @@ function accountProviderId(providerId: string): string {
   return isDerivedProvider(providerId) ? XBOX_PROVIDER_ID : providerId;
 }
 
-async function loadAccountLinks(env: Env, ctx: AuthContext, session: RedisSession): Promise<AccountLink[]> {
+type UserAccounts = Awaited<ReturnType<AuthContext['internalAdapter']['findAccounts']>>;
+
+async function loadAccountLinks(env: Env, ctx: AuthContext, session: RedisSession, pendingAccounts: Promise<UserAccounts>): Promise<AccountLink[]> {
   const cached = await new AccountLinkGetRepository(env, session).get();
   if (cached) return cached;
-  const accounts = await ctx.internalAdapter.findAccounts(session.userId);
+  const accounts = await pendingAccounts;
   const providerIds = [...ctx.socialProviders.map((provider) => provider.id), ...DERIVED_PROVIDER_IDS, 'minecraft'];
-  const links = providerIds.map((providerId) => {
-    const account = accounts.find((entry) => entry.providerId === accountProviderId(providerId));
-    return { providerId, id: account?.id ?? null, url: null, linked: Boolean(account) };
-  });
+  const links = await Promise.all(
+    providerIds.map(async (providerId) => {
+      const account = accounts.find((entry) => entry.providerId === accountProviderId(providerId));
+      const linked = providerId === 'minecraft' && account ? (await getMinecraftLinkStatus(env, account.accountId)).linked : Boolean(account);
+      return { providerId, id: account?.id ?? null, url: null, linked };
+    })
+  );
   await new AccountLinkCreateRepository(env, session).create(links);
   return links;
 }
@@ -291,10 +298,11 @@ export async function getProviderProfile(
   options?: ProviderProfileOptions
 ): Promise<ProviderProfile | null> {
   const ctx = (await auth.$context) as unknown as AuthContext;
-  const links = await loadAccountLinks(env, ctx, session);
+  const pendingAccounts = ctx.internalAdapter.findAccounts(session.userId);
+  const links = await loadAccountLinks(env, ctx, session, pendingAccounts);
   const link = links.find((entry) => entry.providerId === providerId);
   if (link && !link.linked) return null;
-  const accounts = await ctx.internalAdapter.findAccounts(session.userId);
+  const accounts = await pendingAccounts;
   const profile = await resolveProfileFromAccounts(env, ctx, session.userId, accounts, providerId, new Map(), options);
   if (link) await recordAccountLinkUrls(env, session, links, new Map([[providerId, profile]]));
   return profile;
@@ -309,8 +317,8 @@ export async function streamProviderProfiles(
 ): Promise<void> {
   const uid = session.userId;
   const ctx = (await auth.$context) as unknown as AuthContext;
-  const links = await loadAccountLinks(env, ctx, session);
-  const accounts = links.some((link) => link.linked) ? await ctx.internalAdapter.findAccounts(uid) : [];
+  const pendingAccounts = ctx.internalAdapter.findAccounts(uid);
+  const [links, accounts] = await Promise.all([loadAccountLinks(env, ctx, session, pendingAccounts), pendingAccounts]);
   const sharedRefreshes: SharedRefreshes = new Map();
   const profiles = new Map<string, ProviderProfile | null>();
   await Promise.all(

@@ -4,6 +4,7 @@ import { AccountLinkDeleteRepository } from './redis/account-link-repositories';
 import { ActiveSessionDeleteRepository } from './redis/active-session-repositories';
 import { AuthorizedAppDeleteRepository } from './redis/authorized-app-repositories';
 import { JwksDeleteRepository } from './redis/jwks-repositories';
+import { MinecraftLinkStatusDeleteRepository } from './redis/minecraft-link-status-repositories';
 import {
   OAuthClientCreateRepository,
   OAuthClientDeleteRepository,
@@ -30,6 +31,7 @@ export function oauthClientRedisAdapter(
     { invalidate: (table, rows, find) => AuthorizedAppDeleteRepository.invalidate(env, table, rows, find) },
     { invalidate: (table, rows, find) => AccountLinkDeleteRepository.invalidate(env, table, rows, find) },
     { invalidate: (table, rows, find) => SecuritySettingDeleteRepository.invalidate(env, table, rows, find) },
+    { invalidate: (table, rows) => MinecraftLinkStatusDeleteRepository.invalidate(env, table, rows) },
   ];
 
   return (options) => {
