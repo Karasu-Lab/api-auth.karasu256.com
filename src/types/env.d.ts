@@ -11,6 +11,10 @@ declare global {
     API_URL: string;
     MC_AUTH_URL: string;
     BASE_DOMAIN?: string;
+    TRUSTED_ORIGINS: string;
+    WEBAUTHN_EXPECTED_ORIGINS: string;
+    TURNSTILE_HOSTNAMES: string;
+    BATCH_WORKS_MAX_CONCURRENCY: string;
     BETTER_AUTH_SECRET: string;
     AUTH_SECRET: string;
     INTERNAL_API_SECRET: string;

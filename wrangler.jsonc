@@ -10,7 +10,10 @@
       "invocation_logs": false,
     },
   },
-  "routes": [{ "pattern": "api-auth.karasu256.com", "custom_domain": true }],
+  "routes": [
+    { "pattern": "api-auth.karasu256.com", "custom_domain": true },
+    { "pattern": "dev-api-auth.karasu256.com", "custom_domain": true, "previews_enabled": true, "enabled": false },
+  ],
   "vars": {
     "APP_ENV": "production",
     "BETTER_AUTH_URL": "https://api-auth.karasu256.com",
@@ -39,9 +42,9 @@
   ],
   "preview_urls": true,
   "previews": {
+    "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "3876cf92143a4652bb2e6ecd7d2a3d07" }],
     "vars": {
       "APP_ENV": "preview",
-      "BETTER_AUTH_URL": "https://dev-api-auth.karasu256.com",
       "AUTH_UI_URL": "https://dev-auth.karasu256.com",
       "SSO_UI_URL": "https://dev-sso.karasu256.com",
       "ACCOUNTS_URL": "https://dev.accounts.karasu256.com",

@@ -77,10 +77,17 @@ jobs:
       GITHUB_CLIENT_SECRET: ${{ secrets.GH_CLIENT_SECRET }}
       NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: Generate the Better Auth URL
+        id: better-auth-url
+        run: |
+          SLUG="${GITHUB_REF_NAME,,}"
+          echo "value=https://${SLUG//[^a-z0-9-]/-}.dev-api-auth.karasu256.com" >> "$GITHUB_OUTPUT"
+
       - name: Deploy the worker
         uses: Karasu-Lab/WorkersDeploy@v1
         with:
           mode: preview
+          preview-args: --var BETTER_AUTH_URL:${{ steps.better-auth-url.outputs.value }}
           worker-name: api-auth-karasu256-com
           secret-names: ${{ needs.secret-names.outputs.names }}
           vars-json: ${{ toJSON(vars) }}

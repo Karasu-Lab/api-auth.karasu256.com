@@ -17,7 +17,10 @@ import { handleAuthorizedAppDetails, handleAuthorizedAppList } from './routes/au
 import { handleSecuritySettings } from './routes/security';
 import { handleXboxCallback, handleXboxLink } from './routes/xbox';
 
-const env = resolveEnv(cfEnv as Env);
+let resolvedEnv: Env | undefined;
+const env = new Proxy({} as Env, {
+  get: (_, key) => (resolvedEnv ??= resolveEnv(cfEnv as Env))[key as keyof Env],
+});
 
 const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typebox' })
   .parser('none', () => ({}))
@@ -50,7 +53,7 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
   .get('/api/users/me/security', ({ request }) => handleSecuritySettings(env, request))
   .get('/api/users/me/authorized-apps/:id', ({ request, params }) => handleAuthorizedAppDetails(env, request, params.id))
   .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
-  .get('/api/xbox/link', ({ request }) => handleXboxLink(env, request))
+  .get('/api/xbox/link',({ request }) => handleXboxLink(env, request))
   .get('/api/xbox/callback', ({ request }) => handleXboxCallback(env, request))
   .post(
     '/api/auth/oauth2/client/rotate-secret',
@@ -91,9 +94,9 @@ function normalizePath(request: Request): Request {
 export default {
   async fetch(rawRequest: Request): Promise<Response> {
     const request = normalizePath(rawRequest);
-    const preflight = handlePreflight(env, request);
+    const preflight = await handlePreflight(env, request);
     if (preflight) return preflight;
     const rejected = await rejectInvalidSignature(env, request);
-    return withCors(env, request, rejected ?? (await app.fetch(request)));
+    return await withCors(env, request, rejected ?? (await app.fetch(request)));
   },
 };
