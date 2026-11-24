@@ -18,7 +18,10 @@ import { handleAuthorizedAppDetails, handleAuthorizedAppList } from './routes/au
 import { handleSecuritySettings } from './routes/security';
 import { handleXboxCallback, handleXboxLink } from './routes/xbox';
 
-const env = resolveEnv(cfEnv as Env);
+let resolvedEnv: Env | undefined;
+const env = new Proxy({} as Env, {
+  get: (_, key) => (resolvedEnv ??= resolveEnv(cfEnv as Env))[key as keyof Env],
+});
 
 const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typebox' })
   .parser('none', () => ({}))

@@ -14,11 +14,5 @@ const domainEnvSchema = z.object({
 });
 
 export function resolveEnv(raw: Env): Env {
-  return {
-    ...raw,
-    ...domainEnvSchema.parse(raw),
-    get DATABASE_URL() {
-      return raw.HYPERDRIVE.connectionString;
-    },
-  };
+  return { ...raw, ...domainEnvSchema.parse(raw), DATABASE_URL: raw.HYPERDRIVE.connectionString };
 }
