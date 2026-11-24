@@ -94,9 +94,9 @@ function normalizePath(request: Request): Request {
 export default {
   async fetch(rawRequest: Request): Promise<Response> {
     const request = normalizePath(rawRequest);
-    const preflight = handlePreflight(env, request);
+    const preflight = await handlePreflight(env, request);
     if (preflight) return preflight;
     const rejected = await rejectInvalidSignature(env, request);
-    return withCors(env, request, rejected ?? (await app.fetch(request)));
+    return await withCors(env, request, rejected ?? (await app.fetch(request)));
   },
 };
