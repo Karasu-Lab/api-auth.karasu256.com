@@ -3,6 +3,7 @@ import { CloudflareAdapter } from 'elysia/adapter/cloudflare-worker';
 import { env as cfEnv } from 'cloudflare:workers';
 import { resolveEnv } from './constants';
 import { dispatchables } from './dispatch';
+import { applyMigrations } from './db/migrate';
 import { handlePreflight, withCors } from './lib/cors';
 import type { DispatchContext } from './lib/dispatch';
 import { HttpError, NotFoundError } from '@karasu-lab/types/server';
@@ -50,7 +51,11 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
   .get('/api/users/me/security', ({ request }) => handleSecuritySettings(env, request))
   .get('/api/users/me/authorized-apps/:id', ({ request, params }) => handleAuthorizedAppDetails(env, request, params.id))
   .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
-  .get('/api/xbox/link', ({ request }) => handleXboxLink(env, request))
+  .post('/api/internal/migrate', async () => {
+    await applyMigrations(env.HYPERDRIVE.connectionString);
+    return Response.json({ ok: true });
+  })
+  .get('/api/xbox/link',({ request }) => handleXboxLink(env, request))
   .get('/api/xbox/callback', ({ request }) => handleXboxCallback(env, request))
   .post(
     '/api/auth/oauth2/client/rotate-secret',

@@ -39,6 +39,7 @@
   ],
   "preview_urls": true,
   "previews": {
+    "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "3876cf92143a4652bb2e6ecd7d2a3d07" }],
     "vars": {
       "APP_ENV": "preview",
       "BETTER_AUTH_URL": "https://dev-api-auth.karasu256.com",

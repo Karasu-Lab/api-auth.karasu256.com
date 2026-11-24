@@ -9,13 +9,12 @@ import { getAuthConfig } from '../config';
  */
 function corsHeaders(env: Env, request: Request): Record<string, string> {
   const origin = request.headers.get('origin');
-  if (!origin || (env.APP_ENV !== 'local' && !getAuthConfig(env).trustedOrigins.includes(origin))) return {};
+  if (!origin || !getAuthConfig(env).trustedOrigins.includes(origin)) return {};
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers':
-      (env.APP_ENV === 'local' && request.headers.get('access-control-request-headers')) || 'Content-Type, Authorization, cf-turnstile-response',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, cf-turnstile-response',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
