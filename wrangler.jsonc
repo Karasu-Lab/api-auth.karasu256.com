@@ -10,10 +10,7 @@
       "invocation_logs": false,
     },
   },
-  "routes": [
-    { "pattern": "api-auth.karasu256.com", "custom_domain": true },
-    { "pattern": "dev-api-auth.karasu256.com", "custom_domain": true, "previews_enabled": true, "enabled": false },
-  ],
+  "routes": [{ "pattern": "api-auth.karasu256.com", "custom_domain": true }],
   "vars": {
     "APP_ENV": "production",
     "BETTER_AUTH_URL": "https://api-auth.karasu256.com",
