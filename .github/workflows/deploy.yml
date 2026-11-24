@@ -76,13 +76,12 @@ jobs:
       GITHUB_CLIENT_ID: ${{ vars.GH_CLIENT_ID }}
       GITHUB_CLIENT_SECRET: ${{ secrets.GH_CLIENT_SECRET }}
       NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      CLOUDFLARE_ENV: dev
     steps:
       - name: Deploy the worker
         uses: Karasu-Lab/WorkersDeploy@v1
         with:
-          mode: production
-          worker-name: dev-api-auth-karasu256-com
+          mode: preview
+          worker-name: api-auth-karasu256-com
           secret-names: ${{ needs.secret-names.outputs.names }}
           vars-json: ${{ toJSON(vars) }}
           secrets-json: ${{ toJSON(secrets) }}
