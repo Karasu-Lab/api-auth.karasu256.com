@@ -62,12 +62,6 @@ jobs:
           vars-json: ${{ toJSON(vars) }}
           secrets-json: ${{ toJSON(secrets) }}
 
-      - name: Apply the migrations through Hyperdrive
-        env:
-          API_AUTH_URL: ${{ vars.API_AUTH_URL }}
-          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
-        run: pnpm dlx tsx .github/scripts/migrate.mjs
-
   preview:
     if: github.ref_name != 'main'
     needs: secret-names
@@ -92,9 +86,3 @@ jobs:
           secret-names: ${{ needs.secret-names.outputs.names }}
           vars-json: ${{ toJSON(vars) }}
           secrets-json: ${{ toJSON(secrets) }}
-
-      - name: Apply the migrations through Hyperdrive
-        env:
-          API_AUTH_URL: ${{ vars.API_AUTH_URL }}
-          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
-        run: pnpm dlx tsx .github/scripts/migrate.mjs
