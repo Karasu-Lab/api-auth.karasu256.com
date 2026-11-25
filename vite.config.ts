@@ -1,13 +1,14 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import { cloudflare } from '@cloudflare/vite-plugin';
-import { parse as parseYaml } from 'yaml';
+import { unstable_readConfig } from 'wrangler';
 
-const configPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'config.development.yml');
+const wranglerPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'wrangler.jsonc');
 
-const { allowedHosts } = parseYaml(fs.readFileSync(configPath, 'utf-8')) as { allowedHosts: string[] };
+const allowedHosts = String(unstable_readConfig({ config: wranglerPath, env: 'local' }).vars.ALLOWED_HOSTS)
+  .split(',')
+  .filter((host) => host.length > 0);
 
 export default defineConfig({
   plugins: [cloudflare({ inspectorPort: 9232 })],

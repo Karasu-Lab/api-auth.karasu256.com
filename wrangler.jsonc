@@ -43,6 +43,7 @@
       ],
       "vars": {
         "APP_ENV": "local",
+        "ALLOWED_HOSTS": "local-api-auth.karasu256.com",
         "BETTER_AUTH_URL": "http://localhost:8790",
         "AUTH_UI_URL": "http://localhost:3004",
         "SSO_UI_URL": "http://localhost:3007",
