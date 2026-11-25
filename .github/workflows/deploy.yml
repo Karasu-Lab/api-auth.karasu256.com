@@ -34,8 +34,19 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
     steps:
+      - name: Exclude the Turnstile settings
+        id: filtered
+        env:
+          VARS_JSON: ${{ toJSON(vars) }}
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+        run: |
+          {
+            echo "vars=$(jq -c 'del(.TURNSTILE_HOSTNAMES)' <<<"$VARS_JSON")"
+            echo "secrets=$(jq -c 'del(.CLOUDFLARE_TURNSTILE_SECRET)' <<<"$SECRETS_JSON")"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Deploy the worker
         uses: Karasu-Lab/WorkersDeploy@v3
         with:
-          vars-json: ${{ toJSON(vars) }}
-          secrets-json: ${{ toJSON(secrets) }}
+          vars-json: ${{ steps.filtered.outputs.vars }}
+          secrets-json: ${{ steps.filtered.outputs.secrets }}
