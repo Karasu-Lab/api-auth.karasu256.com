@@ -173,6 +173,7 @@ function createAuthOptions(env: Env, db: Db) {
       storage: 'memory',
     },
     advanced: {
+      cookiePrefix: env.APP_ENV,
       crossSubDomainCookies: {
         enabled: Boolean(env.BASE_DOMAIN),
         domain: env.BASE_DOMAIN,
