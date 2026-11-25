@@ -5,7 +5,7 @@ import { withCdnProfileAvatarUrls } from '../lib/profile-avatar';
 import { withOAuthProxyState } from '../lib/oauth-proxy';
 import { withAuth } from '../lib/request-auth';
 import { assertTokenSessionActive } from '../lib/session-expiry';
-import { rejectUnverifiedTurnstile } from '../lib/turnstile';
+import { TurnstileGate } from '../lib/turnstile';
 import { resendVerificationForUnverifiedUser } from '../lib/verification-resend';
 
 export class AuthDispatch implements Dispatchable {
@@ -21,11 +21,14 @@ export class AuthDispatch implements Dispatchable {
 
   async handle(): Promise<Response> {
     const { env, request, pathname } = this.context;
-    const rejectedTurnstile = await rejectUnverifiedTurnstile(env, request);
+    const rejectedTurnstile = await new TurnstileGate(env, request).reject();
     if (rejectedTurnstile) return rejectedTurnstile;
     const resent = await resendVerificationForUnverifiedUser(env, request, pathname);
     if (resent) return resent;
-    const cookieSession = request.method === 'GET' && pathname === '/api/auth/get-session' ? new CookieSessionStore(env, request) : null;
+    const cookieSession =
+      request.method === 'GET' && pathname === '/api/auth/get-session' && !new URL(request.url).searchParams.has('disableCookieCache')
+        ? new CookieSessionStore(env, request)
+        : null;
     const cached = await cookieSession?.get();
     if (cached) return cached;
     const authRequest = await normalizeClientAuthentication(env, request, pathname);

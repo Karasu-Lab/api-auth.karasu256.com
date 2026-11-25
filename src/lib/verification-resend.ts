@@ -13,10 +13,12 @@ async function consume(kv: KVNamespace, key: string, limit: number): Promise<boo
 }
 
 export async function sendVerificationWithLimit(env: Env, email: string, request: Request): Promise<boolean> {
-  const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
-  const allowed =
-    (await consume(env.VERIFICATION_RESEND_KV, `resend:email:${email}`, 3)) && (await consume(env.VERIFICATION_RESEND_KV, `resend:ip:${ip}`, 10));
-  if (!allowed) return false;
+  const kv = env.VERIFICATION_RESEND_KV;
+  if (kv) {
+    const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
+    const allowed = (await consume(kv, `resend:email:${email}`, 3)) && (await consume(kv, `resend:ip:${ip}`, 10));
+    if (!allowed) return false;
+  }
 
   await withAuth(env, (auth) => auth.api.sendVerificationEmail({ body: { email, callbackURL: `${env.AUTH_UI_URL}/email/verify/complete` } }));
   return true;

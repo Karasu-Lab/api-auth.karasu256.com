@@ -2,9 +2,10 @@ import { z } from 'zod';
 
 export function getOAuthProxyConfig(env: Env) {
   if (!env.OAUTH_PROXY_URL) return null;
+  if (env.APP_ENV !== 'production' && !env.OAUTH_PROXY_SECRET) return null;
   return {
     url: new URL(env.OAUTH_PROXY_URL).origin,
-    secret: env.APP_ENV === 'production' ? null : z.string().min(1).parse(env.OAUTH_PROXY_SECRET),
+    secret: env.APP_ENV === 'production' ? null : (env.OAUTH_PROXY_SECRET ?? null),
     origin: new URL(env.BETTER_AUTH_URL).origin,
     ttlMs: 10 * 60 * 1000,
   };

@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - drizzle/migrations/**
+      - drizzle.config.ts
+      - src/db/schema/**
       - .github/workflows/production-migrate.yml
   workflow_dispatch:
 

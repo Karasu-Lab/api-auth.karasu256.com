@@ -1,19 +1,24 @@
-name: PR Migrations
+name: Preview Migrations
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  push:
+    branches-ignore:
+      - main
     paths:
       - drizzle/migrations/**
-      - .github/workflows/neon-pr-migrate.yml
+      - drizzle.config.ts
+      - src/db/schema/**
+      - .github/workflows/preview-migrate.yml
+  workflow_dispatch:
 
 concurrency:
-  group: neon-dev-migrate
+  group: preview-migrate
   cancel-in-progress: false
 
 jobs:
   migrate:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.ref_name != github.event.repository.default_branch
+    environment: preview
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,13 +27,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Resolve the dev database
-        id: neon
-        env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
-        run: node .github/scripts/neon-branch-url.mjs dev
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -51,7 +49,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Apply migrations
+      - name: Apply migrations to the preview database
         env:
-          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: pnpm db:migrate:deploy

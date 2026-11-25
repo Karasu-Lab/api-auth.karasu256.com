@@ -1,3 +1,5 @@
 # api-auth.karasu256.com
 
 The single Better Auth instance for Karasu Lab — email/password, Google, GitHub and Microsoft sign-in, passkeys, API keys, OAuth 2.1 / OIDC provider, and SAML SSO — running as a Cloudflare Worker. The Microsoft link also backs the derived Xbox Live and Minecraft provider profiles (see `src/lib/xbox-live.ts`). Split out of [Karasu-Lab/Karasu-Lab](https://github.com/Karasu-Lab/Karasu-Lab).
+
+It is deployed as two separate workers by `.github/workflows/deploy.yml`: `api-auth-karasu256-com` serves production (`api-auth.karasu256.com`) from `main`, and `dev-api-auth-karasu256-com` serves the preview environment on `dev-api-auth.karasu256.com` (the `dev` environment in `wrangler.jsonc`, selected with `CLOUDFLARE_ENV=dev`) from every other branch. Per-branch Previews are not used. The non-secret variables (`APP_ENV`, `BETTER_AUTH_URL`, `AUTH_UI_URL`, and so on) are not defined in `wrangler.jsonc`; they are injected from the `production` / `preview` GitHub Environment variables (or repository-level variables when both share a value) through `secret-names`.

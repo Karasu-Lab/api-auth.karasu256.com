@@ -15,13 +15,13 @@ declare global {
     OAUTH_PROXY_SECRET?: string;
     TRUSTED_ORIGINS: string;
     WEBAUTHN_EXPECTED_ORIGINS: string;
-    TURNSTILE_HOSTNAMES: string;
+    TURNSTILE_HOSTNAMES?: string;
     BATCH_WORKS_MAX_CONCURRENCY: string;
     BETTER_AUTH_SECRET: string;
     INTERNAL_API_SECRET: string;
     DATABASE_URL: string;
     HYPERDRIVE: Hyperdrive;
-    VERIFICATION_RESEND_KV: KVNamespace;
+    VERIFICATION_RESEND_KV?: KVNamespace;
     MINECRAFT_STATUS_RATE_LIMIT_KV: KVNamespace;
     UPSTASH_REDIS_REST_URL: string;
     UPSTASH_REDIS_REST_TOKEN: string;
@@ -34,8 +34,8 @@ declare global {
     CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
     GOOGLE_CLIENT_ID?: string;
     GOOGLE_CLIENT_SECRET?: string;
-    GITHUB_CLIENT_ID?: string;
-    GITHUB_CLIENT_SECRET?: string;
+    GH_CLIENT_ID?: string;
+    GH_CLIENT_SECRET?: string;
     GH_OATH_CLIENT_ID?: string;
     GH_OAUTH_CLIENT_SECRET?: string;
     GH_APP_ID?: string;

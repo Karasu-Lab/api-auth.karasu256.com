@@ -14,5 +14,6 @@ const domainEnvSchema = z.object({
 });
 
 export function resolveEnv(raw: Env): Env {
+  if (raw.APP_ENV !== 'local') z.object({ BASE_DOMAIN: z.string().min(1) }).parse(raw);
   return { ...raw, ...domainEnvSchema.parse(raw), DATABASE_URL: raw.HYPERDRIVE.connectionString };
 }

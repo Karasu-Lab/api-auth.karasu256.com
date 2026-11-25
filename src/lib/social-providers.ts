@@ -17,11 +17,11 @@ export function createSocialProviders(env: Env) {
           },
         }
       : {}),
-    ...(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
+    ...(env.GH_CLIENT_ID && env.GH_CLIENT_SECRET
       ? {
           github: {
-            clientId: env.GITHUB_CLIENT_ID,
-            clientSecret: env.GITHUB_CLIENT_SECRET,
+            clientId: env.GH_CLIENT_ID,
+            clientSecret: env.GH_CLIENT_SECRET,
             redirectURI: oauthProxyRedirectURI(env, 'github'),
             disableImplicitSignUp: false,
           },

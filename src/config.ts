@@ -12,12 +12,16 @@ function parseStringArray(name: string, raw: string | undefined): string[] {
   }
 }
 
-/**
- * Builds the auth configuration from the worker's variables. Every list of
- * allowed origins comes from a variable holding a JSON array, so nothing
- * differs per environment in code: each GitHub environment (or the local
- * `.dev.vars`) supplies its own values.
- */
+function parsePositiveInteger(name: string, raw: string | undefined): number {
+  const value = Number(raw);
+  if (!raw || !Number.isInteger(value) || value <= 0) throw new Error(`${name} must be a positive integer`);
+  return value;
+}
+
+function parseOptionalStringArray(name: string, raw: string | undefined): string[] {
+  return raw ? parseStringArray(name, raw) : [];
+}
+
 export function getAuthConfig(env: Env): AuthConfig {
   return authConfigSchema.parse({
     webauthn: {
@@ -26,7 +30,7 @@ export function getAuthConfig(env: Env): AuthConfig {
       expectedOrigins: parseStringArray('WEBAUTHN_EXPECTED_ORIGINS', env.WEBAUTHN_EXPECTED_ORIGINS),
     },
     trustedOrigins: parseStringArray('TRUSTED_ORIGINS', env.TRUSTED_ORIGINS),
-    turnstileHostnames: parseStringArray('TURNSTILE_HOSTNAMES', env.TURNSTILE_HOSTNAMES),
-    batchWorks: { maxConcurrency: z.coerce.number().int().positive().parse(env.BATCH_WORKS_MAX_CONCURRENCY) },
+    turnstileHostnames: parseOptionalStringArray('TURNSTILE_HOSTNAMES', env.TURNSTILE_HOSTNAMES),
+    batchWorks: { maxConcurrency: parsePositiveInteger('BATCH_WORKS_MAX_CONCURRENCY', env.BATCH_WORKS_MAX_CONCURRENCY) },
   });
 }

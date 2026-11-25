@@ -17,7 +17,7 @@ export class CookieSessionStore {
     private readonly env: Env,
     request: Request
   ) {
-    const name = `${env.BETTER_AUTH_URL.startsWith('https:') ? '__Secure-' : ''}better-auth.session_token`;
+    const name = `${env.BETTER_AUTH_URL.startsWith('https:') ? '__Secure-' : ''}${env.APP_ENV}.session_token`;
     const value = request.headers
       .get('cookie')
       ?.split(';')
