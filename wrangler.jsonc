@@ -24,7 +24,7 @@
     "dev": {
       "name": "dev-api-auth-karasu256-com",
       "vars": {
-        "TRUSTED_ORIGINS": "[\"https://dev-accounts.karasu256.com\",\"https://dev-auth.karasu256.com\",\"https://dev-sso.karasu256.com\",\"https://dev.karasu256.com\",\"https://dev-qr.karasu256.com\"]"
+        "TRUSTED_ORIGINS": "[\"https://dev-accounts.karasu256.com\",\"https://*.dev-accounts.karasu256.com\",\"https://dev-auth.karasu256.com\",\"https://dev-sso.karasu256.com\",\"https://dev.karasu256.com\",\"https://dev-qr.karasu256.com\"]"
       },
       "routes": [{ "pattern": "dev-api-auth.karasu256.com", "custom_domain": true }],
       "ratelimits": [{ "name": "CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
