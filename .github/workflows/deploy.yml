@@ -21,7 +21,7 @@ jobs:
       NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Deploy the worker
-        uses: Karasu-Lab/WorkersDeploy@v1
+        uses: Karasu-Lab/WorkersDeploy@v1.0.11
         with:
           mode: production
           worker-name: api-auth-karasu256-com
@@ -49,7 +49,7 @@ jobs:
           echo "value=https://${SLUG//[^a-z0-9-]/-}.dev-api-auth.karasu256.com" >> "$GITHUB_OUTPUT"
 
       - name: Deploy the worker
-        uses: Karasu-Lab/WorkersDeploy@v1
+        uses: Karasu-Lab/WorkersDeploy@v1.0.11
         with:
           mode: preview
           preview-args: --var BETTER_AUTH_URL:${{ steps.better-auth-url.outputs.value }}
