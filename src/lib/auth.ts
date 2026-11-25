@@ -144,7 +144,7 @@ function createAuthOptions(env: Env, db: Db) {
       encryptOAuthTokens: true,
       accountLinking: {
         enabled: true,
-        trustedProviders: ['google', 'github', 'microsoft', GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID],
+        trustedProviders: ['google', 'github', 'microsoft', 'twitter', 'discord', GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID],
         allowDifferentEmails: true,
         updateUserInfoOnLink: true,
       },
@@ -291,6 +291,26 @@ function createAuthOptions(env: Env, db: Db) {
             prompt: 'select_account',
             disableImplicitSignUp: false,
           },
+          ...(env.X_CLIENT_ID && env.X_CLIENT_SECRET
+            ? {
+                twitter: {
+                  clientId: env.X_CLIENT_ID,
+                  clientSecret: env.X_CLIENT_SECRET,
+                  redirectURI: oauthProxyRedirectURI(env, 'twitter'),
+                  disableImplicitSignUp: false,
+                },
+              }
+            : {}),
+          ...(env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET
+            ? {
+                discord: {
+                  clientId: env.DISCORD_CLIENT_ID,
+                  clientSecret: env.DISCORD_CLIENT_SECRET,
+                  redirectURI: oauthProxyRedirectURI(env, 'discord'),
+                  disableImplicitSignUp: false,
+                },
+              }
+            : {}),
         },
   } satisfies BetterAuthOptions;
 }
