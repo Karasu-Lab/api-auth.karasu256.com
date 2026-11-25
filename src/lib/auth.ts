@@ -27,6 +27,7 @@ import { SessionExpiryCreateRepository, SessionExpiryRevokeRepository } from './
 import { redisSecondaryStorage } from './redis-storage';
 import { sessionJwtHeaderPlugin } from './session-jwt';
 import { SessionSourceStore } from './session-source';
+import { getXUserInfo } from './x-user-info';
 import { tenantTypePlugin } from './tenant-type';
 import { sendVerificationEmail } from './verification-email';
 
@@ -297,6 +298,7 @@ function createAuthOptions(env: Env, db: Db) {
                   clientId: env.X_CLIENT_ID,
                   clientSecret: env.X_CLIENT_SECRET,
                   redirectURI: oauthProxyRedirectURI(env, 'twitter'),
+                  getUserInfo: getXUserInfo,
                   disableImplicitSignUp: false,
                 },
               }
