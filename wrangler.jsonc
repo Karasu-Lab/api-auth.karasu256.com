@@ -24,6 +24,7 @@
     "API_URL": "https://api.karasu256.com",
     "MC_AUTH_URL": "https://mc-auth.karasu256.com",
     "BASE_DOMAIN": "karasu256.com",
+    "OAUTH_PROXY_URL": "https://oauth.karasu256.com",
     "CDN_URL": "https://cdn.karasu256.com",
     "STORAGE_BUCKET": "cdn",
     "RESEND_FROM_EMAIL": "no-reply@karasu256.com",
