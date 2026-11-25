@@ -46,7 +46,7 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
       },
       'error'
     );
-    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
+    return Response.json({ error: 'Internal Server Error', code: 'INTERNAL_SERVER_ERROR', message: 'Internal Server Error' }, { status: 500 });
   })
   .get('/api/users/me/providers', ({ request }) => handleProviderList(env, request))
   .get('/api/users/me/providers/stream', ({ request }) => handleProviderStream(env, request))
