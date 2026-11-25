@@ -31,16 +31,15 @@ export async function getXUserInfo(token: OAuth2Tokens) {
   }
 
   const { id_str, name, screen_name, profile_image_url_https, email } = profile.data;
-  const image = profile_image_url_https?.replace('_normal', '');
   return {
     user: {
       name,
       email: email ?? createPlaceholderEmail({ identifier: id_str, namespace: 'twitter' }),
-      image,
+      image: profile_image_url_https,
       emailVerified: Boolean(email),
     },
     data: {
-      data: { id: id_str, name, username: screen_name, profile_image_url: image },
+      data: { id: id_str, name, username: screen_name, profile_image_url: profile_image_url_https },
     },
   };
 }
