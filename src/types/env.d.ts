@@ -15,7 +15,7 @@ declare global {
     OAUTH_PROXY_SECRET?: string;
     TRUSTED_ORIGINS: string;
     WEBAUTHN_EXPECTED_ORIGINS: string;
-    TURNSTILE_HOSTNAMES: string;
+    TURNSTILE_HOSTNAMES?: string;
     BATCH_WORKS_MAX_CONCURRENCY: string;
     BETTER_AUTH_SECRET: string;
     INTERNAL_API_SECRET: string;
