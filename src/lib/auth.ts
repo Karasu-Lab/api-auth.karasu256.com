@@ -13,7 +13,7 @@ import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
 import { getAuthConfig } from '../config';
 import { emailChallenges } from '../db/schema/email-challenges';
 import { sendChallengeEmail } from './challenge-email';
-import { FirebaseDeleteUserWork, FirebaseLinkUserWork, NeonAuthSyncUserWork, RedisSessionCleanupWork, runBatchWorks } from './batch-works';
+import { FirebaseDeleteUserWork, FirebaseLinkUserWork, RedisSessionCleanupWork, runBatchWorks } from './batch-works';
 import { assertNoDeviceSessionConflict } from './device-session-conflict';
 import { getLinkedFirebaseUid } from './firebase-link';
 import { githubAppInstallationPlugin } from './github-app-installation';
@@ -189,7 +189,6 @@ function createAuthOptions(env: Env, db: Db) {
           },
           after: async (user, context) => {
             await new FirebaseLinkUserWork(env, db).enqueue({ userId: user.id });
-            await new NeonAuthSyncUserWork(env, db).enqueue({ id: user.id, email: user.email ?? null, name: user.name ?? null });
             context?.context.runInBackground(runBatchWorks(env));
           },
         },
