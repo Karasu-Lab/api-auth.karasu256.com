@@ -23,7 +23,7 @@
     "BASE_DOMAIN": "karasu256.com",
   },
   "ratelimits": [{ "name": "CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
-  "kv_namespaces": [{ "binding": "MINECRAFT_STATUS_RATE_LIMIT_KV" }],
+  "kv_namespaces": [{ "binding": "VERIFICATION_RESEND_KV" }, { "binding": "MINECRAFT_STATUS_RATE_LIMIT_KV" }],
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
@@ -48,7 +48,7 @@
       },
       "routes": [{ "pattern": "dev-api-auth.karasu256.com", "custom_domain": true }],
       "ratelimits": [{ "name": "CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
-      "kv_namespaces": [{ "binding": "MINECRAFT_STATUS_RATE_LIMIT_KV", "id": "f92f5a167375432c970376fa40a05844" }],
+      "kv_namespaces": [{ "binding": "VERIFICATION_RESEND_KV" }, { "binding": "MINECRAFT_STATUS_RATE_LIMIT_KV", "id": "f92f5a167375432c970376fa40a05844" }],
       "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "3876cf92143a4652bb2e6ecd7d2a3d07" }],
     },
     "local": {
