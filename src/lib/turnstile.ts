@@ -32,7 +32,7 @@ export class TurnstileGate {
     const { turnstileHostnames } = getAuthConfig(env);
     if (!secret || turnstileHostnames.length === 0) return null;
 
-    const forbidden = () => Response.json({ code: 'bot_verification_failed', message: 'Bot verification failed.' }, { status: 403 });
+    const forbidden = () => Response.json({ code: 'bot_verification_failed' }, { status: 403 });
 
     const token = request.headers.get(this.tokenHeader);
     if (!token || token.length > 2048) return forbidden();
