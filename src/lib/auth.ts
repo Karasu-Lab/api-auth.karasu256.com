@@ -20,6 +20,7 @@ import { githubAppInstallationPlugin } from './github-app-installation';
 import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { oauthClientRedisAdapter } from './oauth-client-adapter';
+import { oauthProxyRedirectURI } from './oauth-proxy';
 import { ActiveSessionDeleteRepository } from './redis/active-session-repositories';
 import { JwksCreateRepository, JwksGetRepository } from './redis/jwks-repositories';
 import { SessionExpiryCreateRepository, SessionExpiryRevokeRepository } from './redis/session-expiry-repositories';
@@ -272,16 +273,19 @@ function createAuthOptions(env: Env, db: Db) {
           google: {
             clientId: env.GOOGLE_CLIENT_ID as string,
             clientSecret: env.GOOGLE_CLIENT_SECRET as string,
+            redirectURI: oauthProxyRedirectURI(env, 'google'),
             disableImplicitSignUp: false,
           },
           github: {
             clientId: env.GITHUB_CLIENT_ID as string,
             clientSecret: env.GITHUB_CLIENT_SECRET as string,
+            redirectURI: oauthProxyRedirectURI(env, 'github'),
             disableImplicitSignUp: false,
           },
           microsoft: {
             clientId: env.MICROSOFT_CLIENT_ID as string,
             clientSecret: env.MICROSOFT_CLIENT_SECRET as string,
+            redirectURI: oauthProxyRedirectURI(env, 'microsoft'),
             tenantId: 'consumers',
             disableProfilePhoto: true,
             prompt: 'select_account',

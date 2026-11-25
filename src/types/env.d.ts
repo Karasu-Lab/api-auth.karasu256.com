@@ -11,6 +11,8 @@ declare global {
     API_URL: string;
     MC_AUTH_URL: string;
     BASE_DOMAIN?: string;
+    OAUTH_PROXY_URL?: string;
+    OAUTH_PROXY_SECRET?: string;
     TRUSTED_ORIGINS: string;
     WEBAUTHN_EXPECTED_ORIGINS: string;
     TURNSTILE_HOSTNAMES: string;
