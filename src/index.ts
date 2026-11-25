@@ -1,4 +1,5 @@
 import { Elysia, ParseError } from 'elysia';
+import { ZodError } from 'zod';
 import { CloudflareAdapter } from 'elysia/adapter/cloudflare-worker';
 import { env as cfEnv } from 'cloudflare:workers';
 import { resolveEnv } from './constants';
@@ -22,32 +23,34 @@ const env = new Proxy({} as Env, {
   get: (_, key) => (resolvedEnv ??= resolveEnv(cfEnv as Env))[key as keyof Env],
 });
 
+function handleError(error: unknown, request: Request): Response {
+  if (error instanceof SecretRotationNotAllowedError) return Response.json({ error: 'invalid_client', error_description: error.message }, { status: 400 });
+  if (error instanceof UploadVerificationError) return Response.json({ error: error.message }, { status: 502 });
+  if (error instanceof HttpError)
+    return Response.json(error.issues.length > 0 ? { ...error.body, issues: error.issues } : error.body, {
+      status: error.status,
+      headers: error.headers,
+    });
+  if (error instanceof ParseError) return Response.json({ error: 'Bad Request' }, { status: 400 });
+  log(
+    'request_error',
+    {
+      name: error instanceof Error ? error.name : typeof error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      cause: error instanceof Error && error.cause !== undefined ? String(error.cause) : undefined,
+      issues: error instanceof ZodError ? error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })) : undefined,
+      method: request.method,
+      path: new URL(request.url).pathname,
+    },
+    'error'
+  );
+  return Response.json({ error: 'Internal Server Error' }, { status: 500 });
+}
+
 const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typebox' })
   .parser('none', () => ({}))
-  .onError(({ error, request }) => {
-    if (error instanceof SecretRotationNotAllowedError)
-      return Response.json({ error: 'invalid_client', error_description: error.message }, { status: 400 });
-    if (error instanceof UploadVerificationError) return Response.json({ error: error.message }, { status: 502 });
-    if (error instanceof HttpError)
-      return Response.json(error.issues.length > 0 ? { ...error.body, issues: error.issues } : error.body, {
-        status: error.status,
-        headers: error.headers,
-      });
-    if (error instanceof ParseError) return Response.json({ error: 'Bad Request' }, { status: 400 });
-    log(
-      'request_error',
-      {
-        name: error instanceof Error ? error.name : typeof error,
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        cause: error instanceof Error && error.cause !== undefined ? String(error.cause) : undefined,
-        method: request.method,
-        path: new URL(request.url).pathname,
-      },
-      'error'
-    );
-    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
-  })
+  .onError(({ error, request }) => handleError(error, request))
   .get('/api/users/me/providers', ({ request }) => handleProviderList(env, request))
   .get('/api/users/me/providers/stream', ({ request }) => handleProviderStream(env, request))
   .get('/api/users/me/authorized-apps', ({ request }) => handleAuthorizedAppList(env, request))
@@ -95,9 +98,13 @@ function normalizePath(request: Request): Request {
 export default {
   async fetch(rawRequest: Request): Promise<Response> {
     const request = normalizePath(rawRequest);
-    const preflight = await handlePreflight(env, request);
-    if (preflight) return preflight;
-    const rejected = await rejectInvalidSignature(env, request);
-    return await withCors(env, request, rejected ?? (await app.fetch(request)));
+    try {
+      const preflight = await handlePreflight(env, request);
+      if (preflight) return preflight;
+      const rejected = await rejectInvalidSignature(env, request);
+      return await withCors(env, request, rejected ?? (await app.fetch(request)));
+    } catch (error) {
+      return handleError(error, request);
+    }
   },
 };

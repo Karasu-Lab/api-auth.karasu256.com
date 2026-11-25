@@ -12,6 +12,12 @@ function parseStringArray(name: string, raw: string | undefined): string[] {
   }
 }
 
+function parsePositiveInteger(name: string, raw: string | undefined): number {
+  const value = Number(raw);
+  if (!raw || !Number.isInteger(value) || value <= 0) throw new Error(`${name} must be a positive integer`);
+  return value;
+}
+
 function parseOptionalStringArray(name: string, raw: string | undefined): string[] {
   return raw ? parseStringArray(name, raw) : [];
 }
@@ -25,6 +31,6 @@ export function getAuthConfig(env: Env): AuthConfig {
     },
     trustedOrigins: parseStringArray('TRUSTED_ORIGINS', env.TRUSTED_ORIGINS),
     turnstileHostnames: parseOptionalStringArray('TURNSTILE_HOSTNAMES', env.TURNSTILE_HOSTNAMES),
-    batchWorks: { maxConcurrency: z.coerce.number().int().positive().parse(env.BATCH_WORKS_MAX_CONCURRENCY) },
+    batchWorks: { maxConcurrency: parsePositiveInteger('BATCH_WORKS_MAX_CONCURRENCY', env.BATCH_WORKS_MAX_CONCURRENCY) },
   });
 }
