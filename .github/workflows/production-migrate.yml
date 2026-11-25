@@ -35,12 +35,15 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          registry-url: https://npm.pkg.github.com
-          scope: "@karasu-lab"
+
+      - name: Configure GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pnpm config set "@karasu-lab:registry" https://npm.pkg.github.com
+          pnpm config set "//npm.pkg.github.com/:_authToken" "$GITHUB_TOKEN"
 
       - name: Install dependencies
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install --frozen-lockfile
 
       - name: Apply migrations to the production database
