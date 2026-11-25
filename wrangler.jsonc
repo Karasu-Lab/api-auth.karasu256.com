@@ -23,6 +23,9 @@
   "env": {
     "dev": {
       "name": "dev-api-auth-karasu256-com",
+      "vars": {
+        "TRUSTED_ORIGINS": "[\"https://dev-auth.karasu256.com\",\"https://dev-sso.karasu256.com\",\"https://dev.karasu256.com\",\"https://dev.qr.karasu256.com\",\"https://*-accounts-karasu256-com.*.workers.dev\"]"
+      },
       "routes": [{ "pattern": "dev-api-auth.karasu256.com", "custom_domain": true }],
       "ratelimits": [{ "name": "CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
       "kv_namespaces": [{ "binding": "MINECRAFT_STATUS_RATE_LIMIT_KV", "id": "f92f5a167375432c970376fa40a05844" }],
