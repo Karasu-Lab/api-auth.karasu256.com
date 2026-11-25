@@ -51,7 +51,9 @@ async function postForm(consumer: XConsumer, url: string, options: Parameters<ty
     headers: { authorization: await signXRequest(consumer, 'POST', url, options) },
   }).catch(() => null);
   if (!response?.ok) {
-    console.error(JSON.stringify({ level: 'error', kind: 'x-oauth1', url, status: response?.status ?? null }));
+    const { origin, pathname } = new URL(url);
+    const body = await response?.text().catch(() => null);
+    console.error(JSON.stringify({ level: 'error', kind: 'x-oauth1', url: `${origin}${pathname}`, status: response?.status ?? null, body }));
     return null;
   }
   return new URLSearchParams(await response.text());
@@ -72,11 +74,9 @@ export function xAuthenticateUrl(requestToken: string) {
 }
 
 export async function fetchXAccessToken(consumer: XConsumer, requestToken: string, requestTokenSecret: string, verifier: string) {
-  const params = await postForm(consumer, 'https://api.x.com/oauth/access_token', {
-    token: requestToken,
-    tokenSecret: requestTokenSecret,
-    extraOAuthParams: { oauth_verifier: verifier },
-  });
+  const url = new URL('https://api.x.com/oauth/access_token');
+  url.searchParams.set('oauth_verifier', verifier);
+  const params = await postForm(consumer, url.toString(), { token: requestToken, tokenSecret: requestTokenSecret });
   const token = params?.get('oauth_token');
   const tokenSecret = params?.get('oauth_token_secret');
   if (!token || !tokenSecret) return null;
