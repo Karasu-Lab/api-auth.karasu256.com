@@ -40,6 +40,7 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
         name: error instanceof Error ? error.name : typeof error,
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
+        cause: error instanceof Error && error.cause !== undefined ? String(error.cause) : undefined,
         method: request.method,
         path: new URL(request.url).pathname,
       },
