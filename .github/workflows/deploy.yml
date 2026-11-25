@@ -6,44 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  secret-names:
-    runs-on: ubuntu-latest
-    outputs:
-      names: ${{ steps.build.outputs.names }}
-    steps:
-      - name: Build the secret names
-        id: build
-        env:
-          SECRET_NAMES: |
-            - BETTER_AUTH_SECRET
-            - AUTH_SECRET
-            - INTERNAL_API_SECRET
-            - DATABASE_URL
-            - UPSTASH_REDIS_REST_URL
-            - UPSTASH_REDIS_REST_TOKEN
-            - GOOGLE_CLOUD_PROJECT_ID
-            - FIREBASE_ADMIN_CLIENT_EMAIL
-            - FIREBASE_ADMIN_PRIVATE_KEY
-            - RESEND_API_KEY
-            - NEON_AUTH_BASE_URL
-            - GOOGLE_CLIENT_SECRET
-            - GITHUB_CLIENT_SECRET
-            - GH_APP_CLIENT_SECRET
-            - GH_APP_PRIVATE_KEY
-            - GH_OAUTH_CLIENT_SECRET
-            - CLOUDFLARE_TURNSTILE_SECRET
-            - MICROSOFT_CLIENT_SECRET
-            - OAUTH_PROXY_SECRET
-            - X_CLIENT_SECRET
-            - DISCORD_CLIENT_SECRET
-            - STORAGE_ENDPOINT
-            - STORAGE_ACCESS_KEY_ID
-            - STORAGE_SECRET_ACCESS_KEY
-        run: sed 's/^- //' <<< "$SECRET_NAMES" | xargs | sed 's/^/names=/' >> "$GITHUB_OUTPUT"
-
   deploy:
     if: github.ref_name == 'main'
-    needs: secret-names
     environment: production
     runs-on: ubuntu-latest
     permissions:
@@ -56,18 +20,35 @@ jobs:
       GITHUB_CLIENT_SECRET: ${{ secrets.GH_CLIENT_SECRET }}
       NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect the worker variable names
+        id: names
+        env:
+          VARS_JSON: ${{ toJSON(vars) }}
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+        run: |
+          NAMES=""
+          for NAME in $(jq -rn --argjson vars "$VARS_JSON" --argjson secrets "$SECRETS_JSON" '($vars + $secrets) | keys[]'); do
+            case "$NAME" in
+              github_token | CLOUDFLARE_API_TOKEN | CLOUDFLARE_ACCOUNT_ID | GH_CLIENT_ID | GH_CLIENT_SECRET) continue ;;
+            esac
+            if grep -qs "\"$NAME\"" wrangler.jsonc; then continue; fi
+            NAMES+="$NAME "
+          done
+          echo "value=$NAMES" >> "$GITHUB_OUTPUT"
+
       - name: Deploy the worker
         uses: Karasu-Lab/WorkersDeploy@v1
         with:
           mode: production
           worker-name: api-auth-karasu256-com
-          secret-names: ${{ needs.secret-names.outputs.names }}
+          secret-names: ${{ steps.names.outputs.value }}
           vars-json: ${{ toJSON(vars) }}
           secrets-json: ${{ toJSON(secrets) }}
 
   preview:
     if: github.ref_name != 'main'
-    needs: secret-names
     environment: preview
     runs-on: ubuntu-latest
     permissions:
@@ -80,6 +61,24 @@ jobs:
       GITHUB_CLIENT_SECRET: ${{ secrets.GH_CLIENT_SECRET }}
       NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect the worker variable names
+        id: names
+        env:
+          VARS_JSON: ${{ toJSON(vars) }}
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+        run: |
+          NAMES=""
+          for NAME in $(jq -rn --argjson vars "$VARS_JSON" --argjson secrets "$SECRETS_JSON" '($vars + $secrets) | keys[]'); do
+            case "$NAME" in
+              github_token | CLOUDFLARE_API_TOKEN | CLOUDFLARE_ACCOUNT_ID | GH_CLIENT_ID | GH_CLIENT_SECRET) continue ;;
+            esac
+            if grep -qs "\"$NAME\"" wrangler.jsonc; then continue; fi
+            NAMES+="$NAME "
+          done
+          echo "value=$NAMES" >> "$GITHUB_OUTPUT"
+
       - name: Generate the Better Auth URL
         id: better-auth-url
         run: |
@@ -92,6 +91,6 @@ jobs:
           mode: preview
           preview-args: --var BETTER_AUTH_URL:${{ steps.better-auth-url.outputs.value }}
           worker-name: api-auth-karasu256-com
-          secret-names: ${{ needs.secret-names.outputs.names }}
+          secret-names: ${{ steps.names.outputs.value }}
           vars-json: ${{ toJSON(vars) }}
           secrets-json: ${{ toJSON(secrets) }}
