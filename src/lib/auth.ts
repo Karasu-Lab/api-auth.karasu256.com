@@ -21,7 +21,7 @@ import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_I
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { oauthClientRedisAdapter } from './oauth-client-adapter';
 import { ActiveSessionDeleteRepository } from './redis/active-session-repositories';
-import { JwksCreateRepository, JwksGetRepository } from './redis/jwks-repositories';
+import { readJwks } from './redis/jwks-repositories';
 import { SessionExpiryCreateRepository, SessionExpiryRevokeRepository } from './redis/session-expiry-repositories';
 import { redisSecondaryStorage } from './redis-storage';
 import { sessionJwtHeaderPlugin } from './session-jwt';
@@ -39,9 +39,7 @@ function createPlugins(env: Env, db: Db) {
     jwks: { keyPairConfig: { alg: 'RS256', modulusLength: 2048 } },
     adapter: {
       getJwks: async (ctx) => {
-        const keys =
-          (await new JwksGetRepository(env).get()) ??
-          (await new JwksCreateRepository(env).create(await ctx.context.adapter.findMany({ model: 'jwks' })));
+        const keys = await readJwks(env, () => ctx.context.adapter.findMany({ model: 'jwks' }));
         return keys.some((key) => key.alg === 'RS256') ? [...keys].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()) : [];
       },
     },

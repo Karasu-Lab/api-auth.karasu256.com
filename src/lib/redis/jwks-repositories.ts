@@ -47,6 +47,12 @@ export class JwksCreateRepository extends RedisRepository {
   }
 }
 
+export async function readJwks(env: Env, readFromDatabase: () => Promise<unknown[]>): Promise<Jwks> {
+  const cached = await new JwksGetRepository(env).get();
+  if (cached) return cached;
+  return new JwksCreateRepository(env).create(await readFromDatabase());
+}
+
 export class JwksDeleteRepository extends RedisRepository {
   protected readonly prefix = 'jwks';
 

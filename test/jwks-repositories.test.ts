@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const store = new Map<string, string>();
 
@@ -17,14 +17,36 @@ vi.mock('@upstash/redis/cloudflare', () => ({
   },
 }));
 
-const { JwksCreateRepository, JwksGetRepository } = await import('../src/lib/redis/jwks-repositories');
+const { readJwks } = await import('../src/lib/redis/jwks-repositories');
 
 const env = { UPSTASH_REDIS_REST_URL: 'https://redis.example.test', UPSTASH_REDIS_REST_TOKEN: 'token' } as Env;
 
-describe('jwks cache', () => {
-  it('does not keep serving an empty key list after the keys were cleaned up', async () => {
+const databaseKey = { id: 'key-1', publicKey: '{}', privateKey: 'private', createdAt: new Date('2026-11-25T00:00:00Z'), alg: 'RS256' };
+
+describe('readJwks', () => {
+  beforeEach(() => {
     store.clear();
-    await new JwksCreateRepository(env).create([]);
-    expect(await new JwksGetRepository(env).get()).toBeNull();
+  });
+
+  it('reads the database when nothing is cached and caches the keys it finds', async () => {
+    const readFromDatabase = vi.fn(async () => [databaseKey]);
+    expect(await readJwks(env, readFromDatabase)).toHaveLength(1);
+    expect(readFromDatabase).toHaveBeenCalledTimes(1);
+
+    await readJwks(env, readFromDatabase);
+    expect(readFromDatabase).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the database again when the cached list is empty', async () => {
+    store.set('jwks-keys', '[]');
+    const readFromDatabase = vi.fn(async () => [databaseKey]);
+    expect(await readJwks(env, readFromDatabase)).toHaveLength(1);
+    expect(readFromDatabase).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not cache an empty database result', async () => {
+    const readFromDatabase = vi.fn(async () => []);
+    expect(await readJwks(env, readFromDatabase)).toEqual([]);
+    expect(store.has('jwks-keys')).toBe(false);
   });
 });
