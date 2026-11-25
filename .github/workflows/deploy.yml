@@ -34,7 +34,9 @@ jobs:
             - CLOUDFLARE_TURNSTILE_SECRET
             - MICROSOFT_CLIENT_SECRET
             - OAUTH_PROXY_SECRET
+            - X_CLIENT_ID
             - X_CLIENT_SECRET
+            - DISCORD_CLIENT_ID
             - DISCORD_CLIENT_SECRET
             - STORAGE_ENDPOINT
             - STORAGE_ACCESS_KEY_ID
