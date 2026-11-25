@@ -6,12 +6,11 @@ import { getAuthConfig } from '../../config';
 import { batchWorkStatusSchema, type BatchWork } from './batch-work';
 import { FirebaseDeleteUserWork } from './firebase-delete-user';
 import { FirebaseLinkUserWork } from './firebase-link-user';
-import { NeonAuthSyncUserWork } from './neon-auth-sync-user';
 import { RedisSessionCleanupWork } from './redis-session-cleanup';
 
-export { FirebaseDeleteUserWork, FirebaseLinkUserWork, NeonAuthSyncUserWork, RedisSessionCleanupWork };
+export { FirebaseDeleteUserWork, FirebaseLinkUserWork, RedisSessionCleanupWork };
 
-const batchWorkClasses = [FirebaseLinkUserWork, FirebaseDeleteUserWork, NeonAuthSyncUserWork, RedisSessionCleanupWork];
+const batchWorkClasses = [FirebaseLinkUserWork, FirebaseDeleteUserWork, RedisSessionCleanupWork];
 
 function createBatchWork(env: Env, db: Db, type: string): BatchWork<z.ZodType> | null {
   for (const Work of batchWorkClasses) {
@@ -21,20 +20,26 @@ function createBatchWork(env: Env, db: Db, type: string): BatchWork<z.ZodType> |
   return null;
 }
 
-async function claimBatchWorks(db: Db, maxConcurrency: number): Promise<{ id: string; type: string }[]> {
+async function claimBatchWorks(db: Db, maxConcurrency: number, types: string[]): Promise<{ id: string; type: string }[]> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('batch_works'))`);
     const [{ syncing }] = await tx
       .select({ syncing: count() })
       .from(schema.batchWorks)
-      .where(eq(schema.batchWorks.status, batchWorkStatusSchema.enum.syncing));
+      .where(and(eq(schema.batchWorks.status, batchWorkStatusSchema.enum.syncing), inArray(schema.batchWorks.type, types)));
     const limit = maxConcurrency - syncing;
     if (limit <= 0) return [];
 
     const pending = tx
       .select({ id: schema.batchWorks.id })
       .from(schema.batchWorks)
-      .where(and(eq(schema.batchWorks.status, batchWorkStatusSchema.enum.pending), lte(schema.batchWorks.scheduledAt, new Date())))
+      .where(
+        and(
+          eq(schema.batchWorks.status, batchWorkStatusSchema.enum.pending),
+          inArray(schema.batchWorks.type, types),
+          lte(schema.batchWorks.scheduledAt, new Date())
+        )
+      )
       .orderBy(asc(schema.batchWorks.scheduledAt))
       .limit(limit);
 
@@ -59,7 +64,12 @@ export async function runBatchWorks(env: Env): Promise<void> {
   try {
     await Promise.all(batchWorkClasses.map((Work) => new Work(env, db).failStale()));
     const { maxConcurrency } = getAuthConfig(env).batchWorks;
-    for (let works = await claimBatchWorks(db, maxConcurrency); works.length > 0; works = await claimBatchWorks(db, maxConcurrency)) {
+    const types = batchWorkClasses.map((Work) => new Work(env, db).type);
+    for (
+      let works = await claimBatchWorks(db, maxConcurrency, types);
+      works.length > 0;
+      works = await claimBatchWorks(db, maxConcurrency, types)
+    ) {
       await Promise.all(works.map((work) => runClaimedBatchWork(env, db, work)));
     }
   } finally {

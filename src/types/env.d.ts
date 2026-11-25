@@ -18,7 +18,6 @@ declare global {
     TURNSTILE_HOSTNAMES: string;
     BATCH_WORKS_MAX_CONCURRENCY: string;
     BETTER_AUTH_SECRET: string;
-    AUTH_SECRET: string;
     INTERNAL_API_SECRET: string;
     DATABASE_URL: string;
     HYPERDRIVE: Hyperdrive;
@@ -32,7 +31,6 @@ declare global {
     FIREBASE_AUTH_EMULATOR_HOST?: string;
     RESEND_API_KEY: string;
     RESEND_FROM_EMAIL: string;
-    NEON_AUTH_BASE_URL: string;
     CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
     GOOGLE_CLIENT_ID?: string;
     GOOGLE_CLIENT_SECRET?: string;
