@@ -27,7 +27,7 @@ import { SessionExpiryCreateRepository, SessionExpiryRevokeRepository } from './
 import { redisSecondaryStorage } from './redis-storage';
 import { sessionJwtHeaderPlugin } from './session-jwt';
 import { SessionSourceStore } from './session-source';
-import { getXUserInfo } from './x-user-info';
+import { xOAuth1Plugin } from './x-oauth1-provider';
 import { tenantTypePlugin } from './tenant-type';
 import { sendVerificationEmail } from './verification-email';
 
@@ -95,6 +95,9 @@ function createPlugins(env: Env, db: Db) {
       },
     }),
     ...(oauthProviders.length > 0 ? [genericOAuth({ config: oauthProviders })] : []),
+    ...(env.X_CONSUMER_KEY && env.X_CONSUMER_SECRET
+      ? [xOAuth1Plugin(env, { key: env.X_CONSUMER_KEY, secret: env.X_CONSUMER_SECRET })]
+      : []),
     githubAppInstallationPlugin(env),
     tenantTypePlugin(env),
     customSession(async ({ user, session }) => ({
@@ -292,17 +295,6 @@ function createAuthOptions(env: Env, db: Db) {
             prompt: 'select_account',
             disableImplicitSignUp: false,
           },
-          ...(env.X_CLIENT_ID && env.X_CLIENT_SECRET
-            ? {
-                twitter: {
-                  clientId: env.X_CLIENT_ID,
-                  clientSecret: env.X_CLIENT_SECRET,
-                  redirectURI: oauthProxyRedirectURI(env, 'twitter'),
-                  getUserInfo: getXUserInfo,
-                  disableImplicitSignUp: false,
-                },
-              }
-            : {}),
           ...(env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET
             ? {
                 discord: {

@@ -1,6 +1,6 @@
-import type { OAuth2Tokens } from '@better-auth/core/oauth2';
 import { createPlaceholderEmail } from '@better-auth/core/utils/email';
 import { z } from 'zod';
+import { signXRequest, type XConsumer } from './x-oauth1';
 
 const profileSchema = z.looseObject({
   id_str: z.string(),
@@ -14,9 +14,10 @@ const problemSchema = z.looseObject({
   errors: z.array(z.looseObject({ code: z.number().optional(), message: z.string().optional() })).optional(),
 });
 
-export async function getXUserInfo(token: OAuth2Tokens) {
-  const response = await fetch('https://api.x.com/1.1/account/verify_credentials.json?include_email=true&skip_status=true', {
-    headers: { authorization: `Bearer ${token.accessToken}` },
+export async function getXUserInfo(consumer: XConsumer, token: string, tokenSecret: string) {
+  const url = 'https://api.x.com/1.1/account/verify_credentials.json?include_email=true&skip_status=true';
+  const response = await fetch(url, {
+    headers: { authorization: await signXRequest(consumer, 'GET', url, { token, tokenSecret }) },
   }).catch(() => null);
   const body = await response?.json().catch(() => null);
   if (!response?.ok) {
