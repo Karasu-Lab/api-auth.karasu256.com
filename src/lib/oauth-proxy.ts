@@ -4,7 +4,7 @@ export function getOAuthProxyConfig(env: Env) {
   if (!env.OAUTH_PROXY_URL) return null;
   return {
     url: new URL(env.OAUTH_PROXY_URL).origin,
-    secret: z.string().min(1).parse(env.OAUTH_PROXY_SECRET),
+    secret: env.APP_ENV === 'production' ? null : z.string().min(1).parse(env.OAUTH_PROXY_SECRET),
     origin: new URL(env.BETTER_AUTH_URL).origin,
     ttlMs: 10 * 60 * 1000,
   };
@@ -22,7 +22,7 @@ function encodeBase64Url(bytes: Uint8Array) {
     .replace(/=+$/, '');
 }
 
-export async function signProxyState(config: NonNullable<ReturnType<typeof getOAuthProxyConfig>>, state: string, now = Date.now()) {
+export async function signProxyState(config: { secret: string; origin: string; ttlMs: number }, state: string, now = Date.now()) {
   const body = encodeBase64Url(
     new TextEncoder().encode(JSON.stringify({ origin: config.origin, state, exp: now + config.ttlMs, nonce: crypto.randomUUID() }))
   );
@@ -39,7 +39,7 @@ function replaceState(url: string, state: string) {
 
 export async function withOAuthProxyState(env: Env, method: string, pathname: string, response: Response) {
   const config = getOAuthProxyConfig(env);
-  if (!config || method !== 'POST' || !['/api/auth/sign-in/social', '/api/auth/link-social'].includes(pathname)) return response;
+  if (!config?.secret || method !== 'POST' || !['/api/auth/sign-in/social', '/api/auth/link-social'].includes(pathname)) return response;
 
   const parsed = z
     .looseObject({ url: z.url() })
@@ -50,7 +50,7 @@ export async function withOAuthProxyState(env: Env, method: string, pathname: st
   const originalState = new URL(body.url).searchParams.get('state');
   if (!originalState) return response;
 
-  const signed = await signProxyState(config, originalState);
+  const signed = await signProxyState({ ...config, secret: config.secret }, originalState);
   const headers = new Headers(response.headers);
   if (headers.has('location')) headers.set('location', replaceState(headers.get('location') as string, signed));
   headers.delete('content-length');
