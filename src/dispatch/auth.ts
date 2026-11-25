@@ -25,7 +25,10 @@ export class AuthDispatch implements Dispatchable {
     if (rejectedTurnstile) return rejectedTurnstile;
     const resent = await resendVerificationForUnverifiedUser(env, request, pathname);
     if (resent) return resent;
-    const cookieSession = request.method === 'GET' && pathname === '/api/auth/get-session' ? new CookieSessionStore(env, request) : null;
+    const cookieSession =
+      request.method === 'GET' && pathname === '/api/auth/get-session' && !new URL(request.url).searchParams.has('disableCookieCache')
+        ? new CookieSessionStore(env, request)
+        : null;
     const cached = await cookieSession?.get();
     if (cached) return cached;
     const authRequest = await normalizeClientAuthentication(env, request, pathname);
