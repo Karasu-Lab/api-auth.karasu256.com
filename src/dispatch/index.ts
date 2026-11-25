@@ -26,6 +26,7 @@ import {
 import { ListAuthSessionsDispatch, ListSessionDevicesSourceDispatch, RevokeAuthSessionDispatch } from './sessions';
 import { SetPasswordDispatch } from './set-password';
 import { SignInLookupDispatch } from './sign-in-lookup';
+import { ListSocialProvidersDispatch } from './social-providers';
 import {
   AssignTenantTypeDispatch,
   InstallationTokenDispatch,
@@ -84,6 +85,7 @@ export const dispatchables: DispatchableClass[] = [
   PushWebhookDispatch,
   InstallationWebhookDispatch,
   SignInLookupDispatch,
+  ListSocialProvidersDispatch,
   CreateTestAccountDispatch,
   DeleteTestAccountDispatch,
   GetUserProfileDispatch,
