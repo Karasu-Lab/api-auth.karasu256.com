@@ -26,7 +26,7 @@ export class TurnstileGate {
     if (request.method !== 'POST') return null;
     const { pathname } = new URL(request.url);
     const expectedAction = this.gatedActions[pathname];
-    if (!expectedAction || env.APP_ENV === 'local') return null;
+    if (!expectedAction || env.APP_ENV === 'local' || env.APP_ENV === 'preview') return null;
 
     const secret = env.CLOUDFLARE_TURNSTILE_SECRET;
     const { turnstileHostnames } = getAuthConfig(env);
