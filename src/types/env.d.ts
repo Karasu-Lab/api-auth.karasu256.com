@@ -46,8 +46,8 @@ declare global {
     GH_APP_CLIENT_SECRET?: string;
     MICROSOFT_CLIENT_ID?: string;
     MICROSOFT_CLIENT_SECRET?: string;
-    X_CONSUMER_KEY?: string;
-    X_CONSUMER_SECRET?: string;
+    X_CLIENT_ID?: string;
+    X_CLIENT_SECRET?: string;
     DISCORD_CLIENT_ID?: string;
     DISCORD_CLIENT_SECRET?: string;
     E2E_MOCK_OAUTH_URL?: string;

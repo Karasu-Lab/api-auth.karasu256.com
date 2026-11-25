@@ -20,14 +20,13 @@ import { githubAppInstallationPlugin } from './github-app-installation';
 import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { oauthClientRedisAdapter } from './oauth-client-adapter';
-import { oauthProxyRedirectURI } from './oauth-proxy';
 import { ActiveSessionDeleteRepository } from './redis/active-session-repositories';
 import { JwksCreateRepository, JwksGetRepository } from './redis/jwks-repositories';
 import { SessionExpiryCreateRepository, SessionExpiryRevokeRepository } from './redis/session-expiry-repositories';
 import { redisSecondaryStorage } from './redis-storage';
 import { sessionJwtHeaderPlugin } from './session-jwt';
 import { SessionSourceStore } from './session-source';
-import { xOAuth1Plugin } from './x-oauth1-provider';
+import { createSocialProviders } from './social-providers';
 import { tenantTypePlugin } from './tenant-type';
 import { sendVerificationEmail } from './verification-email';
 
@@ -95,9 +94,6 @@ function createPlugins(env: Env, db: Db) {
       },
     }),
     ...(oauthProviders.length > 0 ? [genericOAuth({ config: oauthProviders })] : []),
-    ...(env.X_CONSUMER_KEY && env.X_CONSUMER_SECRET
-      ? [xOAuth1Plugin(env, { key: env.X_CONSUMER_KEY, secret: env.X_CONSUMER_SECRET })]
-      : []),
     githubAppInstallationPlugin(env),
     tenantTypePlugin(env),
     customSession(async ({ user, session }) => ({
@@ -110,7 +106,6 @@ function createPlugins(env: Env, db: Db) {
 
 function createAuthOptions(env: Env, db: Db) {
   const { trustedOrigins } = getAuthConfig(env);
-  const mockOAuthUrl = getMockOAuthUrl(env);
 
   return {
     secondaryStorage: redisSecondaryStorage(env),
@@ -271,41 +266,7 @@ function createAuthOptions(env: Env, db: Db) {
     onAPIError: {
       errorURL: `${env.AUTH_UI_URL}/oauth/error`,
     },
-    socialProviders: mockOAuthUrl
-      ? {}
-      : {
-          google: {
-            clientId: env.GOOGLE_CLIENT_ID as string,
-            clientSecret: env.GOOGLE_CLIENT_SECRET as string,
-            redirectURI: oauthProxyRedirectURI(env, 'google'),
-            disableImplicitSignUp: false,
-          },
-          github: {
-            clientId: env.GITHUB_CLIENT_ID as string,
-            clientSecret: env.GITHUB_CLIENT_SECRET as string,
-            redirectURI: oauthProxyRedirectURI(env, 'github'),
-            disableImplicitSignUp: false,
-          },
-          microsoft: {
-            clientId: env.MICROSOFT_CLIENT_ID as string,
-            clientSecret: env.MICROSOFT_CLIENT_SECRET as string,
-            redirectURI: oauthProxyRedirectURI(env, 'microsoft'),
-            tenantId: 'consumers',
-            disableProfilePhoto: true,
-            prompt: 'select_account',
-            disableImplicitSignUp: false,
-          },
-          ...(env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET
-            ? {
-                discord: {
-                  clientId: env.DISCORD_CLIENT_ID,
-                  clientSecret: env.DISCORD_CLIENT_SECRET,
-                  redirectURI: oauthProxyRedirectURI(env, 'discord'),
-                  disableImplicitSignUp: false,
-                },
-              }
-            : {}),
-        },
+    socialProviders: createSocialProviders(env),
   } satisfies BetterAuthOptions;
 }
 

@@ -1,46 +1,59 @@
+import type { OAuth2Tokens } from '@better-auth/core/oauth2';
 import { createPlaceholderEmail } from '@better-auth/core/utils/email';
 import { z } from 'zod';
-import { signXRequest, type XConsumer } from './x-oauth1';
 
-const profileSchema = z.looseObject({
-  id_str: z.string(),
-  name: z.string(),
-  screen_name: z.string(),
-  profile_image_url_https: z.string().optional(),
-  email: z.string().nullish(),
+const profileSchema = z.object({
+  data: z.object({
+    id: z.string(),
+    name: z.string(),
+    username: z.string(),
+    profile_image_url: z.string().optional(),
+  }),
+});
+
+const emailSchema = z.object({
+  data: z.object({ confirmed_email: z.string().optional() }),
 });
 
 const problemSchema = z.looseObject({
-  errors: z.array(z.looseObject({ code: z.number().optional(), message: z.string().optional() })).optional(),
+  type: z.string().optional(),
+  title: z.string().optional(),
+  detail: z.string().optional(),
 });
 
-export async function getXUserInfo(consumer: XConsumer, token: string, tokenSecret: string) {
-  const url = 'https://api.x.com/1.1/account/verify_credentials.json?include_email=true&skip_status=true';
-  const response = await fetch(url, {
-    headers: { authorization: await signXRequest(consumer, 'GET', url, { token, tokenSecret }) },
+async function getMe(accessToken: string | undefined, fields: string) {
+  const response = await fetch(`https://api.x.com/2/users/me?user.fields=${fields}`, {
+    headers: { authorization: `Bearer ${accessToken}` },
   }).catch(() => null);
-  const body = await response?.json().catch(() => null);
-  if (!response?.ok) {
-    const problem = problemSchema.safeParse(body);
-    console.error(JSON.stringify({ level: 'error', kind: 'x-user-info', status: response?.status ?? null, problem: problem.success ? problem.data : null }));
+  if (response?.ok) return { response, problem: null };
+  const problem = problemSchema.safeParse(await response?.json().catch(() => null));
+  return { response: null, status: response?.status ?? null, problem: problem.success ? problem.data : null };
+}
+
+export async function getXUserInfo(token: OAuth2Tokens) {
+  const profileResult = await getMe(token.accessToken, 'profile_image_url');
+  if (!profileResult.response) {
+    console.error(JSON.stringify({ level: 'error', kind: 'x-user-info', status: profileResult.status, problem: profileResult.problem }));
     return null;
   }
-  const profile = profileSchema.safeParse(body);
+  const profile = profileSchema.safeParse(await profileResult.response.json().catch(() => null));
   if (!profile.success) {
     console.error(JSON.stringify({ level: 'error', kind: 'x-user-info', status: 200, problem: 'unexpected profile response' }));
     return null;
   }
 
-  const { id_str, name, screen_name, profile_image_url_https, email } = profile.data;
+  const emailResult = await getMe(token.accessToken, 'confirmed_email');
+  const email = emailResult.response ? emailSchema.safeParse(await emailResult.response.json().catch(() => null)) : null;
+  const confirmedEmail = email?.success ? email.data.data.confirmed_email : undefined;
+
+  const { id, name, profile_image_url } = profile.data.data;
   return {
     user: {
       name,
-      email: email ?? createPlaceholderEmail({ identifier: id_str, namespace: 'twitter' }),
-      image: profile_image_url_https,
-      emailVerified: Boolean(email),
+      email: confirmedEmail ?? createPlaceholderEmail({ identifier: id, namespace: 'twitter' }),
+      image: profile_image_url,
+      emailVerified: Boolean(confirmedEmail),
     },
-    data: {
-      data: { id: id_str, name, username: screen_name, profile_image_url: profile_image_url_https },
-    },
+    data: profile.data,
   };
 }
