@@ -75,6 +75,7 @@ export function xAuthenticateUrl(requestToken: string) {
 
 export async function fetchXAccessToken(consumer: XConsumer, requestToken: string, requestTokenSecret: string, verifier: string) {
   const url = new URL('https://api.x.com/oauth/access_token');
+  url.searchParams.set('oauth_token', requestToken);
   url.searchParams.set('oauth_verifier', verifier);
   const params = await postForm(consumer, url.toString(), { token: requestToken, tokenSecret: requestTokenSecret });
   const token = params?.get('oauth_token');
