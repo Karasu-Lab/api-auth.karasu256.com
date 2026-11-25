@@ -21,7 +21,7 @@ declare global {
     INTERNAL_API_SECRET: string;
     DATABASE_URL: string;
     HYPERDRIVE: Hyperdrive;
-    VERIFICATION_RESEND_KV: KVNamespace;
+    VERIFICATION_RESEND_KV?: KVNamespace;
     MINECRAFT_STATUS_RATE_LIMIT_KV: KVNamespace;
     UPSTASH_REDIS_REST_URL: string;
     UPSTASH_REDIS_REST_TOKEN: string;
