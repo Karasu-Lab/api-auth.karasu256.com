@@ -99,6 +99,13 @@
       "when": 1794936122583,
       "tag": "0013_cultured_micromacro",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1795592745429,
+      "tag": "0014_baseline_auth_tables",
+      "breakpoints": true
     }
   ]
 }
