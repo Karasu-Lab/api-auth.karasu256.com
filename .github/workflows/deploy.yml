@@ -33,6 +33,7 @@ jobs:
             - GH_OAUTH_CLIENT_SECRET
             - CLOUDFLARE_TURNSTILE_SECRET
             - MICROSOFT_CLIENT_SECRET
+            - OAUTH_PROXY_SECRET
             - STORAGE_ENDPOINT
             - STORAGE_ACCESS_KEY_ID
             - STORAGE_SECRET_ACCESS_KEY
