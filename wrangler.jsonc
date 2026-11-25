@@ -11,6 +11,16 @@
     },
   },
   "routes": [{ "pattern": "api-auth.karasu256.com", "custom_domain": true }],
+  "vars": {
+    "APP_ENV": "production",
+    "BETTER_AUTH_URL": "https://api-auth.karasu256.com",
+    "AUTH_UI_URL": "https://auth.karasu256.com",
+    "SSO_UI_URL": "https://sso.karasu256.com",
+    "ACCOUNTS_URL": "https://accounts.karasu256.com",
+    "MCP_URL": "https://mcp.karasu256.com/mcp",
+    "API_URL": "https://api.karasu256.com",
+    "MC_AUTH_URL": "https://mc-auth.karasu256.com",
+  },
   "ratelimits": [{ "name": "CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
   "kv_namespaces": [{ "binding": "MINECRAFT_STATUS_RATE_LIMIT_KV" }],
   "hyperdrive": [
@@ -24,7 +34,15 @@
     "dev": {
       "name": "dev-api-auth-karasu256-com",
       "vars": {
-        "TRUSTED_ORIGINS": "[\"https://dev-accounts.karasu256.com\",\"https://*.dev-accounts.karasu256.com\",\"https://dev-auth.karasu256.com\",\"https://dev-sso.karasu256.com\",\"https://dev.karasu256.com\",\"https://dev-qr.karasu256.com\"]"
+        "APP_ENV": "preview",
+        "BETTER_AUTH_URL": "https://dev-api-auth.karasu256.com",
+        "AUTH_UI_URL": "https://dev-auth.karasu256.com",
+        "SSO_UI_URL": "https://dev-sso.karasu256.com",
+        "ACCOUNTS_URL": "https://dev-accounts.karasu256.com",
+        "MCP_URL": "https://dev-mcp.karasu256.com/mcp",
+        "API_URL": "https://dev-api.karasu256.com",
+        "MC_AUTH_URL": "https://dev-mc-auth.karasu256.com",
+        "TRUSTED_ORIGINS":"[\"https://dev-accounts.karasu256.com\",\"https://*.dev-accounts.karasu256.com\",\"https://dev-auth.karasu256.com\",\"https://dev-sso.karasu256.com\",\"https://dev.karasu256.com\",\"https://dev-qr.karasu256.com\"]"
       },
       "routes": [{ "pattern": "dev-api-auth.karasu256.com", "custom_domain": true }],
       "ratelimits": [{ "name": "CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
