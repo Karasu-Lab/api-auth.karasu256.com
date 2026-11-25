@@ -31,7 +31,9 @@ export class JwksGetRepository extends RedisRepository {
 
   async get(): Promise<Jwks | null> {
     const value = await this.redis.get<string>(`${this.prefix}-keys`);
-    return value === null ? null : jwksSchema.parse(JSON.parse(value));
+    if (value === null) return null;
+    const keys = jwksSchema.parse(JSON.parse(value));
+    return keys.length > 0 ? keys : null;
   }
 }
 
@@ -40,7 +42,7 @@ export class JwksCreateRepository extends RedisRepository {
 
   async create(keys: unknown[]): Promise<Jwks> {
     const parsed = jwksSchema.parse(keys);
-    await this.store(`${this.prefix}-keys`, parsed);
+    if (parsed.length > 0) await this.store(`${this.prefix}-keys`, parsed);
     return parsed;
   }
 }
