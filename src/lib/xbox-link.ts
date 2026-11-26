@@ -1,4 +1,5 @@
 import { setTokenUtil } from 'better-auth/oauth2';
+import { z } from 'zod';
 import type { AuthContext } from '@better-auth/core';
 import { xboxLinkStatePayloadSchema, type XboxLinkExchange, type XboxLinkTokens } from '@karasu-lab/types/server';
 import { authenticateXboxLive, authorizeXsts, XBOX_RELYING_PARTY } from './xbox-live';
@@ -18,11 +19,14 @@ export class XboxLinkError extends Error {
   }
 }
 
+// TODO: Do not make constants top level
+
 export const XBOX_PROVIDER_ID = 'xbox';
 export const XBOX_SCOPE = 'XboxLive.signin offline_access';
 const MICROSOFT_AUTHORIZE_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize';
 const MICROSOFT_TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
 const STATE_TTL_MS = 10 * 60 * 1000;
+const linkStatePayloadSchema = xboxLinkStatePayloadSchema.extend({ app: z.boolean().optional() });
 
 function base64UrlEncode(bytes: Uint8Array): string {
   let binary = '';
@@ -40,13 +44,13 @@ async function hmacKey(secret: string): Promise<CryptoKey> {
   return crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
 
-export async function createXboxLinkState(secret: string, userId: string): Promise<string> {
-  const payload = base64UrlEncode(new TextEncoder().encode(JSON.stringify({ userId, exp: Date.now() + STATE_TTL_MS })));
+export async function createXboxLinkState(secret: string, userId: string, app = false): Promise<string> {
+  const payload = base64UrlEncode(new TextEncoder().encode(JSON.stringify({ userId, exp: Date.now() + STATE_TTL_MS, ...(app && { app }) })));
   const signature = await crypto.subtle.sign('HMAC', await hmacKey(secret), new TextEncoder().encode(payload));
   return `${payload}.${base64UrlEncode(new Uint8Array(signature))}`;
 }
 
-export async function verifyXboxLinkState(secret: string, state: string): Promise<string | null> {
+export async function verifyXboxLinkState(secret: string, state: string): Promise<{ userId: string; app: boolean } | null> {
   const [payload, signature] = state.split('.');
   if (!payload || !signature) return null;
   const valid = await crypto.subtle
@@ -54,9 +58,9 @@ export async function verifyXboxLinkState(secret: string, state: string): Promis
     .catch(() => false);
   if (!valid) return null;
   try {
-    const parsed = xboxLinkStatePayloadSchema.safeParse(JSON.parse(new TextDecoder().decode(base64UrlDecode(payload))));
+    const parsed = linkStatePayloadSchema.safeParse(JSON.parse(new TextDecoder().decode(base64UrlDecode(payload))));
     if (!parsed.success || parsed.data.exp < Date.now()) return null;
-    return parsed.data.userId;
+    return { userId: parsed.data.userId, app: parsed.data.app === true };
   } catch {
     return null;
   }

@@ -14,6 +14,10 @@ function linkingUrl(env: Env): string {
   return `${env.ACCOUNTS_URL.replace(/\/+$/, '')}/settings/linking`;
 }
 
+function appCallbackUrl(env: Env): string {
+  return `${env.ACCOUNTS_URL.replace(/\/+$/, '')}/auth/app/callback`;
+}
+
 function callbackUrl(env: Env): string {
   return `${env.BETTER_AUTH_URL.replace(/\/+$/, '')}/api/xbox/callback`;
 }
@@ -32,9 +36,23 @@ export async function handleXboxLink(env: Env, request: Request): Promise<Respon
   return Response.redirect(destination, 302);
 }
 
+export async function handleXboxAppLink(env: Env, request: Request): Promise<Response> {
+  if (!env.MICROSOFT_CLIENT_ID) return Response.json({ error: 'xbox_link_not_configured' }, { status: 503 });
+  const url = await withAuth(env, async (auth: Auth) => {
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session) return null;
+    const state = await createXboxLinkState(env.BETTER_AUTH_SECRET, session.user.id, true);
+    return buildXboxAuthorizeUrl(env.MICROSOFT_CLIENT_ID!, callbackUrl(env), state);
+  });
+  if (!url) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  return Response.json({ url });
+}
+
 export async function handleXboxCallback(env: Env, request: Request): Promise<Response> {
   const url = new URL(request.url);
-  const destination = new URL(linkingUrl(env));
+  const state = url.searchParams.get('state');
+  const linkState = state ? await verifyXboxLinkState(env.BETTER_AUTH_SECRET, state) : null;
+  const destination = new URL(linkState?.app ? appCallbackUrl(env) : linkingUrl(env));
   const fail = (error: string, errorDescription?: string | null) => {
     destination.searchParams.set('error', error);
     if (errorDescription) destination.searchParams.set('error_description', errorDescription);
@@ -45,7 +63,6 @@ export async function handleXboxCallback(env: Env, request: Request): Promise<Re
   if (authorizeError) return fail(authorizeError, url.searchParams.get('error_description'));
 
   const code = url.searchParams.get('code');
-  const state = url.searchParams.get('state');
   if (!code || !state) return fail('xbox_link_missing_code', 'Microsoft did not return an authorization code.');
   if (!env.MICROSOFT_CLIENT_ID || !env.MICROSOFT_CLIENT_SECRET) {
     return fail('xbox_link_not_configured', 'The Microsoft client credentials are not configured on the server.');
@@ -53,11 +70,12 @@ export async function handleXboxCallback(env: Env, request: Request): Promise<Re
 
   try {
     await withAuth(env, async (auth: Auth) => {
-      const stateUserId = await verifyXboxLinkState(env.BETTER_AUTH_SECRET, state);
-      if (!stateUserId) throw new XboxLinkError('xbox_link_state_invalid', 'The link state was invalid or expired.');
-      const session = await auth.api.getSession({ headers: request.headers });
-      if (!session || session.user.id !== stateUserId) {
-        throw new XboxLinkError('xbox_link_session_mismatch', 'The session does not match the user who started the Xbox link.');
+      if (!linkState) throw new XboxLinkError('xbox_link_state_invalid', 'The link state was invalid or expired.');
+      if (!linkState.app) {
+        const session = await auth.api.getSession({ headers: request.headers });
+        if (!session || session.user.id !== linkState.userId) {
+          throw new XboxLinkError('xbox_link_session_mismatch', 'The session does not match the user who started the Xbox link.');
+        }
       }
 
       const exchange = await exchangeXboxLinkCode(code, callbackUrl(env), env.MICROSOFT_CLIENT_ID!, env.MICROSOFT_CLIENT_SECRET!);
@@ -65,7 +83,7 @@ export async function handleXboxCallback(env: Env, request: Request): Promise<Re
 
       const ctx = (await auth.$context) as unknown as AuthContext;
       try {
-        await storeXboxLink(ctx, session.user.id, exchange.tokens);
+        await storeXboxLink(ctx, linkState.userId, exchange.tokens);
       } catch (error) {
         throw new XboxLinkError('xbox_live_rejected', null, error);
       }
