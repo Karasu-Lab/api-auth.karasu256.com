@@ -1,4 +1,4 @@
-import { Redis } from '@upstash/redis/cloudflare';
+import { CacheClient } from './cache-client';
 
 export interface RedisSession {
   id: string;
@@ -13,20 +13,15 @@ export function secondsUntil(date: Date): number {
 export abstract class RedisRepository {
   protected abstract readonly prefix: string;
   protected readonly ttl: number = 60 * 60;
-  protected readonly redis: Redis;
+  protected readonly redis: CacheClient;
 
   constructor(
     env: Env,
     protected readonly session: RedisSession | null = null
   ) {
-    this.redis = new Redis({
-      url: env.UPSTASH_REDIS_REST_URL,
-      token: env.UPSTASH_REDIS_REST_TOKEN,
-      automaticDeserialization: false,
-    });
+    this.redis = new CacheClient(env);
   }
 
-  /** Stores the value for `ttl` seconds, serializing non-strings as JSON. Skips the write and returns false when `ttl` has run out. */
   protected async store(key: string, value: unknown, condition?: 'nx' | 'xx'): Promise<boolean> {
     if (this.ttl <= 0) return false;
     const serialized = typeof value === 'string' ? value : JSON.stringify(value);
