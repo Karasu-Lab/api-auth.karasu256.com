@@ -15,6 +15,10 @@ vi.mock('../src/routes/xbox', () => ({
   handleXboxAppLink: vi.fn(),
 }));
 
+vi.mock('../src/lib/social-providers', () => ({
+  createSocialProviders: () => ({ github: {} }),
+}));
+
 import { handleOAuthLink, handleOAuthLinkHandoff } from '../src/routes/oauth-link';
 
 const env = {
@@ -36,7 +40,7 @@ beforeEach(() => {
   mockAuthHandler.mockResolvedValue(
     new Response(
       JSON.stringify({
-        url: 'https://github.com/login/oauth/authorize?state=provider-state',
+        url: `https://github.com/login/oauth/authorize?state=provider-state&redirect_uri=${encodeURIComponent(`${env.OAUTH_PROXY_URL}/api/auth/callback/github`)}`,
         redirect: false,
       }),
       {
@@ -106,7 +110,104 @@ describe('generic native OAuth linking', () => {
     );
 
     expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: 'invalid_oauth_callback',
+      reason: 'callbackURL path must match the requested provider.',
+    });
     expect(mockAuthHandler).not.toHaveBeenCalled();
+  });
+
+  it('explains JSON parse failures', async () => {
+    const response = await handleOAuthLink(
+      env,
+      new Request(`${env.BETTER_AUTH_URL}/api/oauth/link`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{',
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: 'invalid_oauth_link_request',
+      reason: expect.stringContaining('Could not parse JSON request body'),
+    });
+  });
+
+  it('explains invalid request fields', async () => {
+    const response = await handleOAuthLink(
+      env,
+      new Request(`${env.BETTER_AUTH_URL}/api/oauth/link`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ provider: 'github' }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: 'invalid_oauth_link_request',
+      reason: expect.stringContaining('callbackURL'),
+    });
+  });
+
+  it('explains unsupported providers', async () => {
+    const response = await handleOAuthLink(
+      env,
+      new Request(`${env.BETTER_AUTH_URL}/api/oauth/link`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'not-configured',
+          callbackURL: `karasulab://api/auth/callback/not-configured?state=${state}`,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: 'unsupported_oauth_provider',
+      reason: expect.stringContaining('not-configured'),
+    });
+    expect(mockAuthHandler).not.toHaveBeenCalled();
+  });
+
+  it('explains failures returned by the OAuth provider', async () => {
+    mockAuthHandler.mockResolvedValueOnce(Response.json({ message: 'Provider rejected the link.' }, { status: 422 }));
+
+    const response = await handleOAuthLink(
+      env,
+      new Request(`${env.BETTER_AUTH_URL}/api/oauth/link`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ provider: 'github', callbackURL: nativeCallback }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({
+      error: 'oauth_link_start_failed',
+      reason: 'Provider rejected the link.',
+    });
+  });
+
+  it('explains successful provider responses without an authorization URL', async () => {
+    mockAuthHandler.mockResolvedValueOnce(Response.json(null));
+
+    const response = await handleOAuthLink(
+      env,
+      new Request(`${env.BETTER_AUTH_URL}/api/oauth/link`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ provider: 'github', callbackURL: nativeCallback }),
+      }),
+    );
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({
+      error: 'oauth_link_start_failed',
+      reason: 'OAuth provider response did not include an authorization URL.',
+    });
   });
 
   it('rejects invalid handoff tickets', async () => {
@@ -116,5 +217,9 @@ describe('generic native OAuth linking', () => {
     );
 
     expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: 'invalid_oauth_link_handoff',
+      reason: 'The ticket is malformed, expired, or failed integrity validation.',
+    });
   });
 });

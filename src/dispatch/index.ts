@@ -43,12 +43,14 @@ import {
 } from './tenants';
 import { CreateTestAccountDispatch, DeleteTestAccountDispatch } from './test-accounts';
 import { UnlinkAccountDispatch } from './unlink-account';
+import { AndroidAssetLinksDispatch } from './android-asset-links';
 import { GetUserProfileDispatch, UpdateUserProfileDispatch } from './user-profile';
 
 export const dispatchables: DispatchableClass[] = [
   SetPasswordDispatch,
   ClientRegistrationDispatch,
   UnlinkAccountDispatch,
+  AndroidAssetLinksDispatch,
   AuthDispatch,
   VerifyApiKeyDispatch,
   ListApiKeysDispatch,

@@ -53,7 +53,12 @@ export async function handleXboxAppLink(
   callbackURL?: string,
   providerId = 'xbox',
 ): Promise<Response> {
-  if (!env.MICROSOFT_CLIENT_ID) return Response.json({ error: 'xbox_link_not_configured' }, { status: 503 });
+  if (!env.MICROSOFT_CLIENT_ID) {
+    return Response.json({
+      error: 'xbox_link_not_configured',
+      reason: 'Microsoft OAuth client ID is not configured.',
+    }, { status: 503 });
+  }
   const url = await withAuth(env, async (auth: Auth) => {
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) return null;
@@ -61,7 +66,7 @@ export async function handleXboxAppLink(
     const signedState = await proxyState(env, state);
     return buildXboxAuthorizeUrl(env.MICROSOFT_CLIENT_ID!, callbackUrl(env), signedState);
   });
-  if (!url) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!url) return Response.json({ error: 'unauthorized', reason: 'An authenticated session is required to link an account.' }, { status: 401 });
   return Response.json({ url });
 }
 
