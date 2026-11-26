@@ -7,6 +7,7 @@ import {
   verifyXboxLinkState,
   XboxLinkError,
 } from '../lib/xbox-link';
+import { getOAuthProxyConfig, oauthProxyRedirectURI, signProxyState } from '../lib/oauth-proxy';
 import { withAuth } from '../lib/request-auth';
 import type { Auth } from '../lib/auth';
 
@@ -19,7 +20,16 @@ function appCallbackUrl(env: Env): string {
 }
 
 function callbackUrl(env: Env): string {
-  return `${env.BETTER_AUTH_URL.replace(/\/+$/, '')}/api/xbox/callback`;
+  return (
+    oauthProxyRedirectURI(env, 'xbox') ??
+    `${env.BETTER_AUTH_URL.replace(/\/+$/, '')}/api/xbox/callback`
+  );
+}
+
+async function proxyState(env: Env, state: string): Promise<string> {
+  const config = getOAuthProxyConfig(env);
+  if (!config?.secret) return state;
+  return signProxyState({ origin: config.origin, ttlMs: config.ttlMs, secret: config.secret }, state);
 }
 
 export async function handleXboxLink(env: Env, request: Request): Promise<Response> {
@@ -31,18 +41,25 @@ export async function handleXboxLink(env: Env, request: Request): Promise<Respon
     }
     if (!env.MICROSOFT_CLIENT_ID) return linkingUrl(env);
     const state = await createXboxLinkState(env.BETTER_AUTH_SECRET, session.user.id);
-    return buildXboxAuthorizeUrl(env.MICROSOFT_CLIENT_ID, callbackUrl(env), state);
+    const signedState = await proxyState(env, state);
+    return buildXboxAuthorizeUrl(env.MICROSOFT_CLIENT_ID, callbackUrl(env), signedState);
   });
   return Response.redirect(destination, 302);
 }
 
-export async function handleXboxAppLink(env: Env, request: Request): Promise<Response> {
+export async function handleXboxAppLink(
+  env: Env,
+  request: Request,
+  callbackURL?: string,
+  providerId = 'xbox',
+): Promise<Response> {
   if (!env.MICROSOFT_CLIENT_ID) return Response.json({ error: 'xbox_link_not_configured' }, { status: 503 });
   const url = await withAuth(env, async (auth: Auth) => {
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) return null;
-    const state = await createXboxLinkState(env.BETTER_AUTH_SECRET, session.user.id, true);
-    return buildXboxAuthorizeUrl(env.MICROSOFT_CLIENT_ID!, callbackUrl(env), state);
+    const state = await createXboxLinkState(env.BETTER_AUTH_SECRET, session.user.id, true, callbackURL, providerId);
+    const signedState = await proxyState(env, state);
+    return buildXboxAuthorizeUrl(env.MICROSOFT_CLIENT_ID!, callbackUrl(env), signedState);
   });
   if (!url) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   return Response.json({ url });
@@ -52,7 +69,7 @@ export async function handleXboxCallback(env: Env, request: Request): Promise<Re
   const url = new URL(request.url);
   const state = url.searchParams.get('state');
   const linkState = state ? await verifyXboxLinkState(env.BETTER_AUTH_SECRET, state) : null;
-  const destination = new URL(linkState?.app ? appCallbackUrl(env) : linkingUrl(env));
+  const destination = new URL(linkState?.callbackURL ?? (linkState?.app ? appCallbackUrl(env) : linkingUrl(env)));
   const fail = (error: string, errorDescription?: string | null) => {
     destination.searchParams.set('error', error);
     if (errorDescription) destination.searchParams.set('error_description', errorDescription);
@@ -93,6 +110,6 @@ export async function handleXboxCallback(env: Env, request: Request): Promise<Re
     throw error;
   }
 
-  destination.searchParams.set('linked', 'Xbox');
+  destination.searchParams.set('linked', linkState?.providerId ?? 'xbox');
   return Response.redirect(destination.toString(), 302);
 }
