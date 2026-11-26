@@ -4,6 +4,9 @@ const store = new Map<string, string>();
 
 vi.mock('@upstash/redis/cloudflare', () => ({
   Redis: class {
+    async ping() {
+      return 'PONG';
+    }
     async get(key: string) {
       return store.get(key) ?? null;
     }

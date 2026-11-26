@@ -16,7 +16,7 @@ import { UploadVerificationError } from './lib/upload-verification-error';
 import { handleProviderDetails, handleProviderList, handleProviderStream } from './routes/providers';
 import { handleAuthorizedAppDetails, handleAuthorizedAppList } from './routes/authorized-apps';
 import { handleSecuritySettings } from './routes/security';
-import { handleXboxCallback, handleXboxLink } from './routes/xbox';
+import { handleXboxAppLink, handleXboxCallback, handleXboxLink } from './routes/xbox';
 
 let resolvedEnv: Env | undefined;
 const env = new Proxy({} as Env, {
@@ -58,6 +58,7 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
   .get('/api/users/me/authorized-apps/:id', ({ request, params }) => handleAuthorizedAppDetails(env, request, params.id))
   .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
   .get('/api/xbox/link',({ request }) => handleXboxLink(env, request))
+  .post('/api/xbox/link', ({ request }) => handleXboxAppLink(env, request))
   .get('/api/xbox/callback', ({ request }) => handleXboxCallback(env, request))
   .post(
     '/api/auth/oauth2/client/rotate-secret',

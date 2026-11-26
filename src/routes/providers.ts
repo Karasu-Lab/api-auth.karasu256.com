@@ -54,7 +54,7 @@ export async function handleProviderStream(env: Env, request: Request): Promise<
   const release = () => waitUntil(db.$client.end());
 
   try {
-    const auth = createAuth(env, db);
+    const auth = await createAuth(env, db);
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) {
       release();

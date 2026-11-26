@@ -6,7 +6,7 @@ import { apiKey } from '@better-auth/api-key';
 import { sso } from '@better-auth/sso';
 import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-provider';
 import { jwt, type JwtOptions } from 'better-auth/plugins/jwt';
-import { customSession, genericOAuth, multiSession, organization, testUtils } from 'better-auth/plugins';
+import { customSession, genericOAuth, multiSession, oneTimeToken, organization, testUtils } from 'better-auth/plugins';
 import type { Db } from '../db/create-db';
 import * as schema from '../db/schema';
 import { sendPasswordResetEmail } from '@karasu-lab/utils/email';
@@ -20,6 +20,7 @@ import { githubAppInstallationPlugin } from './github-app-installation';
 import { getGithubOAuthProviders, GITHUB_APP_PROVIDER_ID, SIGNING_KEY_PROVIDER_ID } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
 import { oauthClientRedisAdapter } from './oauth-client-adapter';
+import { oneTimeTokenStateOptions, oneTimeTokenStatePlugin } from './one-time-token-state';
 import { ActiveSessionDeleteRepository } from './redis/active-session-repositories';
 import { readJwks } from './redis/jwks-repositories';
 import { SessionExpiryCreateRepository, SessionExpiryRevokeRepository } from './redis/session-expiry-repositories';
@@ -81,6 +82,8 @@ function createPlugins(env: Env, db: Db) {
       sendChallengeEmail: ({ email, otp, challenge }) => sendChallengeEmail(env, { email, otp, expiresAt: challenge.expiresAt }),
     }),
     multiSession({ maximumSessions: 5 }),
+    oneTimeToken(oneTimeTokenStateOptions(env)),
+    oneTimeTokenStatePlugin(env),
     organization({ teams: { enabled: true } }),
     oauthDeviceAuthorization({ verificationUri: `${env.AUTH_UI_URL}/device` }),
     apiKey({ defaultPrefix: 'ksk_', rateLimit: { enabled: false } }),
@@ -102,11 +105,11 @@ function createPlugins(env: Env, db: Db) {
   ];
 }
 
-function createAuthOptions(env: Env, db: Db) {
+async function createAuthOptions(env: Env, db: Db) {
   const { trustedOrigins } = getAuthConfig(env);
 
   return {
-    secondaryStorage: redisSecondaryStorage(env),
+    secondaryStorage: await redisSecondaryStorage(env),
     database: oauthClientRedisAdapter(env, db, {
       provider: 'pg',
       schema: {
@@ -268,12 +271,12 @@ function createAuthOptions(env: Env, db: Db) {
   } satisfies BetterAuthOptions;
 }
 
-export function createAuth(env: Env, db: Db) {
-  return betterAuth({ ...createAuthOptions(env, db), plugins: createPlugins(env, db) });
+export async function createAuth(env: Env, db: Db) {
+  return betterAuth({ ...(await createAuthOptions(env, db)), plugins: createPlugins(env, db) });
 }
 
-export function createTestAuth(env: Env, db: Db) {
-  return betterAuth({ ...createAuthOptions(env, db), plugins: [...createPlugins(env, db), testUtils()] });
+export async function createTestAuth(env: Env, db: Db) {
+  return betterAuth({ ...(await createAuthOptions(env, db)), plugins: [...createPlugins(env, db), testUtils()] });
 }
 
-export type Auth = ReturnType<typeof createAuth>;
+export type Auth = Awaited<ReturnType<typeof createAuth>>;

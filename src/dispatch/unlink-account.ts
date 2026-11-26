@@ -51,7 +51,7 @@ export class UnlinkAccountDispatch implements Dispatchable {
   private async unlink(request: Request): Promise<void> {
     const db = createDb(this.context.env.HYPERDRIVE.connectionString);
     try {
-      await createAuth(this.context.env, db).handler(request);
+      await (await createAuth(this.context.env, db)).handler(request);
     } catch (error) {
       console.error('Failed to unlink the account:', error);
     } finally {

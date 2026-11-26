@@ -12,10 +12,10 @@ function isEnabled(env: Env): boolean {
   return env.APP_ENV === 'local';
 }
 
-async function withTestAuth<T>(env: Env, fn: (auth: ReturnType<typeof createTestAuth>) => Promise<T>): Promise<T> {
+async function withTestAuth<T>(env: Env, fn: (auth: Awaited<ReturnType<typeof createTestAuth>>) => Promise<T>): Promise<T> {
   const db = createDb(env.DATABASE_URL);
   try {
-    return await fn(createTestAuth(env, db));
+    return await fn(await createTestAuth(env, db));
   } finally {
     waitUntil(db.$client.end());
   }
