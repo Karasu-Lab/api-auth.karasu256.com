@@ -1,5 +1,6 @@
 import type { SecondaryStorage } from 'better-auth';
 import { z } from 'zod';
+import { isRedisEnabled } from './redis/cache-client';
 import { SessionCreateRepository, SessionDeleteRepository, SessionGetRepository, SessionUpdateRepository } from './redis/session-repositories';
 
 const sessionValueSchema = z.union([
@@ -27,7 +28,8 @@ const sessionValueSchema = z.union([
   z.array(z.object({ token: z.string(), expiresAt: z.number() })),
 ]);
 
-export function redisSecondaryStorage(env: Env): SecondaryStorage {
+export async function redisSecondaryStorage(env: Env): Promise<SecondaryStorage | undefined> {
+  if (!(await isRedisEnabled(env))) return undefined;
   const getRepository = new SessionGetRepository(env);
   const createRepository = new SessionCreateRepository(env);
   const updateRepository = new SessionUpdateRepository(env);

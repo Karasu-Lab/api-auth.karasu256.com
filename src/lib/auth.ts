@@ -105,11 +105,11 @@ function createPlugins(env: Env, db: Db) {
   ];
 }
 
-function createAuthOptions(env: Env, db: Db) {
+async function createAuthOptions(env: Env, db: Db) {
   const { trustedOrigins } = getAuthConfig(env);
 
   return {
-    secondaryStorage: redisSecondaryStorage(env),
+    secondaryStorage: await redisSecondaryStorage(env),
     database: oauthClientRedisAdapter(env, db, {
       provider: 'pg',
       schema: {
@@ -271,12 +271,12 @@ function createAuthOptions(env: Env, db: Db) {
   } satisfies BetterAuthOptions;
 }
 
-export function createAuth(env: Env, db: Db) {
-  return betterAuth({ ...createAuthOptions(env, db), plugins: createPlugins(env, db) });
+export async function createAuth(env: Env, db: Db) {
+  return betterAuth({ ...(await createAuthOptions(env, db)), plugins: createPlugins(env, db) });
 }
 
-export function createTestAuth(env: Env, db: Db) {
-  return betterAuth({ ...createAuthOptions(env, db), plugins: [...createPlugins(env, db), testUtils()] });
+export async function createTestAuth(env: Env, db: Db) {
+  return betterAuth({ ...(await createAuthOptions(env, db)), plugins: [...createPlugins(env, db), testUtils()] });
 }
 
-export type Auth = ReturnType<typeof createAuth>;
+export type Auth = Awaited<ReturnType<typeof createAuth>>;

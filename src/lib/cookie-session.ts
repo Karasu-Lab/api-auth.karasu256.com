@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
+import { isRedisEnabled } from './redis/cache-client';
 import { CookieSessionCreateRepository, CookieSessionGetRepository } from './redis/cookie-session-repositories';
 import { isSessionExpired } from './session-expiry';
 
@@ -28,7 +29,7 @@ export class CookieSessionStore {
   }
 
   async get(): Promise<Response | null> {
-    if (!this.cookieHash) return null;
+    if (!this.cookieHash || !(await isRedisEnabled(this.env))) return null;
     const cached = await new CookieSessionGetRepository(this.env).get(this.cookieHash);
     if (!cached) return null;
     const { sessionId, body, jwt, exposeHeaders } = cachedSessionSchema.parse(JSON.parse(cached));
@@ -40,7 +41,7 @@ export class CookieSessionStore {
   }
 
   async save(response: Response): Promise<void> {
-    if (!this.cookieHash || !response.ok || response.headers.has('set-cookie')) return;
+    if (!this.cookieHash || !response.ok || response.headers.has('set-cookie') || !(await isRedisEnabled(this.env))) return;
     const body = await response.clone().text();
     const sessionId = z.object({ session: z.object({ id: z.string() }) }).safeParse(JSON.parse(body));
     if (!sessionId.success) return;

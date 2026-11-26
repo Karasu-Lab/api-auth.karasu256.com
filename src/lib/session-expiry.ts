@@ -1,9 +1,11 @@
 import { HttpError } from '@karasu-lab/types/server';
 import { decodeJwt } from 'jose';
 import { z } from 'zod';
+import { isRedisEnabled } from './redis/cache-client';
 import { SessionExpiryGetRepository } from './redis/session-expiry-repositories';
 
 export async function isSessionExpired(env: Env, sessionId: string): Promise<boolean> {
+  if (!(await isRedisEnabled(env))) return false;
   const expiresAt = await new SessionExpiryGetRepository(env).get(sessionId);
   return expiresAt !== null && expiresAt <= Date.now();
 }

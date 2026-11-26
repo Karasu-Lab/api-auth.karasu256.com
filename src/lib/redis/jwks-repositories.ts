@@ -1,6 +1,7 @@
 import type { Jwk } from 'better-auth/plugins/jwt';
 import { z } from 'zod';
 import * as schema from '../../db/schema';
+import { isRedisEnabled } from './cache-client';
 import { RedisRepository } from './redis-repository';
 
 const jwksSchema = z.array(
@@ -48,6 +49,7 @@ export class JwksCreateRepository extends RedisRepository {
 }
 
 export async function readJwks(env: Env, readFromDatabase: () => Promise<unknown[]>): Promise<Jwks> {
+  if (!(await isRedisEnabled(env))) return jwksSchema.parse(await readFromDatabase());
   const cached = await new JwksGetRepository(env).get();
   if (cached) return cached;
   return new JwksCreateRepository(env).create(await readFromDatabase());
