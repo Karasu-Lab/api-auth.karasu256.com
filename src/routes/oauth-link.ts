@@ -7,7 +7,7 @@ import { handleXboxAppLink } from './xbox';
 
 const requestSchema = z.object({
   provider: z.string().max(128).regex(/^[a-z0-9-]+$/i),
-  callbackURL: z.string().max(2048).url(),
+  callbackURL: z.string().max(2048),
 });
 
 const statePattern = /^[A-Za-z0-9_-]{16,128}$/;
