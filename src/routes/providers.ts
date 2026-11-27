@@ -1,11 +1,15 @@
 import { waitUntil } from 'cloudflare:workers';
 import { createDb } from '../db/create-db';
 import { SseServerStream } from '@karasu-lab/sdk/sse';
-import { ProviderStreamClientsEvent, ProviderStreamEvent, type ProviderStreamEventsWithClients } from '@karasu-lab/types/shared';
+import { ProviderStreamEvent, type ProviderStreamEvents } from '@karasu-lab/types/shared';
 import { createAuth } from '../lib/auth';
-import { getLinkableProviderClients } from '../lib/linkable-providers';
+import { getLinkableProviderClients, type LinkableProviderClient } from '../lib/linkable-providers';
 import { getProviderProfile, streamProviderProfiles, type ProviderProfile } from '../lib/provider-profile';
 import { withAuth } from '../lib/request-auth';
+
+type ProviderStreamEventsWithClients = ProviderStreamEvents & {
+  clients: { clients: LinkableProviderClient[] };
+};
 
 function profileOptions(env: Env) {
   return {
@@ -65,7 +69,7 @@ export async function handleProviderStream(env: Env, request: Request): Promise<
     return SseServerStream.respond<ProviderStreamEventsWithClients>(
       async (stream) => {
         const clients = await getLinkableProviderClients(env);
-        stream.send(ProviderStreamClientsEvent, { clients });
+        stream.send('clients', { clients });
         await streamProviderProfiles(
           env,
           auth,
