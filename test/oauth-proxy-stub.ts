@@ -9,6 +9,25 @@
  * the signed state included. A state that is missing, malformed,
  * expired, or fails the signature check is rejected with 400.
  */
+/**
+ * Black-box stub of the production oauth.karasu256.com forwarder.
+ *
+ * The production proxy forwards to a single fixed origin and, because
+ * production api-auth does not sign the state, passes the callback
+ * through with its query string untouched and no verification.
+ */
+export function createProductionOAuthProxyStub(origin: string) {
+  return async function forward(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    if (request.method !== 'GET' || !url.pathname.startsWith('/api/auth/callback/')) {
+      return Response.json({ error: 'not_found' }, { status: 404 });
+    }
+    const destination = new URL(url.pathname, origin);
+    destination.search = url.search;
+    return new Response(null, { status: 302, headers: { location: destination.toString() } });
+  };
+}
+
 export function createOAuthProxyStub(secret: string) {
   const encoder = new TextEncoder();
 
