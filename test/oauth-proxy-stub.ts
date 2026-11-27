@@ -3,11 +3,11 @@
  *
  * The proxy host holds no OAuth processing of its own. It receives the
  * provider callback at `/api/auth/callback/<provider>`, verifies the
- * HMAC-signed state that api-auth issued, and redirects the browser to
- * the callback on the origin named inside the signed state, with the
- * original state restored and every other query parameter carried over
- * unchanged. A state that is missing, malformed, expired, or fails the
- * signature check is rejected with 400.
+ * HMAC-signed state that api-auth issued, reads the origin to forward
+ * to out of the signed payload, and redirects the browser to the same
+ * path on that origin with the query string carried over untouched —
+ * the signed state included. A state that is missing, malformed,
+ * expired, or fails the signature check is rejected with 400.
  */
 export function createOAuthProxyStub(secret: string) {
   const encoder = new TextEncoder();
@@ -37,22 +37,19 @@ export function createOAuthProxyStub(secret: string) {
     const valid = await crypto.subtle.verify('HMAC', key, decodeBase64Url(signature), encoder.encode(body)).catch(() => false);
     if (!valid) return reject('The state signature is invalid.');
 
-    let payload: { origin?: unknown; state?: unknown; exp?: unknown };
+    let payload: { origin?: unknown; exp?: unknown };
     try {
       payload = JSON.parse(new TextDecoder().decode(decodeBase64Url(body))) as typeof payload;
     } catch {
       return reject('The state payload is not valid JSON.');
     }
-    if (typeof payload.origin !== 'string' || typeof payload.state !== 'string' || typeof payload.exp !== 'number') {
+    if (typeof payload.origin !== 'string' || typeof payload.exp !== 'number') {
       return reject('The state payload has an invalid shape.');
     }
     if (payload.exp < Date.now()) return reject('The state has expired.');
 
     const destination = new URL(url.pathname, payload.origin);
-    for (const [name, value] of url.searchParams) {
-      if (name !== 'state') destination.searchParams.append(name, value);
-    }
-    destination.searchParams.set('state', payload.state);
+    destination.search = url.search;
     return new Response(null, { status: 302, headers: { location: destination.toString() } });
   };
 }

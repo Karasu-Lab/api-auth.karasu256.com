@@ -125,7 +125,7 @@ describe('OAuth sign-in through the proxy host', () => {
     const callbackUrl = new URL(forwarded.headers.get('location') as string);
     expect(callbackUrl.origin + callbackUrl.pathname).toBe(`${BASE_URL}/api/auth/callback/github`);
     expect(callbackUrl.searchParams.get('code')).toBe('idp-code');
-    expect(callbackUrl.searchParams.get('state')).not.toBe(signedState);
+    expect(callbackUrl.searchParams.get('state')).toBe(signedState);
 
     const callback = await worker.fetch(new Request(callbackUrl, { headers: { cookie: cookies } }));
     expect(callback.status).toBe(302);
