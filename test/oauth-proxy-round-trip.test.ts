@@ -15,6 +15,7 @@ const NATIVE_CALLBACK = 'karasulab://api/auth/callback/github?state=native-state
 const { entryEnv } = vi.hoisted(() => ({
   entryEnv: {
     APP_ENV: 'preview',
+    BASE_DOMAIN: 'karasu256.com',
     BETTER_AUTH_SECRET: 'oauth-proxy-round-trip-secret',
     BETTER_AUTH_URL: 'https://dev-api-auth.test',
     AUTH_UI_URL: 'https://dev-auth.test',
