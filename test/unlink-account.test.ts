@@ -72,8 +72,8 @@ describe('account unlink dispatch', () => {
       session: { id: 'session-1', expiresAt: new Date() },
     });
     mocks.findAccounts.mockResolvedValue([
-      { providerId: 'github', accountId: 'github-1' },
-      { providerId: 'password', accountId: 'user-1' },
+      { id: 'account-row-github', providerId: 'github', accountId: 'github-1' },
+      { id: 'account-row-password', providerId: 'password', accountId: 'user-1' },
     ]);
     mocks.auth.api.getSession.mockImplementation(mocks.getSession);
     mocks.auth.$context = Promise.resolve({ internalAdapter: { findAccounts: mocks.findAccounts } });
@@ -82,7 +82,8 @@ describe('account unlink dispatch', () => {
     mocks.deleteMinecraftStatus.mockResolvedValue(undefined);
   });
 
-  it('returns the provider failure instead of reporting a false success', async () => {
+  it('returns the provider failure instead of reporting a false success and logs it', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mocks.unlinkHandler.mockResolvedValueOnce(
       Response.json({ code: 'ACCOUNT_UNLINK_FAILED', message: 'Provider rejected unlink.' }, { status: 400 }),
     );
@@ -95,6 +96,18 @@ describe('account unlink dispatch', () => {
       reason: 'Provider rejected unlink.',
     });
     expect(mocks.deleteAccountLink).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledOnce();
+    expect(consoleError.mock.calls[0]?.[0]).toContain('Unlinking github failed with 400');
+    expect(consoleError.mock.calls[0]?.[0]).toContain('ACCOUNT_UNLINK_FAILED');
+    consoleError.mockRestore();
+  });
+
+  it('forwards the resolved account row id as accountId to the auth handler', async () => {
+    const response = await dispatch().handle();
+
+    expect(response.status).toBe(200);
+    const forwarded = mocks.unlinkHandler.mock.calls[0]?.[0] as Request;
+    expect(await forwarded.json()).toEqual({ providerId: 'github', accountId: 'account-row-github' });
   });
 
   it('clears cached state only after the provider confirms unlinking', async () => {
