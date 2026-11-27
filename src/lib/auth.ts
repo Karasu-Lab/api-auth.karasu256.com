@@ -28,13 +28,14 @@ import { redisSecondaryStorage } from './redis-storage';
 import { sessionJwtHeaderPlugin } from './session-jwt';
 import { SessionSourceStore } from './session-source';
 import { createSocialProviders } from './social-providers';
+import { OAuthSignInFlow } from './oauth-sign-in-flow';
 import { tenantTypePlugin } from './tenant-type';
 import { sendVerificationEmail } from './verification-email';
 
 function createPlugins(env: Env, db: Db) {
   const { webauthn } = getAuthConfig(env);
   const mockOAuthUrl = getMockOAuthUrl(env);
-  const oauthProviders = mockOAuthUrl ? getMockOAuthProviders(mockOAuthUrl) : getGithubOAuthProviders(env);
+  const oauthProviders = mockOAuthUrl ? getMockOAuthProviders(mockOAuthUrl) : getGithubOAuthProviders(env, new OAuthSignInFlow(db));
 
   const jwtOptions = {
     jwks: { keyPairConfig: { alg: 'RS256', modulusLength: 2048 } },
@@ -284,7 +285,7 @@ async function createAuthOptions(env: Env, db: Db) {
     onAPIError: {
       errorURL: `${env.AUTH_UI_URL}/oauth/error`,
     },
-    socialProviders: createSocialProviders(env),
+    socialProviders: createSocialProviders(env, new OAuthSignInFlow(db)),
   } satisfies BetterAuthOptions;
 }
 

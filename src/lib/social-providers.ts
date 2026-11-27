@@ -1,5 +1,6 @@
 import type { BetterAuthOptions } from 'better-auth';
 import { z } from 'zod';
+import { OAuthSignInFlow } from './oauth-sign-in-flow';
 import { getMockOAuthUrl } from './mock-oauth';
 import { oauthProxyRedirectURI } from './oauth-proxy';
 import { getXUserInfo } from './x-user-info';
@@ -19,7 +20,7 @@ function googleClientIds(env: Env): string | string[] {
   return clientIds.length > 1 ? clientIds : primary;
 }
 
-export function createSocialProviders(env: Env) {
+export function createSocialProviders(env: Env, signInFlow?: OAuthSignInFlow) {
   if (getMockOAuthUrl(env)) return {};
 
   return {
@@ -40,6 +41,7 @@ export function createSocialProviders(env: Env) {
             clientSecret: env.GH_CLIENT_SECRET,
             redirectURI: oauthProxyRedirectURI(env, 'github'),
             disableImplicitSignUp: false,
+            ...(signInFlow ? { mapProfileToUser: signInFlow.socialProfileMapper('github') } : {}),
           },
         }
       : {}),

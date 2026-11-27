@@ -1,4 +1,5 @@
 import type { GenericOAuthConfig, GenericOAuthUserInfo } from 'better-auth/plugins';
+import { OAuthSignInFlow } from './oauth-sign-in-flow';
 
 export const GITHUB_APP_PROVIDER_ID = 'github-app';
 export const SIGNING_KEY_PROVIDER_ID = 'github-oauth-app';
@@ -6,10 +7,6 @@ export const SIGNING_KEY_PROVIDER_ID = 'github-oauth-app';
 const GITHUB_AUTHORIZATION_URL = 'https://github.com/login/oauth/authorize';
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const GITHUB_USER_INFO_URL = 'https://api.github.com/user';
-
-function mapGithubProfile(profile: GenericOAuthUserInfo) {
-  return { image: typeof profile.avatar_url === 'string' ? profile.avatar_url : undefined };
-}
 
 async function fetchGithubUserInfo(tokens: { accessToken?: string }): Promise<GenericOAuthUserInfo | null> {
   if (!tokens.accessToken) return null;
@@ -24,7 +21,7 @@ async function fetchGithubUserInfo(tokens: { accessToken?: string }): Promise<Ge
   return (await response.json().catch(() => null)) as GenericOAuthUserInfo | null;
 }
 
-export function getGithubOAuthProviders(env: Env): GenericOAuthConfig[] {
+export function getGithubOAuthProviders(env: Env, signInFlow?: OAuthSignInFlow): GenericOAuthConfig[] {
   const providers: GenericOAuthConfig[] = [];
   if (env.GH_APP_CLIENT_ID && env.GH_APP_CLIENT_SECRET) {
     providers.push({
@@ -35,7 +32,7 @@ export function getGithubOAuthProviders(env: Env): GenericOAuthConfig[] {
       tokenUrl: GITHUB_TOKEN_URL,
       getUserInfo: fetchGithubUserInfo,
       disableImplicitSignUp: true,
-      mapProfileToUser: mapGithubProfile,
+      mapProfileToUser: signInFlow ? signInFlow.githubProfileMapper(GITHUB_APP_PROVIDER_ID) : OAuthSignInFlow.mapGithubImage,
     });
   }
   if (env.GH_OATH_CLIENT_ID && env.GH_OAUTH_CLIENT_SECRET) {
@@ -48,7 +45,7 @@ export function getGithubOAuthProviders(env: Env): GenericOAuthConfig[] {
       getUserInfo: fetchGithubUserInfo,
       scopes: ['admin:ssh_signing_key'],
       disableImplicitSignUp: true,
-      mapProfileToUser: mapGithubProfile,
+      mapProfileToUser: signInFlow ? signInFlow.githubProfileMapper(SIGNING_KEY_PROVIDER_ID) : OAuthSignInFlow.mapGithubImage,
     });
   }
   return providers;
