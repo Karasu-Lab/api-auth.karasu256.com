@@ -50,7 +50,10 @@ function buildAuth(db: MemoryDb) {
     trustedOrigins: [AUTH_UI_URL],
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
-    account: { encryptOAuthTokens: true },
+    account: {
+      encryptOAuthTokens: true,
+      accountLinking: { enabled: true, allowDifferentEmails: true, updateUserInfoOnLink: true },
+    },
     plugins: [genericOAuth({ config: getMockOAuthProviders(MOCK_URL) })],
   });
 }
