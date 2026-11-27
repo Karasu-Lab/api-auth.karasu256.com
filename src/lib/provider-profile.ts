@@ -5,7 +5,7 @@ import type { OAuth2Tokens } from '@better-auth/core/oauth2';
 import type { Auth } from './auth';
 import { signRequest } from '@karasu-lab/utils/server/request-signature';
 import { authenticateXboxLive, authorizeXsts, getXboxProfile, refreshMicrosoftTokens, XBOX_RELYING_PARTY } from './xbox-live';
-import { XBOX_PROVIDER_ID } from './xbox-link';
+import { OAuthLinkFlow } from './oauth-link-flow';
 import { storeProviderAvatar } from './avatar-api';
 import { getMinecraftLinkStatus } from './minecraft-link-status';
 import {
@@ -264,7 +264,7 @@ function isDerivedProvider(providerId: string): boolean {
 }
 
 function accountProviderId(providerId: string): string {
-  return isDerivedProvider(providerId) ? XBOX_PROVIDER_ID : providerId;
+  return isDerivedProvider(providerId) ? OAuthLinkFlow.XBOX_PROVIDER_ID : providerId;
 }
 
 type UserAccounts = Awaited<ReturnType<AuthContext['internalAdapter']['findAccounts']>>;

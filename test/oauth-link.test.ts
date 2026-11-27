@@ -11,10 +11,6 @@ vi.mock('../src/lib/request-auth', () => ({
     }),
 }));
 
-vi.mock('../src/routes/xbox', () => ({
-  handleXboxAppLink: vi.fn(),
-}));
-
 vi.mock('../src/lib/social-providers', () => ({
   createSocialProviders: () => ({ github: {} }),
 }));

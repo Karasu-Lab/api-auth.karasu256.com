@@ -49,6 +49,7 @@ declare global {
     DISCORD_CLIENT_ID?: string;
     DISCORD_CLIENT_SECRET?: string;
     E2E_MOCK_OAUTH_URL?: string;
+    ANDROID_APP_SCHEME?: string;
     CLOUDFLARE_TURNSTILE_SECRET?: string;
     CDN_URL: string;
     STORAGE_ENDPOINT: string;
