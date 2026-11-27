@@ -6,7 +6,7 @@ import { xboxLinkStatePayloadSchema, type XboxLinkExchange, type XboxLinkTokens 
 import type { Auth } from './auth';
 import { getGithubOAuthProviders } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
-import { getOAuthProxyConfig, oauthProxyRedirectURI, signProxyState, withOAuthProxyState } from './oauth-proxy';
+import { getOAuthProxyConfig, oauthProxyRedirectURI, signProxyState, verifyProxyState, withOAuthProxyState } from './oauth-proxy';
 import { withAuth } from './request-auth';
 import { createSocialProviders } from './social-providers';
 import { authenticateXboxLive, authorizeXsts, XBOX_RELYING_PARTY } from './xbox-live';
@@ -206,7 +206,8 @@ export class OAuthLinkFlow {
 
   async finishXboxLink(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    const state = url.searchParams.get('state');
+    const forwardedState = url.searchParams.get('state');
+    const state = forwardedState ? ((await verifyProxyState(this.env, forwardedState)) ?? forwardedState) : null;
     const linkState = state ? await this.verifyLinkState(state) : null;
     const destination = new URL(linkState?.callbackURL ?? (linkState?.app ? this.appCallbackUrl() : this.linkingUrl()));
     const fail = (error: string, errorDescription?: string | null) => {

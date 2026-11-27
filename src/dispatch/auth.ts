@@ -2,7 +2,7 @@ import { normalizeClientAuthentication } from '../lib/client-authentication';
 import { CookieSessionStore } from '../lib/cookie-session';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import { withCdnProfileAvatarUrls } from '../lib/profile-avatar';
-import { withOAuthProxyState } from '../lib/oauth-proxy';
+import { withOAuthProxyCallback, withOAuthProxyState } from '../lib/oauth-proxy';
 import { withAuth } from '../lib/request-auth';
 import { assertTokenSessionActive } from '../lib/session-expiry';
 import { TurnstileGate } from '../lib/turnstile';
@@ -31,7 +31,7 @@ export class AuthDispatch implements Dispatchable {
         : null;
     const cached = await cookieSession?.get();
     if (cached) return cached;
-    const authRequest = await normalizeClientAuthentication(env, request, pathname);
+    const authRequest = await withOAuthProxyCallback(env, await normalizeClientAuthentication(env, request, pathname));
     const authResponse = await withOAuthProxyState(
       env,
       request.method,
