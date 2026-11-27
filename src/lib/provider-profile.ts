@@ -6,6 +6,7 @@ import type { Auth } from './auth';
 import { signRequest } from '@karasu-lab/utils/server/request-signature';
 import { authenticateXboxLive, authorizeXsts, getXboxProfile, refreshMicrosoftTokens, XBOX_RELYING_PARTY } from './xbox-live';
 import { OAuthLinkFlow } from './oauth-link-flow';
+import { getAccountLinkable } from './account-linkable';
 import { storeProviderAvatar } from './avatar-api';
 import { getMinecraftLinkStatus } from './minecraft-link-status';
 import {
@@ -313,7 +314,8 @@ export async function streamProviderProfiles(
   auth: Auth,
   session: RedisSession,
   onProfile: (providerId: string, profile: ProviderProfile | null) => void,
-  options?: ProviderProfileOptions
+  options?: ProviderProfileOptions,
+  onLinkState?: (providerId: string, providerUserId: string, linkable: boolean) => void
 ): Promise<void> {
   const uid = session.userId;
   const ctx = (await auth.$context) as unknown as AuthContext;
@@ -321,8 +323,8 @@ export async function streamProviderProfiles(
   const [links, accounts] = await Promise.all([loadAccountLinks(env, ctx, session, pendingAccounts), pendingAccounts]);
   const sharedRefreshes: SharedRefreshes = new Map();
   const profiles = new Map<string, ProviderProfile | null>();
-  await Promise.all(
-    links.map(async ({ providerId, linked }) => {
+  await Promise.all([
+    ...links.map(async ({ providerId, linked }) => {
       if (!linked) return onProfile(providerId, null);
       try {
         const profile = await resolveProfileFromAccounts(env, ctx, uid, accounts, providerId, sharedRefreshes, options);
@@ -331,8 +333,14 @@ export async function streamProviderProfiles(
       } catch {
         onProfile(providerId, null);
       }
-    })
-  );
+    }),
+    ...(onLinkState
+      ? accounts.map(async (account) => {
+          const linkable = await getAccountLinkable(env, uid, account.providerId, account.accountId).catch(() => null);
+          if (linkable !== null) onLinkState(account.providerId, account.accountId, linkable);
+        })
+      : []),
+  ]);
   await recordAccountLinkUrls(env, session, links, profiles);
 }
 

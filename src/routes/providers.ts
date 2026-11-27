@@ -68,7 +68,8 @@ export async function handleProviderStream(env: Env, request: Request): Promise<
           auth,
           { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt },
           (providerId, profile) => stream.send(ProviderStreamEvent.Profile, { providerId, profile }),
-          profileOptions(env)
+          profileOptions(env),
+          (providerId, providerUserId, linkable) => stream.send(ProviderStreamEvent.LinkState, { providerId, providerUserId, linkable })
         ),
       { onClose: release }
     );
