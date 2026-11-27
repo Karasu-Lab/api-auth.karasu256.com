@@ -99,11 +99,16 @@ export async function findFirebaseUidByEmail(env: Env, email: string): Promise<s
   return users?.[0]?.localId ?? null;
 }
 
-export async function updateFirebaseUser(env: Env, uid: string, update: { displayName?: string; photoURL?: string }): Promise<void> {
+export async function updateFirebaseUser(
+  env: Env,
+  uid: string,
+  update: { displayName?: string; photoURL?: string; providerUserInfo?: FirebaseProviderUserInfo[] },
+): Promise<void> {
   await identityToolkit(env, '/accounts:update', {
     localId: uid,
     displayName: update.displayName,
     photoUrl: update.photoURL,
+    providerUserInfo: update.providerUserInfo,
   });
 }
 

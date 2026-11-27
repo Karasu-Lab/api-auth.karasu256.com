@@ -1,7 +1,23 @@
 import type { BetterAuthOptions } from 'better-auth';
+import { z } from 'zod';
 import { getMockOAuthUrl } from './mock-oauth';
 import { oauthProxyRedirectURI } from './oauth-proxy';
 import { getXUserInfo } from './x-user-info';
+
+function googleClientIds(env: Env): string | string[] {
+  const primary = env.GOOGLE_CLIENT_ID as string;
+  if (!env.GOOGLE_ADDITIONAL_CLIENT_IDS) return primary;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(env.GOOGLE_ADDITIONAL_CLIENT_IDS);
+  } catch {
+    throw new Error('GOOGLE_ADDITIONAL_CLIENT_IDS must be a JSON array of non-empty strings');
+  }
+  const result = z.array(z.string().min(1)).safeParse(parsed);
+  if (!result.success) throw new Error('GOOGLE_ADDITIONAL_CLIENT_IDS must be a JSON array of non-empty strings');
+  const clientIds = [primary, ...result.data.filter((clientId) => clientId !== primary)];
+  return clientIds.length > 1 ? clientIds : primary;
+}
 
 export function createSocialProviders(env: Env) {
   if (getMockOAuthUrl(env)) return {};
@@ -10,7 +26,7 @@ export function createSocialProviders(env: Env) {
     ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
       ? {
           google: {
-            clientId: env.GOOGLE_CLIENT_ID,
+            clientId: googleClientIds(env),
             clientSecret: env.GOOGLE_CLIENT_SECRET,
             redirectURI: oauthProxyRedirectURI(env, 'google'),
             disableImplicitSignUp: false,
