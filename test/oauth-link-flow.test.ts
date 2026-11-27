@@ -5,7 +5,7 @@ import { decryptOAuthToken } from 'better-auth/oauth2';
 import { createHmac } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getMockOAuthProviders } from '../src/lib/mock-oauth';
-import { handleOAuthLink, handleOAuthLinkHandoff } from '../src/routes/oauth-link';
+import { handleOAuthLink, handleOAuthLinkHandoff, handleOAuthSignIn } from '../src/routes/oauth-link';
 import { handleXboxCallback } from '../src/routes/xbox';
 
 const SECRET = 'test-better-auth-secret';
@@ -47,6 +47,7 @@ function buildAuth(db: MemoryDb) {
   return betterAuth({
     secret: SECRET,
     baseURL: BASE_URL,
+    trustedOrigins: [AUTH_UI_URL],
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
     plugins: [genericOAuth({ config: getMockOAuthProviders(MOCK_URL) })],
@@ -127,6 +128,24 @@ async function startNativeLink(providerId: string, cookie: string): Promise<{ au
     new Request(`${BASE_URL}/api/oauth/link`, {
       method: 'POST',
       headers: { cookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ provider: providerId, callbackURL: `karasulab://api/auth/callback/${providerId}?state=${NATIVE_STATE}` }),
+    }),
+  );
+  expect(started.status).toBe(200);
+  const { url } = (await started.json()) as { url: string };
+  expect(url.startsWith(`${BASE_URL}/api/oauth/link/continue?ticket=`)).toBe(true);
+
+  const continued = await handleOAuthLinkHandoff(env, new Request(url));
+  expect(continued.status).toBe(302);
+  return { authorizeUrl: new URL(continued.headers.get('location') ?? ''), cookies: cookieHeader(continued) };
+}
+
+async function startNativeSignIn(providerId: string): Promise<{ authorizeUrl: URL; cookies: string }> {
+  const started = await handleOAuthSignIn(
+    env,
+    new Request(`${BASE_URL}/api/oauth/sign-in`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ provider: providerId, callbackURL: `karasulab://api/auth/callback/${providerId}?state=${NATIVE_STATE}` }),
     }),
   );
@@ -226,5 +245,58 @@ describe('OAuth link flow by provider ID', () => {
     expect(account?.accessToken).not.toBe('ms-access-token');
     expect(account?.refreshToken).toBeTruthy();
     expect(account?.refreshToken).not.toBe('ms-refresh-token');
+  });
+});
+
+describe('OAuth sign-in flow by provider ID', () => {
+  it.each(['google', 'github', 'microsoft'])('signs in with %s end to end without linking', async (providerId) => {
+    const db: MemoryDb = { user: [], session: [], account: [], verification: [] };
+    const auth = buildAuth(db);
+    holder.auth = auth;
+
+    const { authorizeUrl, cookies } = await startNativeSignIn(providerId);
+    expect(authorizeUrl.origin).toBe(MOCK_URL);
+    expect(authorizeUrl.pathname).toBe(`/${providerId}/authorize`);
+
+    const redirectUri = authorizeUrl.searchParams.get('redirect_uri') ?? '';
+    const providerState = authorizeUrl.searchParams.get('state') ?? '';
+    expect(redirectUri).toBeTruthy();
+    expect(providerState).toBeTruthy();
+    const callback = await auth.handler(
+      new Request(`${redirectUri}?code=mock-code&state=${encodeURIComponent(providerState)}`, {
+        headers: { cookie: cookies },
+        redirect: 'manual',
+      }),
+    );
+    expect(callback.status).toBe(302);
+    const destination = new URL(callback.headers.get('location') ?? '');
+    expect(destination.origin).toBe(AUTH_UI_URL);
+    expect(destination.pathname).toBe('/auth/callback');
+    expect(destination.searchParams.get('flow')).toBeNull();
+    expect(destination.searchParams.get('next')).toBe(`karasulab://api/auth/callback/${providerId}?state=${NATIVE_STATE}`);
+
+    const user = db.user.find((entry) => entry.email === `mock-${providerId}@example.com`);
+    expect(user).toBeTruthy();
+    const userId = user?.id as string;
+    const ctx = await auth.$context;
+    const accounts = await ctx.internalAdapter.findAccounts(userId);
+    const account = accounts.find((entry) => entry.providerId === providerId);
+    expect(account?.accountId).toBe(`mock-user-${providerId}`);
+    expect(account?.accessToken).toBeTruthy();
+    expect(account?.accessToken).not.toBe(`access-${providerId}`);
+    expect(db.session.some((entry) => entry.userId === userId)).toBe(true);
+  });
+
+  it('rejects the Xbox family for sign-in', async () => {
+    const response = await handleOAuthSignIn(
+      env,
+      new Request(`${BASE_URL}/api/oauth/sign-in`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ provider: 'xbox', callbackURL: `karasulab://api/auth/callback/xbox?state=${NATIVE_STATE}` }),
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: 'unsupported_oauth_provider' });
   });
 });

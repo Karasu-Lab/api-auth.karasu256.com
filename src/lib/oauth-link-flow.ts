@@ -1,4 +1,5 @@
 import type { AuthContext } from '@better-auth/core';
+import type { GenericOAuthConfig } from 'better-auth/plugins';
 import { setTokenUtil } from 'better-auth/oauth2';
 import { z } from 'zod';
 import { xboxLinkStatePayloadSchema, type XboxLinkExchange, type XboxLinkTokens } from '@karasu-lab/types/server';
@@ -71,49 +72,73 @@ export class OAuthLinkFlow {
   }
 
   async startLink(request: Request): Promise<Response> {
+    const input = await this.parseStartRequest(request, 'invalid_oauth_link_request');
+    if (input instanceof Response) return input;
+
+    const started =
+      input.provider === OAuthLinkFlow.XBOX_PROVIDER_ID || input.provider === 'minecraft'
+        ? await this.startXboxAppLink(request, input.callbackURL, input.provider)
+        : await this.startProviderLink(request, input.provider, input.callbackURL);
+    return this.respondWithHandoff(started, 'oauth_link_start_failed');
+  }
+
+  async startSignIn(request: Request): Promise<Response> {
+    const input = await this.parseStartRequest(request, 'invalid_oauth_sign_in_request');
+    if (input instanceof Response) return input;
+
+    if (input.provider === OAuthLinkFlow.XBOX_PROVIDER_ID || input.provider === 'minecraft') {
+      return Response.json({
+        error: 'unsupported_oauth_provider',
+        reason: `Provider '${input.provider}' is not configured for OAuth sign-in.`,
+      }, { status: 400 });
+    }
+
+    const started = await this.startProviderSignIn(request, input.provider, input.callbackURL);
+    return this.respondWithHandoff(started, 'oauth_sign_in_start_failed');
+  }
+
+  private async parseStartRequest(request: Request, requestError: string): Promise<{ provider: string; callbackURL: string } | Response> {
     let body: unknown;
     try {
       body = await request.json();
     } catch (error) {
       const reason = error instanceof Error ? error.message : 'Request body must be valid JSON.';
-      return Response.json({ error: 'invalid_oauth_link_request', reason: `Could not parse JSON request body: ${reason}` }, { status: 400 });
+      return Response.json({ error: requestError, reason: `Could not parse JSON request body: ${reason}` }, { status: 400 });
     }
 
     const input = linkRequestSchema.safeParse(body);
     if (!input.success) {
-      return Response.json({ error: 'invalid_oauth_link_request', reason: this.inputReason(input.error.issues) }, { status: 400 });
+      return Response.json({ error: requestError, reason: this.inputReason(input.error.issues) }, { status: 400 });
     }
 
     const callback = this.validateNativeCallback(input.data.callbackURL, input.data.provider);
     if ('reason' in callback) return Response.json({ error: 'invalid_oauth_callback', reason: callback.reason }, { status: 400 });
+    return { provider: input.data.provider, callbackURL: callback.url.toString() };
+  }
 
-    const started =
-      input.data.provider === OAuthLinkFlow.XBOX_PROVIDER_ID || input.data.provider === 'minecraft'
-        ? await this.startXboxAppLink(request, callback.url.toString(), input.data.provider)
-        : await this.startProviderLink(request, input.data.provider, callback.url.toString());
-
+  private async respondWithHandoff(started: Response, startError: string): Promise<Response> {
     if (!started.ok) {
-      return Response.json(await this.providerFailure(started), { status: started.status });
+      return Response.json(await this.providerFailure(started, startError), { status: started.status });
     }
 
     let startedBody: unknown;
     try {
       startedBody = await started.json();
     } catch {
-      return Response.json({ error: 'oauth_link_start_failed', reason: 'OAuth provider returned an unreadable response.' }, { status: 502 });
+      return Response.json({ error: startError, reason: 'OAuth provider returned an unreadable response.' }, { status: 502 });
     }
     if (typeof startedBody !== 'object' || startedBody === null || !('url' in startedBody) || typeof startedBody.url !== 'string') {
-      return Response.json({ error: 'oauth_link_start_failed', reason: 'OAuth provider response did not include an authorization URL.' }, { status: 502 });
+      return Response.json({ error: startError, reason: 'OAuth provider response did not include an authorization URL.' }, { status: 502 });
     }
 
     let authorizationURL: URL;
     try {
       authorizationURL = new URL(startedBody.url);
     } catch {
-      return Response.json({ error: 'oauth_link_start_failed', reason: 'OAuth provider returned an invalid authorization URL.' }, { status: 502 });
+      return Response.json({ error: startError, reason: 'OAuth provider returned an invalid authorization URL.' }, { status: 502 });
     }
     if (authorizationURL.protocol !== 'https:') {
-      return Response.json({ error: 'oauth_link_start_failed', reason: 'OAuth authorization URL must use HTTPS.' }, { status: 502 });
+      return Response.json({ error: startError, reason: 'OAuth authorization URL must use HTTPS.' }, { status: 502 });
     }
 
     let ticket: string;
@@ -258,11 +283,49 @@ export class OAuthLinkFlow {
     });
   }
 
+  private async startProviderSignIn(request: Request, provider: string, nativeCallbackURL: string): Promise<Response> {
+    const social = this.isSocialProvider(provider);
+    if (!social && !this.isProviderConfigured(provider)) {
+      return Response.json({
+        error: 'unsupported_oauth_provider',
+        reason: `Provider '${provider}' is not configured for OAuth sign-in.`,
+      }, { status: 400 });
+    }
+
+    const signInCallback = new URL('/auth/callback', this.env.AUTH_UI_URL);
+    signInCallback.searchParams.set('next', nativeCallbackURL);
+
+    const pathname = social ? '/api/auth/sign-in/social' : '/api/auth/sign-in/oauth2';
+    return withAuth(this.env, async (auth) => {
+      const headers = new Headers(request.headers);
+      headers.set('content-type', 'application/json');
+      headers.delete('content-length');
+      headers.delete('cookie');
+      const authRequest = new Request(`${this.env.BETTER_AUTH_URL.replace(/\/+$/, '')}${pathname}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          ...(social ? { provider } : { providerId: provider }),
+          callbackURL: signInCallback.toString(),
+          errorCallbackURL: signInCallback.toString(),
+          disableRedirect: true,
+        }),
+      });
+      return withOAuthProxyState(this.env, 'POST', pathname, await auth.handler(authRequest));
+    });
+  }
+
   private isProviderConfigured(providerId: string): boolean {
-    if (Object.prototype.hasOwnProperty.call(createSocialProviders(this.env), providerId)) return true;
+    return this.isSocialProvider(providerId) || this.genericProviders().some((provider) => provider.providerId === providerId);
+  }
+
+  private isSocialProvider(providerId: string): boolean {
+    return Object.prototype.hasOwnProperty.call(createSocialProviders(this.env), providerId);
+  }
+
+  private genericProviders(): GenericOAuthConfig[] {
     const mockUrl = getMockOAuthUrl(this.env);
-    const genericProviders = mockUrl ? getMockOAuthProviders(mockUrl) : getGithubOAuthProviders(this.env);
-    return genericProviders.some((provider) => provider.providerId === providerId);
+    return mockUrl ? getMockOAuthProviders(mockUrl) : getGithubOAuthProviders(this.env);
   }
 
   private validateNativeCallback(callbackURL: string, provider: string): { url: URL } | { reason: string } {
@@ -293,14 +356,14 @@ export class OAuthLinkFlow {
     return issues.map((issue) => `${issue.path.join('.') || 'body'}: ${issue.message}`).join('; ');
   }
 
-  private providerFailure(response: Response): Promise<{ error: string; reason: string }> {
+  private providerFailure(response: Response, fallbackError: string): Promise<{ error: string; reason: string }> {
     return response
       .clone()
       .json()
       .then((body: unknown) => {
         if (typeof body !== 'object' || body === null) {
           return {
-            error: 'oauth_link_start_failed',
+            error: fallbackError,
             reason: `OAuth provider request failed with status ${response.status}.`,
           };
         }
@@ -308,12 +371,12 @@ export class OAuthLinkFlow {
         const message = record.reason ?? record.message ?? record.error_description ?? record.error;
         const code = record.error ?? record.code;
         return {
-          error: typeof code === 'string' && /^[A-Za-z0-9_-]+$/.test(code) ? code : 'oauth_link_start_failed',
+          error: typeof code === 'string' && /^[A-Za-z0-9_-]+$/.test(code) ? code : fallbackError,
           reason: typeof message === 'string' ? message : `OAuth provider request failed with status ${response.status}.`,
         };
       })
       .catch(() => ({
-        error: 'oauth_link_start_failed',
+        error: fallbackError,
         reason: `OAuth provider request failed with status ${response.status}.`,
       }));
   }
