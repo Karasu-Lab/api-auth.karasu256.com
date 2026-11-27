@@ -32,7 +32,7 @@ export function getGithubOAuthProviders(env: Env, signInFlow?: OAuthSignInFlow):
       tokenUrl: GITHUB_TOKEN_URL,
       getUserInfo: fetchGithubUserInfo,
       disableImplicitSignUp: true,
-      mapProfileToUser: signInFlow ? signInFlow.githubProfileMapper(GITHUB_APP_PROVIDER_ID) : OAuthSignInFlow.mapGithubImage,
+      mapProfileToUser: signInFlow ? signInFlow.githubProfileMapper() : OAuthSignInFlow.mapGithubImage,
     });
   }
   if (env.GH_OATH_CLIENT_ID && env.GH_OAUTH_CLIENT_SECRET) {
@@ -45,7 +45,7 @@ export function getGithubOAuthProviders(env: Env, signInFlow?: OAuthSignInFlow):
       getUserInfo: fetchGithubUserInfo,
       scopes: ['admin:ssh_signing_key'],
       disableImplicitSignUp: true,
-      mapProfileToUser: signInFlow ? signInFlow.githubProfileMapper(SIGNING_KEY_PROVIDER_ID) : OAuthSignInFlow.mapGithubImage,
+      mapProfileToUser: signInFlow ? signInFlow.githubProfileMapper() : OAuthSignInFlow.mapGithubImage,
     });
   }
   return providers;

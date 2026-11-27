@@ -36,7 +36,7 @@ import { sendVerificationEmail } from './verification-email';
 function createPlugins(env: Env, db: Db) {
   const { webauthn } = getAuthConfig(env);
   const mockOAuthUrl = getMockOAuthUrl(env);
-  const oauthProviders = mockOAuthUrl ? getMockOAuthProviders(mockOAuthUrl) : getGithubOAuthProviders(env, new OAuthSignInFlow(db));
+  const oauthProviders = mockOAuthUrl ? getMockOAuthProviders(mockOAuthUrl) : getGithubOAuthProviders(env, new OAuthSignInFlow());
 
   const jwtOptions = {
     jwks: { keyPairConfig: { alg: 'RS256', modulusLength: 2048 } },
@@ -286,7 +286,7 @@ async function createAuthOptions(env: Env, db: Db) {
     onAPIError: {
       errorURL: `${env.AUTH_UI_URL}/oauth/error`,
     },
-    socialProviders: createSocialProviders(env, new OAuthSignInFlow(db)),
+    socialProviders: createSocialProviders(env, new OAuthSignInFlow()),
   } satisfies BetterAuthOptions;
 }
 
