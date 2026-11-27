@@ -17,8 +17,8 @@ const sessionValueSchema = z.union([
     }),
     user: z.object({
       id: z.string(),
-      name: z.string(),
-      email: z.string(),
+      name: z.string().nullish(),
+      email: z.string().nullish(),
       emailVerified: z.boolean(),
       image: z.string().nullish(),
       createdAt: z.string(),
