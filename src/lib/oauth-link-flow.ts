@@ -284,8 +284,7 @@ export class OAuthLinkFlow {
   }
 
   private async startProviderSignIn(request: Request, provider: string, nativeCallbackURL: string): Promise<Response> {
-    const social = this.isSocialProvider(provider);
-    if (!social && !this.isProviderConfigured(provider)) {
+    if (!this.isProviderConfigured(provider)) {
       return Response.json({
         error: 'unsupported_oauth_provider',
         reason: `Provider '${provider}' is not configured for OAuth sign-in.`,
@@ -295,7 +294,7 @@ export class OAuthLinkFlow {
     const signInCallback = new URL('/auth/callback', this.env.AUTH_UI_URL);
     signInCallback.searchParams.set('next', nativeCallbackURL);
 
-    const pathname = social ? '/api/auth/sign-in/social' : '/api/auth/sign-in/oauth2';
+    const pathname = '/api/auth/sign-in/social';
     return withAuth(this.env, async (auth) => {
       const headers = new Headers(request.headers);
       headers.set('content-type', 'application/json');
@@ -305,7 +304,7 @@ export class OAuthLinkFlow {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          ...(social ? { provider } : { providerId: provider }),
+          provider,
           callbackURL: signInCallback.toString(),
           errorCallbackURL: signInCallback.toString(),
           disableRedirect: true,
