@@ -11,23 +11,25 @@ const BASE_URL = 'https://auth.test';
 const MOCK_URL = 'https://mock-oauth.test';
 const NATIVE_STATE = 'entry-state-0123456789abcdef';
 
-const entryEnv = {
-  APP_ENV: 'local',
-  BETTER_AUTH_SECRET: SECRET,
-  BETTER_AUTH_URL: BASE_URL,
-  AUTH_UI_URL: 'https://auth-ui.test',
-  SSO_UI_URL: 'https://sso.test',
-  ACCOUNTS_URL: 'https://accounts.test',
-  MCP_URL: 'https://mcp.test',
-  API_URL: 'https://api.test',
-  MC_AUTH_URL: 'https://mc-auth.test',
-  UPSTASH_REDIS_REST_URL: 'https://redis.test',
-  UPSTASH_REDIS_REST_TOKEN: 'redis-token',
-  HYPERDRIVE: { connectionString: 'postgres://unused' },
-  E2E_MOCK_OAUTH_URL: MOCK_URL,
-  MICROSOFT_CLIENT_ID: 'microsoft-client-id',
-  MICROSOFT_CLIENT_SECRET: 'microsoft-client-secret',
-};
+const { entryEnv } = vi.hoisted(() => ({
+  entryEnv: {
+    APP_ENV: 'local',
+    BETTER_AUTH_SECRET: 'oauth-entry-secret',
+    BETTER_AUTH_URL: 'https://auth.test',
+    AUTH_UI_URL: 'https://auth-ui.test',
+    SSO_UI_URL: 'https://sso.test',
+    ACCOUNTS_URL: 'https://accounts.test',
+    MCP_URL: 'https://mcp.test',
+    API_URL: 'https://api.test',
+    MC_AUTH_URL: 'https://mc-auth.test',
+    UPSTASH_REDIS_REST_URL: 'https://redis.test',
+    UPSTASH_REDIS_REST_TOKEN: 'redis-token',
+    HYPERDRIVE: { connectionString: 'postgres://unused' },
+    E2E_MOCK_OAUTH_URL: 'https://mock-oauth.test',
+    MICROSOFT_CLIENT_ID: 'microsoft-client-id',
+    MICROSOFT_CLIENT_SECRET: 'microsoft-client-secret',
+  },
+}));
 
 const holder = vi.hoisted(() => ({ auth: null as unknown }));
 

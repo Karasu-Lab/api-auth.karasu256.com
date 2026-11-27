@@ -50,6 +50,7 @@ function buildAuth(db: MemoryDb) {
     trustedOrigins: [AUTH_UI_URL],
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
+    account: { encryptOAuthTokens: true },
     plugins: [genericOAuth({ config: getMockOAuthProviders(MOCK_URL) })],
   });
 }
@@ -84,6 +85,7 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
     }
     if (headers.get('authorization') !== `Bearer access-${providerId}`) return Response.json({ error: 'invalid_token' }, { status: 401 });
     return Response.json({
+      id: `mock-user-${providerId}`,
       sub: `mock-user-${providerId}`,
       name: `Mock ${providerId}`,
       email: `mock-${providerId}@example.com`,
