@@ -1,6 +1,7 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import type { Db } from '../db/create-db';
 import { AccountLinkDeleteRepository } from './redis/account-link-repositories';
+import { AccountLinkableDeleteRepository } from './redis/account-linkable-repositories';
 import { ActiveSessionDeleteRepository } from './redis/active-session-repositories';
 import { AuthorizedAppDeleteRepository } from './redis/authorized-app-repositories';
 import { JwksDeleteRepository } from './redis/jwks-repositories';
@@ -32,6 +33,7 @@ export function oauthClientRedisAdapter(
     { invalidate: (table, rows, find) => AccountLinkDeleteRepository.invalidate(env, table, rows, find) },
     { invalidate: (table, rows, find) => SecuritySettingDeleteRepository.invalidate(env, table, rows, find) },
     { invalidate: (table, rows) => MinecraftLinkStatusDeleteRepository.invalidate(env, table, rows) },
+    { invalidate: (table, rows) => AccountLinkableDeleteRepository.invalidate(env, table, rows) },
   ];
 
   return (options) => {
