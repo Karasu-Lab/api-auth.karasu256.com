@@ -1,8 +1,9 @@
 import { waitUntil } from 'cloudflare:workers';
 import { createDb } from '../db/create-db';
 import { SseServerStream } from '@karasu-lab/sdk/sse';
-import { ProviderStreamEvent, type ProviderStreamEvents } from '@karasu-lab/types/shared';
+import { ProviderStreamClientsEvent, ProviderStreamEvent, type ProviderStreamEventsWithClients } from '@karasu-lab/types/shared';
 import { createAuth } from '../lib/auth';
+import { getLinkableProviderClients } from '../lib/linkable-providers';
 import { getProviderProfile, streamProviderProfiles, type ProviderProfile } from '../lib/provider-profile';
 import { withAuth } from '../lib/request-auth';
 
@@ -61,16 +62,19 @@ export async function handleProviderStream(env: Env, request: Request): Promise<
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    return SseServerStream.respond<ProviderStreamEvents>(
-      (stream) =>
-        streamProviderProfiles(
+    return SseServerStream.respond<ProviderStreamEventsWithClients>(
+      async (stream) => {
+        const clients = await getLinkableProviderClients(env);
+        stream.send(ProviderStreamClientsEvent, { clients });
+        await streamProviderProfiles(
           env,
           auth,
           { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt },
           (providerId, profile) => stream.send(ProviderStreamEvent.Profile, { providerId, profile }),
           profileOptions(env),
           (providerId, providerUserId, linkable) => stream.send(ProviderStreamEvent.LinkState, { providerId, providerUserId, linkable })
-        ),
+        );
+      },
       { onClose: release }
     );
   } catch (error) {
