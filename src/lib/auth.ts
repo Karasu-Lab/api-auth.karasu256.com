@@ -28,6 +28,7 @@ import { redisSecondaryStorage } from './redis-storage';
 import { sessionJwtHeaderPlugin } from './session-jwt';
 import { SessionSourceStore } from './session-source';
 import { createSocialProviders } from './social-providers';
+import { refreshLinkableProviderClients } from './linkable-providers';
 import { OAuthSignInFlow } from './oauth-sign-in-flow';
 import { tenantTypePlugin } from './tenant-type';
 import { sendVerificationEmail } from './verification-email';
@@ -290,6 +291,7 @@ async function createAuthOptions(env: Env, db: Db) {
 }
 
 export async function createAuth(env: Env, db: Db) {
+  refreshLinkableProviderClients(env);
   return betterAuth({ ...(await createAuthOptions(env, db)), plugins: createPlugins(env, db) });
 }
 
