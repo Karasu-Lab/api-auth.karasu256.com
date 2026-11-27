@@ -8,6 +8,8 @@ import { normalizeMinecraftUuid } from '../lib/minecraft-link-status';
 import { AccountLinkDeleteRepository } from '../lib/redis/account-link-repositories';
 import { MinecraftLinkStatusDeleteRepository } from '../lib/redis/minecraft-link-status-repositories';
 import { withAuth } from '../lib/request-auth';
+import { SessionSourceStore } from '../lib/session-source';
+import { createSocialProviders } from '../lib/social-providers';
 
 const unlinkBodySchema = z.object({ providerId: z.string().min(1), accountId: z.string().optional() });
 
@@ -32,10 +34,30 @@ export class UnlinkAccountDispatch implements Dispatchable {
           const ctx = (await auth.$context) as unknown as AuthContext;
           const accounts = await ctx.internalAdapter.findAccounts(session.user.id);
           const account = accounts.find((entry) => entry.providerId === body.data.providerId && (!body.data.accountId || entry.accountId === body.data.accountId));
-          if (!account || accounts.length < 2) return null;
+          if (!account) return null;
+          const signInProviderIds = new Set([...Object.keys(createSocialProviders(env)), 'credential', 'password']);
+          const remainingSignIn = accounts.some((entry) => entry.id !== account.id && signInProviderIds.has(entry.providerId));
+          if (!remainingSignIn) {
+            const sourceProviderId = await this.sessionSourceProviderId({
+              id: session.session.id,
+              userId: session.user.id,
+              expiresAt: session.session.expiresAt,
+            });
+            if (sourceProviderId === body.data.providerId) return 'blocked' as const;
+            return null;
+          }
           return { account, session: { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt } };
         })
       : null;
+    if (target === 'blocked') {
+      return Response.json(
+        {
+          error: 'account_unlink_blocked',
+          reason: 'The provider used to sign in to the current session cannot be unlinked while it is the only remaining login method.',
+        },
+        { status: 400 },
+      );
+    }
     if (!body.success || !target) return withAuth(env, (auth) => auth.handler(request));
 
     const headers = new Headers(request.headers);
@@ -85,6 +107,19 @@ export class UnlinkAccountDispatch implements Dispatchable {
       }, { status: 500 });
     }
     return Response.json({ status: true });
+  }
+
+  private async sessionSourceProviderId(session: { id: string; userId: string; expiresAt: Date }): Promise<string | null> {
+    const db = createDb(this.context.env.HYPERDRIVE.connectionString);
+    try {
+      const source = await new SessionSourceStore(this.context.env, db).get(session);
+      return source.providerId;
+    } catch (error) {
+      console.error('Could not derive the session source for the unlink request', error);
+      return null;
+    } finally {
+      await db.$client.end();
+    }
   }
 
   private async unlink(request: Request): Promise<Response> {

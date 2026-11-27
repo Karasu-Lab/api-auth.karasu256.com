@@ -252,9 +252,13 @@ async function createAuthOptions(env: Env, db: Db) {
             );
           },
           after: async (session, context) => {
+            const provider = (context?.body as { provider?: unknown } | undefined)?.provider;
             await new SessionSourceStore(env, db).record(session, {
               path: context?.path ?? null,
-              params: context?.params ?? null,
+              params: {
+                ...(context?.params ?? {}),
+                ...(typeof provider === 'string' ? { provider } : {}),
+              },
             });
             await new ActiveSessionDeleteRepository(env).delete(session.userId);
             await new SessionExpiryCreateRepository(env).create(session.id, session.expiresAt);
