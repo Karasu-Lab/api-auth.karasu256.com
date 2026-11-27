@@ -32,6 +32,41 @@ export async function signProxyState(config: { secret: string; origin: string; t
   return `${body}.${encodeBase64Url(signature)}`;
 }
 
+function decodeBase64Url(value: string) {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4));
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+export async function verifyProxyState(env: Env, signedState: string): Promise<string | null> {
+  const config = getOAuthProxyConfig(env);
+  if (!config?.secret) return null;
+  const [body, signature, extra] = signedState.split('.');
+  if (!body || !signature || extra) return null;
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(config.secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+  const valid = await crypto.subtle.verify('HMAC', key, decodeBase64Url(signature), new TextEncoder().encode(body)).catch(() => false);
+  if (!valid) return null;
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(decodeBase64Url(body))) as { state?: unknown; exp?: unknown };
+    if (typeof payload.state !== 'string' || typeof payload.exp !== 'number' || payload.exp < Date.now()) return null;
+    return payload.state;
+  } catch {
+    return null;
+  }
+}
+
+export async function withOAuthProxyCallback(env: Env, request: Request): Promise<Request> {
+  if (request.method !== 'GET') return request;
+  const url = new URL(request.url);
+  if (!url.pathname.startsWith('/api/auth/callback/') && !url.pathname.startsWith('/api/auth/oauth2/callback/')) return request;
+  const signedState = url.searchParams.get('state');
+  if (!signedState) return request;
+  const originalState = await verifyProxyState(env, signedState);
+  if (!originalState) return request;
+  url.searchParams.set('state', originalState);
+  return new Request(url, request);
+}
+
 function replaceState(url: string, state: string) {
   const authorizationUrl = new URL(url);
   authorizationUrl.searchParams.set('state', state);

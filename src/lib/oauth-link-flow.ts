@@ -6,7 +6,7 @@ import { xboxLinkStatePayloadSchema, type XboxLinkExchange, type XboxLinkTokens 
 import type { Auth } from './auth';
 import { getGithubOAuthProviders } from './github-providers';
 import { getMockOAuthProviders, getMockOAuthUrl } from './mock-oauth';
-import { getOAuthProxyConfig, oauthProxyRedirectURI, signProxyState, withOAuthProxyState } from './oauth-proxy';
+import { getOAuthProxyConfig, oauthProxyRedirectURI, signProxyState, verifyProxyState, withOAuthProxyState } from './oauth-proxy';
 import { withAuth } from './request-auth';
 import { createSocialProviders } from './social-providers';
 import { authenticateXboxLive, authorizeXsts, XBOX_RELYING_PARTY } from './xbox-live';
@@ -124,7 +124,8 @@ export class OAuthLinkFlow {
     let startedBody: unknown;
     try {
       startedBody = await started.json();
-    } catch {
+    } catch (error) {
+      console.error('Failed to read the OAuth provider response:', error);
       return Response.json({ error: startError, reason: 'OAuth provider returned an unreadable response.' }, { status: 502 });
     }
     if (typeof startedBody !== 'object' || startedBody === null || !('url' in startedBody) || typeof startedBody.url !== 'string') {
@@ -134,7 +135,8 @@ export class OAuthLinkFlow {
     let authorizationURL: URL;
     try {
       authorizationURL = new URL(startedBody.url);
-    } catch {
+    } catch (error) {
+      console.error('Failed to parse the OAuth authorization URL:', error);
       return Response.json({ error: startError, reason: 'OAuth provider returned an invalid authorization URL.' }, { status: 502 });
     }
     if (authorizationURL.protocol !== 'https:') {
@@ -206,7 +208,8 @@ export class OAuthLinkFlow {
 
   async finishXboxLink(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    const state = url.searchParams.get('state');
+    const forwardedState = url.searchParams.get('state');
+    const state = forwardedState ? ((await verifyProxyState(this.env, forwardedState)) ?? forwardedState) : null;
     const linkState = state ? await this.verifyLinkState(state) : null;
     const destination = new URL(linkState?.callbackURL ?? (linkState?.app ? this.appCallbackUrl() : this.linkingUrl()));
     const fail = (error: string, errorDescription?: string | null) => {
@@ -374,10 +377,13 @@ export class OAuthLinkFlow {
           reason: typeof message === 'string' ? message : `OAuth provider request failed with status ${response.status}.`,
         };
       })
-      .catch(() => ({
-        error: fallbackError,
-        reason: `OAuth provider request failed with status ${response.status}.`,
-      }));
+      .catch((error: unknown) => {
+        console.error('Failed to read the OAuth provider failure response:', error);
+        return {
+          error: fallbackError,
+          reason: `OAuth provider request failed with status ${response.status}.`,
+        };
+      });
   }
 
   private async createHandoff(url: string, cookies: string[]): Promise<string> {
@@ -506,8 +512,14 @@ export class OAuthLinkFlow {
         redirect_uri: this.xboxCallbackUrl(),
         scope: OAuthLinkFlow.XBOX_SCOPE,
       }),
-    }).catch(() => null);
-    const body = (await res?.json().catch(() => null)) as {
+    }).catch((error: unknown) => {
+      console.error('Failed to call the Microsoft token endpoint:', error);
+      return null;
+    });
+    const body = (await res?.json().catch((error: unknown) => {
+      console.error('Failed to read the Microsoft token response:', error);
+      return null;
+    })) as {
       access_token?: string;
       refresh_token?: string;
       expires_in?: number;
