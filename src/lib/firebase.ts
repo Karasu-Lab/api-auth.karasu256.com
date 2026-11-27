@@ -1,10 +1,38 @@
 import { importPKCS8, SignJWT } from 'jose';
+import { z } from 'zod';
 import type { FirebaseUserInput } from '@karasu-lab/types/server';
 
 export type { FirebaseUserInput };
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
+
+const serviceAccountSchema = z.object({
+  project_id: z.string().min(1),
+  client_email: z.string().min(1),
+  private_key: z.string().min(1),
+});
+
+type ServiceAccount = z.infer<typeof serviceAccountSchema>;
+
+let cachedServiceAccount: { raw: string; account: ServiceAccount } | undefined;
+
+function serviceAccount(env: Env): ServiceAccount {
+  const raw = env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (cachedServiceAccount?.raw === raw) return cachedServiceAccount.account;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON.');
+  }
+  const result = serviceAccountSchema.safeParse(parsed);
+  if (!result.success) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not a service account key: project_id, client_email, and private_key are required.');
+  }
+  cachedServiceAccount = { raw, account: result.data };
+  return result.data;
+}
 
 interface CachedToken {
   value: string;
@@ -13,14 +41,14 @@ interface CachedToken {
 
 let cachedToken: CachedToken | undefined;
 
-async function getAccessToken(env: Env): Promise<string> {
+async function getAccessToken(env: Env, account: ServiceAccount): Promise<string> {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.value;
 
-  const key = await importPKCS8(env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'), 'RS256');
+  const key = await importPKCS8(account.private_key.replace(/\\n/g, '\n'), 'RS256');
   const assertion = await new SignJWT({ scope: SCOPE })
     .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
-    .setIssuer(env.FIREBASE_ADMIN_CLIENT_EMAIL)
-    .setSubject(env.FIREBASE_ADMIN_CLIENT_EMAIL)
+    .setIssuer(account.client_email)
+    .setSubject(account.client_email)
     .setAudience(TOKEN_URL)
     .setIssuedAt()
     .setExpirationTime('55m')
@@ -39,11 +67,12 @@ async function getAccessToken(env: Env): Promise<string> {
 }
 
 async function identityToolkit<T>(env: Env, path: string, body: unknown): Promise<T> {
+  const account = serviceAccount(env);
   const emulator = env.FIREBASE_AUTH_EMULATOR_HOST;
   const origin = emulator ? `http://${emulator}/identitytoolkit.googleapis.com` : 'https://identitytoolkit.googleapis.com';
-  const token = emulator ? 'owner' : await getAccessToken(env);
+  const token = emulator ? 'owner' : await getAccessToken(env, account);
 
-  const response = await fetch(`${origin}/v1/projects/${env.GOOGLE_CLOUD_PROJECT_ID}${path}`, {
+  const response = await fetch(`${origin}/v1/projects/${account.project_id}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
