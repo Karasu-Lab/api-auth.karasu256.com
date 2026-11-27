@@ -8,17 +8,10 @@ vi.mock('../src/lib/request-auth', () => ({
     callback({ api: { getSession: async () => ({ user: { id: 'user-1' } }) } }),
 }));
 
-vi.mock('../src/lib/xbox-link', () => ({
-  buildXboxAuthorizeUrl: (clientId: string, redirectUri: string, state: string) => {
-    const url = new URL('https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize');
-    url.searchParams.set('client_id', clientId);
-    url.searchParams.set('redirect_uri', redirectUri);
-    url.searchParams.set('state', state);
-    return url.toString();
-  },
-  createXboxLinkState: async (_secret: string, userId: string, app: boolean, callbackURL?: string, providerId?: string) =>
-    JSON.stringify({ userId, ...(app && { app }), ...(callbackURL && { callbackURL, providerId }) }),
-}));
+function decodeLinkState(state: string): Record<string, unknown> {
+  const [payload] = state.split('.');
+  return JSON.parse(Buffer.from(payload as string, 'base64url').toString()) as Record<string, unknown>;
+}
 
 const env = {
   APP_ENV: 'preview',
@@ -44,7 +37,7 @@ describe('Xbox provider OAuth proxy flow', () => {
 
     const proxyState = JSON.parse(Buffer.from(payload as string, 'base64url').toString()) as { origin: string; state: string };
     expect(proxyState.origin).toBe(env.BETTER_AUTH_URL);
-    expect(JSON.parse(proxyState.state)).toEqual({ userId: 'user-1' });
+    expect(decodeLinkState(proxyState.state)).toMatchObject({ userId: 'user-1' });
   });
 
   it('starts Xbox linking through the generic native OAuth link endpoint', async () => {
@@ -65,6 +58,6 @@ describe('Xbox provider OAuth proxy flow', () => {
     const [payload, signature] = (authorizationURL.searchParams.get('state') ?? '').split('.');
     expect(createHmac('sha256', env.OAUTH_PROXY_SECRET as string).update(payload as string).digest('base64url')).toBe(signature);
     const proxyState = JSON.parse(Buffer.from(payload as string, 'base64url').toString()) as { state: string };
-    expect(JSON.parse(proxyState.state)).toMatchObject({ userId: 'user-1', callbackURL, providerId: 'xbox' });
+    expect(decodeLinkState(proxyState.state)).toMatchObject({ userId: 'user-1', app: true, callbackURL, providerId: 'xbox' });
   });
 });

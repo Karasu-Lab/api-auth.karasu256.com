@@ -21,6 +21,7 @@
     "API_URL": "https://api.karasu256.com",
     "MC_AUTH_URL": "https://mc-auth.karasu256.com",
     "BASE_DOMAIN": "karasu256.com",
+    "ANDROID_APP_SCHEME": "karasulab",
   },
   "ratelimits": [{ "name": "CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
   "kv_namespaces": [{ "binding": "VERIFICATION_RESEND_KV" }, { "binding": "MINECRAFT_STATUS_RATE_LIMIT_KV" }],
@@ -44,6 +45,7 @@
         "API_URL": "https://dev-api.karasu256.com",
         "MC_AUTH_URL": "https://dev-mc-auth.karasu256.com",
         "BASE_DOMAIN": "karasu256.com",
+        "ANDROID_APP_SCHEME": "karasulab",
         "TRUSTED_ORIGINS":"[\"https://dev-accounts.karasu256.com\",\"https://*.dev-accounts.karasu256.com\",\"https://dev-auth.karasu256.com\",\"https://dev-sso.karasu256.com\",\"https://dev.karasu256.com\",\"https://dev-qr.karasu256.com\"]"
       },
       "routes": [{ "pattern": "dev-api-auth.karasu256.com", "custom_domain": true }],
@@ -63,6 +65,7 @@
       ],
       "vars": {
         "APP_ENV": "local",
+        "ANDROID_APP_SCHEME": "karasulab",
         "ALLOWED_HOSTS": "local-api-auth.karasu256.com",
         "BETTER_AUTH_URL": "http://localhost:8790",
         "AUTH_UI_URL": "http://localhost:3004",

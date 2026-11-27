@@ -17,7 +17,7 @@ import { handleProviderDetails, handleProviderList, handleProviderStream } from 
 import { handleAuthorizedAppDetails, handleAuthorizedAppList } from './routes/authorized-apps';
 import { handleSecuritySettings } from './routes/security';
 import { handleXboxAppLink, handleXboxCallback, handleXboxLink } from './routes/xbox';
-import { handleOAuthLink, handleOAuthLinkHandoff } from './routes/oauth-link';
+import { handleOAuthLink, handleOAuthLinkHandoff, handleOAuthSignIn } from './routes/oauth-link';
 
 let resolvedEnv: Env | undefined;
 const env = new Proxy({} as Env, {
@@ -60,6 +60,7 @@ const app = new Elysia({ adapter: CloudflareAdapter, aot: false, normalize: 'typ
   .get('/api/users/me/providers/:providerId/details', ({ request, params }) => handleProviderDetails(env, request, params.providerId))
   .get('/api/auth/callback/xbox', ({ request }) => handleXboxCallback(env, request))
   .post('/api/oauth/link', ({ request }) => handleOAuthLink(env, request))
+  .post('/api/oauth/sign-in', ({ request }) => handleOAuthSignIn(env, request))
   .get('/api/oauth/link/continue', ({ request }) => handleOAuthLinkHandoff(env, request))
   .get('/api/xbox/link',({ request }) => handleXboxLink(env, request))
   .post('/api/xbox/link', ({ request }) => handleXboxAppLink(env, request))
