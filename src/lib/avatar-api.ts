@@ -12,3 +12,12 @@ export async function storeProviderAvatar(env: Env, userId: string, providerId: 
   if (!res.ok) throw new Error(`api.karasu256.com responded ${res.status} for ${res.url}`);
   return storedAvatarSchema.parse(await res.json()).url;
 }
+
+export async function deleteProviderAvatar(env: Env, userId: string, providerId: string): Promise<void> {
+  const res = await fetch(`${env.API_URL}/internal/avatars/users/${encodeURIComponent(userId)}/providers/${encodeURIComponent(providerId)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${env.INTERNAL_API_SECRET}` },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`api.karasu256.com responded ${res.status} for ${res.url}`);
+}
