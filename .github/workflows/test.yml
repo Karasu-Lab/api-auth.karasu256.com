@@ -35,8 +35,9 @@ jobs:
           pnpm config set "@karasu-lab:registry" https://npm.pkg.github.com
           pnpm config set "//npm.pkg.github.com/:_authToken" "$GITHUB_TOKEN"
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - run: pnpm clean --lockfile
+
+      - run: pnpm install --no-frozen-lockfile
 
       - name: Run tests
         run: pnpm test
