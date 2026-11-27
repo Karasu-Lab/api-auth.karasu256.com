@@ -32,6 +32,7 @@ declare global {
     CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
     GOOGLE_CLIENT_ID?: string;
     GOOGLE_CLIENT_SECRET?: string;
+    GOOGLE_ADDITIONAL_CLIENT_IDS?: string;
     GH_CLIENT_ID?: string;
     GH_CLIENT_SECRET?: string;
     GH_OATH_CLIENT_ID?: string;

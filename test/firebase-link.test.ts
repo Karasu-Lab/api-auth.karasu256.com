@@ -112,6 +112,67 @@ describe('ensureFirebaseLink', () => {
     expect(fixture.updates).toEqual([{ firebaseUid: 'firebase-uid-new', updatedAt: expect.any(Date) }]);
   });
 
+  it('creates the Firebase account as a Google account when the user has an email and a Google account', async () => {
+    const fixture: Fixture = {
+      user: { id: 'user-1', email: 'user@example.com', emailVerified: true, name: 'Hikara', image: null },
+      googleAccountId: 'google-sub-1',
+      updates: [],
+    };
+
+    await ensureFirebaseLink(env, fakeDb(fixture), 'user-1');
+
+    expect(mocks.createFirebaseUser).toHaveBeenCalledOnce();
+    expect(mocks.createFirebaseUser.mock.calls[0]?.[1]).toEqual({
+      email: 'user@example.com',
+      emailVerified: true,
+      displayName: 'Hikara',
+      providerUserInfo: [{ providerId: 'google.com', rawId: 'google-sub-1' }],
+    });
+    expect(fixture.updates).toEqual([{ firebaseUid: 'firebase-uid-new', updatedAt: expect.any(Date) }]);
+  });
+
+  it('links Google to the Firebase account found by email instead of creating a new one', async () => {
+    const fixture: Fixture = {
+      user: { id: 'user-1', email: 'user@example.com', emailVerified: true, name: 'Hikara', image: null },
+      googleAccountId: 'google-sub-1',
+      updates: [],
+    };
+    mocks.findFirebaseUidByEmail.mockResolvedValue('firebase-uid-existing');
+
+    await ensureFirebaseLink(env, fakeDb(fixture), 'user-1');
+
+    expect(mocks.createFirebaseUser).not.toHaveBeenCalled();
+    expect(mocks.updateFirebaseUser).toHaveBeenCalledOnce();
+    expect(mocks.updateFirebaseUser.mock.calls[0]?.[1]).toBe('firebase-uid-existing');
+    expect(mocks.updateFirebaseUser.mock.calls[0]?.[2]).toEqual({
+      displayName: 'Hikara',
+      photoURL: undefined,
+      providerUserInfo: [{ providerId: 'google.com', rawId: 'google-sub-1' }],
+    });
+    expect(fixture.updates).toEqual([{ firebaseUid: 'firebase-uid-existing', updatedAt: expect.any(Date) }]);
+  });
+
+  it('adds the Google provider when a Firebase account is already linked', async () => {
+    const fixture: Fixture = {
+      user: { id: 'user-1', email: 'user@example.com', emailVerified: true, name: 'Hikara', image: null },
+      firebaseUid: 'firebase-uid-existing',
+      googleAccountId: 'google-sub-1',
+      updates: [],
+    };
+
+    await ensureFirebaseLink(env, fakeDb(fixture), 'user-1');
+
+    expect(mocks.createFirebaseUser).not.toHaveBeenCalled();
+    expect(mocks.updateFirebaseUser).toHaveBeenCalledOnce();
+    expect(mocks.updateFirebaseUser.mock.calls[0]?.[1]).toBe('firebase-uid-existing');
+    expect(mocks.updateFirebaseUser.mock.calls[0]?.[2]).toEqual({
+      displayName: 'Hikara',
+      photoURL: undefined,
+      providerUserInfo: [{ providerId: 'google.com', rawId: 'google-sub-1' }],
+    });
+    expect(fixture.updates).toEqual([]);
+  });
+
   it('only syncs the profile when a Firebase account is already linked', async () => {
     const fixture: Fixture = {
       user: { id: 'user-1', email: null, emailVerified: false, name: 'Hikara', image: null },

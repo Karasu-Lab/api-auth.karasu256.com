@@ -219,6 +219,22 @@ async function createAuthOptions(env: Env, db: Db) {
           },
         },
       },
+      account: {
+        create: {
+          after: async (account, context) => {
+            if (account.providerId !== 'google') return;
+            await new FirebaseLinkUserWork(env, db).enqueue({ userId: account.userId });
+            context?.context.runInBackground(runBatchWorks(env));
+          },
+        },
+        update: {
+          after: async (account, context) => {
+            if (account.providerId !== 'google' || !account.userId) return;
+            await new FirebaseLinkUserWork(env, db).enqueue({ userId: account.userId });
+            context?.context.runInBackground(runBatchWorks(env));
+          },
+        },
+      },
       session: {
         create: {
           before: async (session, context) => {
