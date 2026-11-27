@@ -267,10 +267,6 @@ function accountProviderId(providerId: string): string {
   return isDerivedProvider(providerId) ? OAuthLinkFlow.XBOX_PROVIDER_ID : providerId;
 }
 
-export function storedAvatarProviderIds(accountProvider: string): string[] {
-  return [accountProvider, ...DERIVED_PROVIDER_IDS.filter((derived) => accountProviderId(derived) === accountProvider)];
-}
-
 type UserAccounts = Awaited<ReturnType<AuthContext['internalAdapter']['findAccounts']>>;
 
 async function loadAccountLinks(env: Env, ctx: AuthContext, session: RedisSession, pendingAccounts: Promise<UserAccounts>): Promise<AccountLink[]> {

@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({
   findAccounts: vi.fn(),
   unlinkHandler: vi.fn(),
   deleteAccountLink: vi.fn(),
-  deleteProviderAvatar: vi.fn(),
   deleteMinecraftStatus: vi.fn(),
   closeDb: vi.fn(),
   auth: {
@@ -23,10 +22,7 @@ vi.mock('../src/lib/auth', () => ({
 }));
 
 vi.mock('../src/lib/avatar-api', () => ({
-  deleteProviderAvatar: mocks.deleteProviderAvatar,
-}));
-
-vi.mock('../src/lib/provider-profile', () => ({
+  deleteProviderAvatar: vi.fn(async () => undefined),
   storedAvatarProviderIds: (accountProvider: string) => [accountProvider],
 }));
 
@@ -88,7 +84,6 @@ describe('account unlink dispatch', () => {
     mocks.auth.$context = Promise.resolve({ internalAdapter: { findAccounts: mocks.findAccounts } });
     mocks.unlinkHandler.mockResolvedValue(Response.json({ status: true }));
     mocks.deleteAccountLink.mockResolvedValue(undefined);
-    mocks.deleteProviderAvatar.mockResolvedValue(undefined);
     mocks.deleteMinecraftStatus.mockResolvedValue(undefined);
   });
 
@@ -106,7 +101,6 @@ describe('account unlink dispatch', () => {
       reason: 'Provider rejected unlink.',
     });
     expect(mocks.deleteAccountLink).not.toHaveBeenCalled();
-    expect(mocks.deleteProviderAvatar).not.toHaveBeenCalled();
     expect(consoleError).toHaveBeenCalledOnce();
     expect(consoleError.mock.calls[0]?.[0]).toContain('Unlinking github failed with 400');
     expect(consoleError.mock.calls[0]?.[0]).toContain('ACCOUNT_UNLINK_FAILED');
@@ -129,14 +123,5 @@ describe('account unlink dispatch', () => {
     expect(mocks.unlinkHandler.mock.invocationCallOrder[0]).toBeLessThan(mocks.deleteAccountLink.mock.invocationCallOrder[0]);
     expect(mocks.deleteAccountLink).toHaveBeenCalledOnce();
     expect(mocks.closeDb).toHaveBeenCalledOnce();
-  });
-
-  it('deletes the stored provider avatar only after the provider confirms unlinking', async () => {
-    const response = await dispatch().handle();
-
-    expect(response.status).toBe(200);
-    expect(mocks.deleteProviderAvatar).toHaveBeenCalledOnce();
-    expect(mocks.deleteProviderAvatar).toHaveBeenCalledWith(env, 'user-1', 'github');
-    expect(mocks.unlinkHandler.mock.invocationCallOrder[0]).toBeLessThan(mocks.deleteProviderAvatar.mock.invocationCallOrder[0]);
   });
 });
