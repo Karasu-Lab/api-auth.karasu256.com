@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { buildLinkableProviderClients } from '../src/lib/linkable-providers';
+
+vi.mock('cloudflare:workers', () => ({ waitUntil: () => undefined }));
 
 function envWith(vars: Record<string, string>): Env {
   return vars as unknown as Env;
