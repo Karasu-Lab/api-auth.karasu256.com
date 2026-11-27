@@ -41,7 +41,7 @@ export function createSocialProviders(env: Env, signInFlow?: OAuthSignInFlow) {
             clientSecret: env.GH_CLIENT_SECRET,
             redirectURI: oauthProxyRedirectURI(env, 'github'),
             disableImplicitSignUp: false,
-            ...(signInFlow ? { mapProfileToUser: signInFlow.socialProfileMapper('github') } : {}),
+            ...(signInFlow ? { mapProfileToUser: signInFlow.socialProfileMapper() } : {}),
           },
         }
       : {}),
