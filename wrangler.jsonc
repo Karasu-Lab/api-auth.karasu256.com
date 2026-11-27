@@ -22,7 +22,7 @@
     "MC_AUTH_URL": "https://mc-auth.karasu256.com",
     "BASE_DOMAIN": "karasu256.com",
     "ANDROID_APP_SCHEME": "karasulab",
-    "GOOGLE_ADDITIONAL_CLIENT_IDS": "[\"521494519407-kufmdvbthsglk6bgiqve72hlbnd4nak2.apps.googleusercontent.com\"]",
+    "GOOGLE_ADDITIONAL_CLIENT_IDS": "[\"521494519407-kufmdvbthsglk6bgiqve72hlbnd4nak2.apps.googleusercontent.com\",\"521494519407-id5l02drr97uj0g6e37l15anhgbkuafp.apps.googleusercontent.com\"]",
   },
   "ratelimits": [{ "name": "CLOUDFLARE_SIGN_IN_LOOKUP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
   "kv_namespaces": [{ "binding": "VERIFICATION_RESEND_KV" }, { "binding": "MINECRAFT_STATUS_RATE_LIMIT_KV" }],
@@ -47,7 +47,7 @@
         "MC_AUTH_URL": "https://dev-mc-auth.karasu256.com",
         "BASE_DOMAIN": "karasu256.com",
         "ANDROID_APP_SCHEME": "karasulab",
-        "GOOGLE_ADDITIONAL_CLIENT_IDS": "[\"291377837692-haa4bsiure8qm70ionnaamb356qf6uca.apps.googleusercontent.com\"]",
+        "GOOGLE_ADDITIONAL_CLIENT_IDS": "[\"521494519407-kufmdvbthsglk6bgiqve72hlbnd4nak2.apps.googleusercontent.com\",\"521494519407-id5l02drr97uj0g6e37l15anhgbkuafp.apps.googleusercontent.com\"]",
         "TRUSTED_ORIGINS":"[\"https://dev-accounts.karasu256.com\",\"https://*.dev-accounts.karasu256.com\",\"https://dev-auth.karasu256.com\",\"https://dev-sso.karasu256.com\",\"https://dev.karasu256.com\",\"https://dev-qr.karasu256.com\"]"
       },
       "routes": [{ "pattern": "dev-api-auth.karasu256.com", "custom_domain": true }],
