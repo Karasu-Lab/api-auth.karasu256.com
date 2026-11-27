@@ -35,12 +35,27 @@ export class UnlinkAccountDispatch implements Dispatchable {
           return { account, session: { id: session.session.id, userId: session.user.id, expiresAt: session.session.expiresAt } };
         })
       : null;
-    if (!target) return withAuth(env, (auth) => auth.handler(request));
+    if (!body.success || !target) return withAuth(env, (auth) => auth.handler(request));
 
-    const response = await this.unlink(request);
+    const headers = new Headers(request.headers);
+    headers.delete('content-length');
+    headers.set('content-type', 'application/json');
+    const forwarded = new Request(request.url, {
+      method: request.method,
+      headers,
+      body: JSON.stringify({ providerId: body.data.providerId, accountId: target.account.id }),
+    });
+    const response = await this.unlink(forwarded);
     if (!response.ok) {
-      const body = await response.clone().json().catch(() => null);
-      const record = typeof body === 'object' && body !== null ? body as Record<string, unknown> : {};
+      const text = await response.clone().text().catch(() => '');
+      console.error(`Unlinking ${body.data.providerId} failed with ${response.status}: ${text}`);
+      let record: Record<string, unknown> = {};
+      try {
+        const parsed = JSON.parse(text) as unknown;
+        if (typeof parsed === 'object' && parsed !== null) record = parsed as Record<string, unknown>;
+      } catch {
+        record = {};
+      }
       const code = [record.code, record.error].find((value): value is string => typeof value === 'string');
       const message = [record.reason, record.message, record.error_description].find((value): value is string => typeof value === 'string');
       return Response.json(
