@@ -21,6 +21,11 @@ vi.mock('../src/lib/auth', () => ({
   createAuth: async () => ({ handler: mocks.unlinkHandler }),
 }));
 
+vi.mock('../src/lib/avatar-api', () => ({
+  deleteProviderAvatar: vi.fn(async () => undefined),
+  storedAvatarProviderIds: (accountProvider: string) => [accountProvider],
+}));
+
 vi.mock('../src/lib/minecraft-link-status', () => ({
   normalizeMinecraftUuid: (value: string) => value,
 }));

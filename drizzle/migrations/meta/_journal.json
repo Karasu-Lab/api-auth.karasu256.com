@@ -113,6 +113,13 @@
       "when": 1795593440314,
       "tag": "0015_users_missing_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1795769674194,
+      "tag": "0016_avatar_delete_permission",
+      "breakpoints": true
     }
   ]
 }

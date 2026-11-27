@@ -62,6 +62,7 @@ function createPlugins(env: Env, db: Db) {
         'read:github.user',
         'read:github.avatar',
         'read:github.repositories',
+        'delete:users.avatar',
       ],
       resources: [env.MCP_URL],
       clientRegistrationAllowedResources: [env.MCP_URL],

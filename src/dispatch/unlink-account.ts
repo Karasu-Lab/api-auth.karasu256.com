@@ -2,6 +2,7 @@ import type { AuthContext } from '@better-auth/core';
 import { z } from 'zod';
 import { createDb } from '../db/create-db';
 import { createAuth } from '../lib/auth';
+import { deleteProviderAvatar, storedAvatarProviderIds } from '../lib/avatar-api';
 import type { Dispatchable, DispatchContext } from '../lib/dispatch';
 import { normalizeMinecraftUuid } from '../lib/minecraft-link-status';
 import { AccountLinkDeleteRepository } from '../lib/redis/account-link-repositories';
@@ -70,9 +71,11 @@ export class UnlinkAccountDispatch implements Dispatchable {
     try {
       await Promise.all([
         new AccountLinkDeleteRepository(env, target.session).delete(),
-        target.account.providerId === 'minecraft'
-          ? new MinecraftLinkStatusDeleteRepository(env).delete(normalizeMinecraftUuid(target.account.accountId))
-          : undefined,
+        ...(target.account.providerId === 'minecraft'
+          ? [new MinecraftLinkStatusDeleteRepository(env).delete(normalizeMinecraftUuid(target.account.accountId))]
+          : storedAvatarProviderIds(target.account.providerId).map((providerId) =>
+              deleteProviderAvatar(env, target.session.userId, providerId)
+            )),
       ]);
     } catch (error) {
       console.error('Account was unlinked but cached link state could not be cleared:', error);

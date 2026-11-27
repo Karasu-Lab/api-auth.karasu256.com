@@ -12,3 +12,18 @@ export async function storeProviderAvatar(env: Env, userId: string, providerId: 
   if (!res.ok) throw new Error(`api.karasu256.com responded ${res.status} for ${res.url}`);
   return storedAvatarSchema.parse(await res.json()).url;
 }
+
+const DERIVED_AVATAR_PROVIDER_IDS: Record<string, readonly string[]> = { microsoft: ['xbox'] };
+
+export function storedAvatarProviderIds(accountProvider: string): string[] {
+  return [accountProvider, ...(DERIVED_AVATAR_PROVIDER_IDS[accountProvider] ?? [])];
+}
+
+export async function deleteProviderAvatar(env: Env, userId: string, providerId: string): Promise<void> {
+  const res = await fetch(`${env.API_URL}/users/${encodeURIComponent(userId)}/avatars/${encodeURIComponent(providerId)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${env.INTERNAL_API_SECRET}` },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`api.karasu256.com responded ${res.status} for ${res.url}`);
+}
