@@ -1,12 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/create-db';
 import * as schema from '../db/schema';
 import { createFirebaseUser, findFirebaseUidByEmail, updateFirebaseUser } from './firebase';
 
-/**
- * Returns the Firebase UID linked to a better-auth user, or null when the
- * user has no `firebase_user` row yet or the row is still unlinked.
- */
 export async function getLinkedFirebaseUid(db: Db, userId: string): Promise<string | null> {
   const [link] = await db
     .select({ firebaseUid: schema.firebaseUsers.firebaseUid })
@@ -33,15 +29,30 @@ export async function ensureFirebaseLink(env: Env, db: Db, userId: string): Prom
     return;
   }
 
-  if (!user.email) return;
-
-  const firebaseUid =
-    (await findFirebaseUidByEmail(env, user.email)) ??
-    (await createFirebaseUser(env, {
-      email: user.email,
-      emailVerified: user.emailVerified,
-      displayName: user.name ?? undefined,
-    }));
+  const firebaseUid = user.email
+    ? (await findFirebaseUidByEmail(env, user.email)) ??
+      (await createFirebaseUser(env, {
+        email: user.email,
+        emailVerified: user.emailVerified,
+        displayName: user.name ?? undefined,
+      }))
+    : await createFirebaseUserWithoutEmail(env, db, user);
 
   await db.update(schema.firebaseUsers).set({ firebaseUid, updatedAt: new Date() }).where(eq(schema.firebaseUsers.userId, userId));
+}
+
+async function createFirebaseUserWithoutEmail(
+  env: Env,
+  db: Db,
+  user: { id: string; name: string | null },
+): Promise<string> {
+  const [google] = await db
+    .select({ accountId: schema.accounts.accountId })
+    .from(schema.accounts)
+    .where(and(eq(schema.accounts.userId, user.id), eq(schema.accounts.providerId, 'google')))
+    .limit(1);
+  return createFirebaseUser(env, {
+    displayName: user.name ?? undefined,
+    ...(google ? { providerUserInfo: [{ providerId: 'google.com', rawId: google.accountId }] } : {}),
+  });
 }

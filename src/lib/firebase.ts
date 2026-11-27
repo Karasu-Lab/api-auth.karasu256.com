@@ -81,7 +81,15 @@ async function identityToolkit<T>(env: Env, path: string, body: unknown): Promis
   return (await response.json()) as T;
 }
 
-export async function createFirebaseUser(env: Env, input: FirebaseUserInput): Promise<string> {
+export interface FirebaseProviderUserInfo {
+  providerId: string;
+  rawId: string;
+}
+
+export async function createFirebaseUser(
+  env: Env,
+  input: FirebaseUserInput & { providerUserInfo?: FirebaseProviderUserInfo[] },
+): Promise<string> {
   const { localId } = await identityToolkit<{ localId: string }>(env, '/accounts', input);
   return localId;
 }
