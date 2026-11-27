@@ -8,6 +8,7 @@ import { McpSessionTokenDispatch } from '../src/dispatch/mcp';
 import type { DispatchContext } from '../src/lib/dispatch';
 
 const SECRET = 'test-better-auth-secret';
+const MCP_URL = 'https://mcp.test';
 
 const holder = vi.hoisted(() => ({
   row: null as { id: string; userId: string; token: string; expiresAt: Date } | null,
@@ -33,10 +34,6 @@ vi.mock('../src/lib/request-auth', () => ({
   withAuth: async (_env: unknown, fn: (auth: unknown) => Promise<unknown>) => fn(holder.auth),
 }));
 
-function base64UrlJson(value: unknown): string {
-  return Buffer.from(JSON.stringify(value)).toString('base64url');
-}
-
 describe('McpSessionTokenDispatch', () => {
   it('exchanges an OAuth access token for a session JWT', async () => {
     const realAuth = betterAuth({
@@ -55,14 +52,18 @@ describe('McpSessionTokenDispatch', () => {
     const session = await authContext.internalAdapter.createSession(user.id, false);
     holder.row = { id: session.id, userId: session.userId, token: session.token, expiresAt: session.expiresAt };
 
-    const accessToken = `${base64UrlJson({ alg: 'EdDSA', typ: 'JWT' })}.${base64UrlJson({ sub: user.id, sid: session.id })}.${Buffer.from('signature').toString('base64url')}`;
-    holder.auth = {
-      handler: async (request: Request): Promise<Response> => {
-        if (request.url.endsWith('/api/auth/oauth2/userinfo') && request.headers.get('authorization') === `Bearer ${accessToken}`) {
-          return Response.json({ sub: user.id });
-        }
-        return new Response(null, { status: 401 });
+    const signed = await realAuth.api.signJWT({
+      body: {
+        payload: {
+          sub: user.id,
+          sid: session.id,
+          iss: 'https://auth.test/api/auth',
+          aud: MCP_URL,
+        },
       },
+    });
+    const accessToken = signed.token;
+    holder.auth = {
       api: realAuth.api,
       $context: realAuth.$context,
     };
@@ -72,6 +73,7 @@ describe('McpSessionTokenDispatch', () => {
         BETTER_AUTH_SECRET: SECRET,
         BETTER_AUTH_URL: 'https://auth.test',
         DATABASE_URL: 'postgres://unused',
+        MCP_URL,
       } as Env,
       request: new Request('https://api-auth.test/api/internal/mcp/session-token', { method: 'POST' }),
       pathname: '/api/internal/mcp/session-token',
