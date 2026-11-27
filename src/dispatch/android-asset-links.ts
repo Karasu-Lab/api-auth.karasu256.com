@@ -13,6 +13,6 @@ export class AndroidAssetLinksDispatch implements Dispatchable {
   }
 
   async handle(): Promise<Response> {
-    return handleAndroidAssetLinks(this.context.env.ANDROID_DEEPLINK_INFO);
+    return handleAndroidAssetLinks(this.context.env.ASSETLINK_HOST);
   }
 }

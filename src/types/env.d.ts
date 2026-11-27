@@ -59,6 +59,6 @@ declare global {
     STORAGE_REGION?: string;
     STORAGE_PRESIGN_TTL_SECONDS?: string;
     UPLOAD_INTENT_TTL_SECONDS?: string;
-    ANDROID_DEEPLINK_INFO?: string;
+    ASSETLINK_HOST?: string;
   }
 }
