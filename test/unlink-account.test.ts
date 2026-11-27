@@ -1,0 +1,109 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  findAccounts: vi.fn(),
+  unlinkHandler: vi.fn(),
+  deleteAccountLink: vi.fn(),
+  deleteMinecraftStatus: vi.fn(),
+  closeDb: vi.fn(),
+  auth: {
+    api: { getSession: vi.fn() },
+    $context: Promise.resolve({ internalAdapter: { findAccounts: vi.fn() } }),
+  },
+}));
+
+vi.mock('../src/db/create-db', () => ({
+  createDb: () => ({ $client: { end: mocks.closeDb } }),
+}));
+
+vi.mock('../src/lib/auth', () => ({
+  createAuth: async () => ({ handler: mocks.unlinkHandler }),
+}));
+
+vi.mock('../src/lib/minecraft-link-status', () => ({
+  normalizeMinecraftUuid: (value: string) => value,
+}));
+
+vi.mock('../src/lib/request-auth', () => ({
+  withAuth: (_env: Env, callback: (auth: unknown) => Promise<unknown>) => callback(mocks.auth),
+}));
+
+vi.mock('../src/lib/redis/account-link-repositories', () => ({
+  AccountLinkDeleteRepository: class {
+    delete() {
+      return mocks.deleteAccountLink();
+    }
+  },
+}));
+
+vi.mock('../src/lib/redis/minecraft-link-status-repositories', () => ({
+  MinecraftLinkStatusDeleteRepository: class {
+    delete() {
+      return mocks.deleteMinecraftStatus();
+    }
+  },
+}));
+
+import type { DispatchContext } from '../src/lib/dispatch';
+import { UnlinkAccountDispatch } from '../src/dispatch/unlink-account';
+
+const env = { HYPERDRIVE: { connectionString: 'postgres://test' } } as Env;
+
+function dispatch(): UnlinkAccountDispatch {
+  const request = new Request('https://api-auth.example.test/api/auth/unlink-account', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ providerId: 'github' }),
+  });
+  return new UnlinkAccountDispatch({
+    env,
+    request,
+    pathname: '/api/auth/unlink-account',
+    body: { providerId: 'github' },
+  } satisfies DispatchContext);
+}
+
+describe('account unlink dispatch', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({
+      user: { id: 'user-1' },
+      session: { id: 'session-1', expiresAt: new Date() },
+    });
+    mocks.findAccounts.mockResolvedValue([
+      { providerId: 'github', accountId: 'github-1' },
+      { providerId: 'password', accountId: 'user-1' },
+    ]);
+    mocks.auth.api.getSession.mockImplementation(mocks.getSession);
+    mocks.auth.$context = Promise.resolve({ internalAdapter: { findAccounts: mocks.findAccounts } });
+    mocks.unlinkHandler.mockResolvedValue(Response.json({ status: true }));
+    mocks.deleteAccountLink.mockResolvedValue(undefined);
+    mocks.deleteMinecraftStatus.mockResolvedValue(undefined);
+  });
+
+  it('returns the provider failure instead of reporting a false success', async () => {
+    mocks.unlinkHandler.mockResolvedValueOnce(
+      Response.json({ code: 'ACCOUNT_UNLINK_FAILED', message: 'Provider rejected unlink.' }, { status: 400 }),
+    );
+
+    const response = await dispatch().handle();
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: 'ACCOUNT_UNLINK_FAILED',
+      reason: 'Provider rejected unlink.',
+    });
+    expect(mocks.deleteAccountLink).not.toHaveBeenCalled();
+  });
+
+  it('clears cached state only after the provider confirms unlinking', async () => {
+    const response = await dispatch().handle();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: true });
+    expect(mocks.unlinkHandler.mock.invocationCallOrder[0]).toBeLessThan(mocks.deleteAccountLink.mock.invocationCallOrder[0]);
+    expect(mocks.deleteAccountLink).toHaveBeenCalledOnce();
+    expect(mocks.closeDb).toHaveBeenCalledOnce();
+  });
+});

@@ -1,5 +1,4 @@
 import type { AuthContext } from '@better-auth/core';
-import { waitUntil } from 'cloudflare:workers';
 import { z } from 'zod';
 import { createDb } from '../db/create-db';
 import { createAuth } from '../lib/auth';
@@ -38,22 +37,42 @@ export class UnlinkAccountDispatch implements Dispatchable {
       : null;
     if (!target) return withAuth(env, (auth) => auth.handler(request));
 
-    await Promise.all([
-      new AccountLinkDeleteRepository(env, target.session).delete(),
-      target.account.providerId === 'minecraft'
-        ? new MinecraftLinkStatusDeleteRepository(env).delete(normalizeMinecraftUuid(target.account.accountId))
-        : undefined,
-    ]);
-    waitUntil(this.unlink(request));
+    const response = await this.unlink(request);
+    if (!response.ok) {
+      const body = await response.clone().json().catch(() => null);
+      const record = typeof body === 'object' && body !== null ? body as Record<string, unknown> : {};
+      const code = [record.code, record.error].find((value): value is string => typeof value === 'string');
+      const message = [record.reason, record.message, record.error_description].find((value): value is string => typeof value === 'string');
+      return Response.json(
+        {
+          error: code ?? 'account_unlink_failed',
+          reason: message ?? `Authentication provider rejected the unlink request (${response.status}).`,
+        },
+        { status: response.status },
+      );
+    }
+
+    try {
+      await Promise.all([
+        new AccountLinkDeleteRepository(env, target.session).delete(),
+        target.account.providerId === 'minecraft'
+          ? new MinecraftLinkStatusDeleteRepository(env).delete(normalizeMinecraftUuid(target.account.accountId))
+          : undefined,
+      ]);
+    } catch (error) {
+      console.error('Account was unlinked but cached link state could not be cleared:', error);
+      return Response.json({
+        error: 'account_unlink_cleanup_failed',
+        reason: 'The account was unlinked, but cached link state could not be cleared.',
+      }, { status: 500 });
+    }
     return Response.json({ status: true });
   }
 
-  private async unlink(request: Request): Promise<void> {
+  private async unlink(request: Request): Promise<Response> {
     const db = createDb(this.context.env.HYPERDRIVE.connectionString);
     try {
-      await (await createAuth(this.context.env, db)).handler(request);
-    } catch (error) {
-      console.error('Failed to unlink the account:', error);
+      return await (await createAuth(this.context.env, db)).handler(request);
     } finally {
       await db.$client.end();
     }
