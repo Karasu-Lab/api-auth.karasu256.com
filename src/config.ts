@@ -22,10 +22,16 @@ function parseOptionalStringArray(name: string, raw: string | undefined): string
   return raw ? parseStringArray(name, raw) : [];
 }
 
+const rpIdByAppEnv: Record<Env['APP_ENV'], string> = {
+  production: 'karasu256.com',
+  preview: 'dev.karasu256.com',
+  local: 'karasu256.com',
+};
+
 export function getAuthConfig(env: Env): AuthConfig {
   return authConfigSchema.parse({
     webauthn: {
-      rpId: 'karasu256.com',
+      rpId: rpIdByAppEnv[env.APP_ENV],
       rpName: 'Karasu Lab',
       expectedOrigins: parseStringArray('WEBAUTHN_EXPECTED_ORIGINS', env.WEBAUTHN_EXPECTED_ORIGINS),
     },
