@@ -1,6 +1,5 @@
 import type { Db } from '../db/create-db';
 import * as schema from '../db/schema';
-import type { SessionSource } from '@karasu-lab/types/shared';
 import { eq } from 'drizzle-orm';
 import { SessionSourceCreateRepository, SessionSourceGetRepository } from './redis/session-source-repositories';
 
@@ -9,13 +8,18 @@ export interface SessionSourceSignals {
   params: Record<string, string | undefined> | null;
 }
 
+export interface SessionSourceInfo {
+  raw: string;
+  providerId: string;
+}
+
 export class SessionSourceStore {
   private static readonly callbackPath = /\/(?:callback|oauth2\/callback|sso\/callback|sso\/saml2\/(?:sp\/acs|callback))\/([^/?:]+)/;
-  private static readonly credentialPath = /^\/sign-in\/(?:email|username)|^\/sign-up\/email/;
-  private static readonly passkeyPath = /^\/passkey\//;
+  private static readonly credentialPath = /^\/sign-in\/(?:email|username|email-challenge)|^\/sign-up\/email|^\/email-challenge\/|^\/passkey\//;
+  private static readonly socialSignInPath = /^\/sign-in\/social/;
   private static readonly unknownProviderId = 'unknown';
   private static readonly maxCachedSources = 1000;
-  private static readonly cache = new Map<string, SessionSource>();
+  private static readonly cache = new Map<string, string>();
 
   constructor(
     private readonly env: Env,
@@ -26,8 +30,8 @@ export class SessionSourceStore {
     const path = signals.path ?? '';
     const callback = SessionSourceStore.callbackPath.exec(path);
     if (callback) return signals.params?.id ?? signals.params?.providerId ?? callback[1];
+    if (SessionSourceStore.socialSignInPath.test(path)) return signals.params?.provider ?? signals.params?.id ?? signals.params?.providerId ?? SessionSourceStore.unknownProviderId;
     if (SessionSourceStore.credentialPath.test(path)) return 'credential';
-    if (SessionSourceStore.passkeyPath.test(path)) return 'passkey';
     return SessionSourceStore.unknownProviderId;
   }
 
@@ -42,11 +46,11 @@ export class SessionSourceStore {
     }
   }
 
-  async get(session: { id: string; userId: string; expiresAt: Date }): Promise<SessionSource> {
+  async get(session: { id: string; userId: string; expiresAt: Date }): Promise<SessionSourceInfo> {
     const cached = SessionSourceStore.cache.get(session.id) ?? (await new SessionSourceGetRepository(this.env, session).get());
     if (cached?.endsWith(`-${session.id}`)) {
       this.remember(session.id, cached);
-      return cached;
+      return SessionSourceStore.parse(cached, session.id);
     }
     const [row] = await this.db
       .select({ source: schema.sessionDevicesSource.source })
@@ -56,10 +60,16 @@ export class SessionSourceStore {
     const source = row?.source.endsWith(`-${session.id}`) ? row.source : `${SessionSourceStore.unknownProviderId}-${session.id}`;
     this.remember(session.id, source);
     await new SessionSourceCreateRepository(this.env, session).create(source);
-    return source;
+    return SessionSourceStore.parse(source, session.id);
   }
 
-  private remember(sessionId: string, source: SessionSource): void {
+  private static parse(raw: string, sessionId: string): SessionSourceInfo {
+    const suffix = `-${sessionId}`;
+    const providerId = raw.endsWith(suffix) && raw.length > suffix.length ? raw.slice(0, -suffix.length) : SessionSourceStore.unknownProviderId;
+    return { raw, providerId };
+  }
+
+  private remember(sessionId: string, source: string): void {
     if (SessionSourceStore.cache.size >= SessionSourceStore.maxCachedSources) SessionSourceStore.cache.clear();
     SessionSourceStore.cache.set(sessionId, source);
   }
