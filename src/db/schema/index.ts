@@ -28,5 +28,7 @@ export { ssoProviders, type NewSsoProvider, type SsoProvider } from './sso-provi
 export { tenantGithubInstallations, type NewTenantGithubInstallation, type TenantGithubInstallation } from './tenant-github-installations';
 export { tenantLinkedPackages, type NewTenantLinkedPackage, type TenantLinkedPackage } from './tenant-linked-packages';
 export { tenantTypes, type NewTenantTypeRow, type TenantTypeRow } from './tenant-types';
+export { temporaryAccounts, type NewTemporaryAccount, type TemporaryAccount } from './temporary-accounts';
+export { temporaryUsers, type NewTemporaryUser, type TemporaryUser } from './temporary-users';
 export { userSigningKeys, type NewUserSigningKey, type UserSigningKey } from './user-signing-keys';
 export { users, type NewUser, type User } from './users';

@@ -31,6 +31,7 @@ import { createSocialProviders } from './social-providers';
 import { refreshLinkableProviderClients } from './linkable-providers';
 import { OAuthSignInFlow } from './oauth-sign-in-flow';
 import { tenantTypePlugin } from './tenant-type';
+import { temporarySignupPlugin } from './temporary-signup';
 import { sendVerificationEmail } from './verification-email';
 
 function createPlugins(env: Env, db: Db) {
@@ -100,6 +101,7 @@ function createPlugins(env: Env, db: Db) {
     ...(oauthProviders.length > 0 ? [genericOAuth({ config: oauthProviders })] : []),
     githubAppInstallationPlugin(env),
     tenantTypePlugin(env),
+    temporarySignupPlugin(env, db),
     customSession(async ({ user, session }) => ({
       user,
       session,
