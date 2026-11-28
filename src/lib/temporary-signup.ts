@@ -362,7 +362,7 @@ export function temporarySignupPlugin(env: Env, db: Db) {
                 id: temporaryUser.id,
                 name: ctx.body.name,
                 email: ctx.body.email,
-                emailVerified: temporaryUser.emailVerified && temporaryUser.email?.toLowerCase() === ctx.body.email.toLowerCase(),
+                emailVerified: false,
                 image: temporaryUser.image,
                 createdAt: temporaryUser.createdAt,
                 updatedAt: new Date(),
