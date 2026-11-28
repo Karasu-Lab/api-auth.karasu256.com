@@ -5,6 +5,7 @@ import { withCdnProfileAvatarUrls } from '../lib/profile-avatar';
 import { withOAuthProxyCallback, withOAuthProxyState } from '../lib/oauth-proxy';
 import { withAuth } from '../lib/request-auth';
 import { assertTokenSessionActive } from '../lib/session-expiry';
+import { TemporarySignupStaging } from '../lib/temporary-signup';
 import { TurnstileGate } from '../lib/turnstile';
 import { resendVerificationForUnverifiedUser } from '../lib/verification-resend';
 
@@ -31,6 +32,8 @@ export class AuthDispatch implements Dispatchable {
         : null;
     const cached = await cookieSession?.get();
     if (cached) return cached;
+    const staging = new TemporarySignupStaging(env, request, pathname);
+    if (staging.isCallback) await staging.captureLinkSource();
     const authRequest = await withOAuthProxyCallback(env, await normalizeClientAuthentication(env, request, pathname));
     const authResponse = await withOAuthProxyState(
       env,
@@ -39,7 +42,8 @@ export class AuthDispatch implements Dispatchable {
       await withAuth(env, (auth) => auth.handler(authRequest))
     );
     if (pathname === '/api/auth/oauth2/token') await assertTokenSessionActive(env, authResponse);
-    const response = await withCdnProfileAvatarUrls(env, pathname, authResponse);
+    const profiled = await withCdnProfileAvatarUrls(env, pathname, authResponse);
+    const response = staging.isCallback ? await staging.stage(profiled) : profiled;
     await cookieSession?.save(response);
     return response;
   }

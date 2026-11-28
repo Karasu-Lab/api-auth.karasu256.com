@@ -120,6 +120,13 @@
       "when": 1795769674194,
       "tag": "0016_avatar_delete_permission",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795857447627,
+      "tag": "0017_temporary_users",
+      "breakpoints": true
     }
   ]
 }
