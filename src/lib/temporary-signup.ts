@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { APIError, createAuthEndpoint } from 'better-auth/api';
+import { APIError, createAuthEndpoint, createEmailVerificationToken } from 'better-auth/api';
 import { setSessionCookie } from 'better-auth/cookies';
 import type { BetterAuthPlugin } from 'better-auth';
 import { z } from 'zod';
@@ -184,7 +184,9 @@ async function stageNewSignup(db: Db, user: schema.User, account: schema.Account
 
 export class TemporarySignupStaging {
   readonly providerId: string | null;
-  private hasLinkSource = false;
+  private linkUserId: string | null = null;
+  private readonly capturedAt = new Date();
+  private readonly preExistingAccountIds = new Set<string>();
 
   constructor(
     private readonly env: Env,
@@ -201,20 +203,69 @@ export class TemporarySignupStaging {
   async captureLinkSource(): Promise<void> {
     try {
       const session = await withAuth(this.env, (auth) => auth.api.getSession({ headers: this.request.headers }));
-      this.hasLinkSource = Boolean(session);
+      this.linkUserId = session?.user.id ?? null;
     } catch (error) {
       console.error('Failed to check the existing session before the OAuth callback:', error);
-      this.hasLinkSource = false;
+      this.linkUserId = null;
+    }
+    if (!this.providerId) return;
+    const db = createDb(this.env.DATABASE_URL);
+    try {
+      const since = new Date(this.capturedAt.getTime() - RECENT_SIGNUP_WINDOW_MS);
+      const recent = await db
+        .select({ id: schema.accounts.id, createdAt: schema.accounts.createdAt })
+        .from(schema.accounts)
+        .where(eq(schema.accounts.providerId, this.providerId));
+      for (const account of recent) {
+        if (account.createdAt >= since) this.preExistingAccountIds.add(account.id);
+      }
+    } catch (error) {
+      console.error('Failed to snapshot the existing accounts before the OAuth callback:', error);
+    } finally {
+      waitUntil(db.$client.end());
     }
   }
 
   async stage(response: Response): Promise<Response> {
-    if (!this.isCallback || this.hasLinkSource) return response;
+    if (!this.isCallback) return response;
     try {
-      return await this.stageResponse(response);
+      return this.linkUserId ? await this.enforceLinkBlock(response, this.linkUserId) : await this.stageResponse(response);
     } catch (error) {
-      console.error('Failed to stage the temporary signup:', error);
+      console.error('Failed to post-process the OAuth callback for the temporary signup:', error);
       return response;
+    }
+  }
+
+  private async enforceLinkBlock(response: Response, linkUserId: string): Promise<Response> {
+    const location = response.headers.get('location');
+    if (!location || new URL(location, this.env.BETTER_AUTH_URL).searchParams.has('error')) return response;
+
+    const db = createDb(this.env.DATABASE_URL);
+    try {
+      const since = new Date(this.capturedAt.getTime() - RECENT_SIGNUP_WINDOW_MS);
+      const created = await db
+        .select()
+        .from(schema.accounts)
+        .where(and(eq(schema.accounts.userId, linkUserId), eq(schema.accounts.providerId, this.providerId!)));
+      for (const account of created) {
+        if (account.createdAt < since) continue;
+        const [temporary] = await db
+          .select({ id: schema.temporaryAccounts.id })
+          .from(schema.temporaryAccounts)
+          .where(and(eq(schema.temporaryAccounts.providerId, account.providerId), eq(schema.temporaryAccounts.accountId, account.accountId)))
+          .limit(1);
+        if (!temporary) continue;
+        await db.delete(schema.accounts).where(eq(schema.accounts.id, account.id));
+        console.error(
+          `Blocked linking ${account.providerId} account ${account.accountId} to user ${linkUserId} because it belongs to an unfinished temporary signup.`
+        );
+        const destination = new URL('/oauth/error', this.env.AUTH_UI_URL);
+        destination.searchParams.set('error', 'temporary_signup_conflict');
+        return new Response(null, { status: 302, headers: { location: destination.toString() } });
+      }
+      return response;
+    } finally {
+      waitUntil(db.$client.end());
     }
   }
 
@@ -226,7 +277,7 @@ export class TemporarySignupStaging {
 
     const db = createDb(this.env.DATABASE_URL);
     try {
-      const since = new Date(Date.now() - RECENT_SIGNUP_WINDOW_MS);
+      const since = new Date(this.capturedAt.getTime() - RECENT_SIGNUP_WINDOW_MS);
       const [session] = await db.select().from(schema.sessions).where(eq(schema.sessions.token, token)).limit(1);
       if (!session || session.createdAt < since) return response;
       const [user] = await db.select().from(schema.users).where(eq(schema.users.id, session.userId)).limit(1);
@@ -236,7 +287,7 @@ export class TemporarySignupStaging {
         .from(schema.accounts)
         .where(and(eq(schema.accounts.userId, user.id), eq(schema.accounts.providerId, this.providerId!)))
         .limit(1);
-      if (!account || account.createdAt < since) return response;
+      if (!account || account.createdAt < since || this.preExistingAccountIds.has(account.id)) return response;
 
       const temporaryUserId = await stageNewSignup(db, user, account);
       return await this.redirectToComplete(response, location, temporaryUserId);
@@ -361,8 +412,37 @@ export function temporarySignupPlugin(env: Env, db: Db) {
           ...(env.BASE_DOMAIN ? { domain: env.BASE_DOMAIN } : {}),
           ...(env.BETTER_AUTH_URL.startsWith('https:') ? { secure: true } : {}),
         });
+        if (!target.emailVerified && target.email) {
+          const sendVerificationEmail = ctx.context.options.emailVerification?.sendVerificationEmail;
+          if (sendVerificationEmail) {
+            const verifiedUser = { ...target, name: ctx.body.name, email: ctx.body.email };
+            const token = await createEmailVerificationToken(ctx.context.secret, verifiedUser.email, undefined, ctx.context.options.emailVerification?.expiresIn);
+            const url = `${ctx.context.baseURL}/verify-email?token=${token}&callbackURL=${encodeURIComponent('/')}`;
+            await ctx.context.runInBackgroundOrAwait(sendVerificationEmail({ user: verifiedUser, url, token }, ctx.request));
+          }
+        }
         await new FirebaseLinkUserWork(env, db).enqueue({ userId: target.id });
         return ctx.json({ user: { id: target.id, name: target.name, email: target.email } });
+      }),
+      cancelTemporarySignup: createAuthEndpoint('/sign-up/cancel', { method: 'POST' }, async (ctx) => {
+        const userId = await readTemporarySignupUserId(env, ctx.headers ?? new Headers());
+        const loaded = userId ? await loadTemporarySignup(db, userId) : null;
+        if (!loaded) {
+          return new Response(JSON.stringify({ error: 'temporary_signup_not_found' }), {
+            status: 404,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        await db.delete(schema.temporaryUsers).where(eq(schema.temporaryUsers.id, loaded.user.id));
+        ctx.setCookie(TEMPORARY_SIGNUP_COOKIE_NAME, '', {
+          path: '/',
+          httpOnly: true,
+          sameSite: 'lax',
+          maxAge: 0,
+          ...(env.BASE_DOMAIN ? { domain: env.BASE_DOMAIN } : {}),
+          ...(env.BETTER_AUTH_URL.startsWith('https:') ? { secure: true } : {}),
+        });
+        return ctx.json({ status: true });
       }),
     },
   } satisfies BetterAuthPlugin;
