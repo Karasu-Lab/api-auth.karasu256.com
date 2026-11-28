@@ -362,7 +362,7 @@ export function temporarySignupPlugin(env: Env, db: Db) {
                 id: temporaryUser.id,
                 name: ctx.body.name,
                 email: ctx.body.email,
-                emailVerified: temporaryUser.emailVerified,
+                emailVerified: temporaryUser.emailVerified && temporaryUser.email?.toLowerCase() === ctx.body.email.toLowerCase(),
                 image: temporaryUser.image,
                 createdAt: temporaryUser.createdAt,
                 updatedAt: new Date(),
@@ -418,7 +418,11 @@ export function temporarySignupPlugin(env: Env, db: Db) {
             const verifiedUser = { ...target, name: ctx.body.name, email: ctx.body.email };
             const token = await createEmailVerificationToken(ctx.context.secret, verifiedUser.email, undefined, ctx.context.options.emailVerification?.expiresIn);
             const url = `${ctx.context.baseURL}/verify-email?token=${token}&callbackURL=${encodeURIComponent('/')}`;
-            await ctx.context.runInBackgroundOrAwait(sendVerificationEmail({ user: verifiedUser, url, token }, ctx.request));
+            try {
+              await sendVerificationEmail({ user: verifiedUser, url, token }, ctx.request);
+            } catch (error) {
+              console.error('Failed to send the verification email after completing the temporary signup:', error);
+            }
           }
         }
         await new FirebaseLinkUserWork(env, db).enqueue({ userId: target.id });
